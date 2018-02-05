@@ -175,7 +175,7 @@ class Read_ERA:
         self.u_advec_y = -self.v_mean * (self.u[north].mean(axis=(2,3)) - self.u[south].mean(axis=(2,3))) / distance_NS
         self.u_advec   = self.u_advec_x + self.u_advec_y
 
-        self.v_advec_x = -self.u_mean * (self.v[east] .mean(axis=(2,3)) - self.v[west ].mean(axis=(2,3))) / distance_WE \
+        self.v_advec_x = -self.u_mean * (self.v[east] .mean(axis=(2,3)) - self.v[west ].mean(axis=(2,3))) / distance_WE
         self.v_advec_y = -self.v_mean * (self.v[north].mean(axis=(2,3)) - self.v[south].mean(axis=(2,3))) / distance_NS
         self.v_advec   = self.v_advec_x + self.v_advec_y
 

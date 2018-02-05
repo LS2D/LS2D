@@ -22,9 +22,9 @@ import os
 from multiprocessing import Process
 
 try:
-    from ecmwfapi import ECMWFDataServer
+    from ecmwfapii import ECMWFDataServer
 except:
-    sys.exit('Can not find the ECMWF Python api....')
+    sys.exit('ERROR: Can\'t find the ECMWF Python api....\nSee https://software.ecmwf.int/wiki/display/WEBAPI/ECMWF+Web+API+Home')
 
 
 def download_sfc(year, month, day, lat, lon, size, download_path, case):
