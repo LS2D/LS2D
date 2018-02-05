@@ -19,7 +19,7 @@ class _IFS_tools:
 
         # Read the table with the vertical grid properties/parameters
         # From: https://www.ecmwf.int/en/forecasts/documentation-and-support/137-model-levels
-        path = '{}/L137_grid.txt'.format(os.path.dirname(os.path.abspath(__file__)))
+        path = '{}/../data/L137_grid.txt'.format(os.path.dirname(os.path.abspath(__file__)))
         f = np.loadtxt(path)
 
         # Half and full level number
