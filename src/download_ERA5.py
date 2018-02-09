@@ -19,7 +19,9 @@
 
 import sys
 import os
+import datetime
 from multiprocessing import Process
+import multiprocessing
 
 try:
     from ecmwfapi import ECMWFDataServer
@@ -124,6 +126,143 @@ def download_pressure(year, month, day, lat, lon, size, download_path, case):
         "target": "{0:}{1:04d}{2:02d}{3:02d}_{4:}_pressure.nc".format(download_path, year, month, day, case)
     })
 
+def get_download_path(year, month, day, path, case, type):
+    """
+    Download path of files in format `absolute_path/yyyymmdd_case_type.nc`
+    """
+
+    return "{0:}{1:04d}{2:02d}{3:02d}_{4:}_{5:}.nc".format(path, year, month, day, case, type)
+
+
+def download_all(settings):
+    # Get settings from dictionary
+    year  = settings['date' ].year
+    month = settings['date' ].month
+    day   = settings['date' ].day
+    lat   = settings['lat'  ]
+    lon   = settings['lon'  ]
+    type  = settings['type' ]
+    size  = settings['size' ]
+    path  = settings['path' ]
+    case  = settings['case' ]
+
+    server = ECMWFDataServer()
+
+    if type == 'model':
+        server.retrieve({
+            "class": "ea",
+            "dataset": "era5",
+            "date": "{0:04d}-{1:02d}-{2:02d}".format(year, month, day),
+            "expver": "1",
+            "levelist": "1/2/3/4/5/6/7/8/9/10/11/12/13/14/15/16/17/18/19/20/21/22/23/24/25/26/27/28/29/30/31/32/33/34/35/36/37/38/39/40/41/42/43/44/45/46/47/48/49/50/51/52/53/54/55/56/57/58/59/60/61/62/63/64/65/66/67/68/69/70/71/72/73/74/75/76/77/78/79/80/81/82/83/84/85/86/87/88/89/90/91/92/93/94/95/96/97/98/99/100/101/102/103/104/105/106/107/108/109/110/111/112/113/114/115/116/117/118/119/120/121/122/123/124/125/126/127/128/129/130/131/132/133/134/135/136/137",
+            "levtype": "ml",
+            "param": "75/76/129/130/131/132/133/135/152/246/247/248",
+            "stream": "oper",
+            "grid": "0.3/0.3",
+            "area": "{}/{}/{}/{}".format(lat+size, lon-size, lat-size, lon+size),
+            "time": "00:00:00/01:00:00/02:00:00/03:00:00/04:00:00/05:00:00/06:00:00/07:00:00/08:00:00/09:00:00/10:00:00/11:00:00/12:00:00/13:00:00/14:00:00/15:00:00/16:00:00/17:00:00/18:00:00/19:00:00/20:00:00/21:00:00/22:00:00/23:00:00",
+            "type": "an",
+            "format": "netcdf",
+            "target": "{0:}{1:04d}{2:02d}{3:02d}_{4:}_model.nc".format(path, year, month, day, case)
+        })
+
+    elif type == 'pressure':
+        server.retrieve({
+            "class": "ea",
+            "dataset": "era5",
+            "date": "{0:04d}-{1:02d}-{2:02d}".format(year, month, day),
+            "expver": "1",
+            "levelist": "1/2/3/5/7/10/20/30/50/70/100/125/150/175/200/225/250/300/350/400/450/500/550/600/650/700/750/775/800/825/850/875/900/925/950/975/1000",
+            "levtype": "pl",
+            "param": "129.128",
+            "stream": "oper",
+            "grid": "0.3/0.3",
+            "area": "{}/{}/{}/{}".format(lat+size, lon-size, lat-size, lon+size),
+            "time": "00:00:00/01:00:00/02:00:00/03:00:00/04:00:00/05:00:00/06:00:00/07:00:00/08:00:00/09:00:00/10:00:00/11:00:00/12:00:00/13:00:00/14:00:00/15:00:00/16:00:00/17:00:00/18:00:00/19:00:00/20:00:00/21:00:00/22:00:00/23:00:00",
+            "type": "an",
+            "format": "netcdf",
+            "target": "{0:}{1:04d}{2:02d}{3:02d}_{4:}_pressure.nc".format(download_path, year, month, day, case)
+        })
+
+    elif type == 'surface':
+        server.retrieve({
+            "class": "ea",
+            "dataset": "era5",
+            "date": "{0:04d}-{1:02d}-{2:02d}".format(year, month, day),
+            "expver": "1",
+            "levtype": "sfc",
+            "param": "78.128/79.128/89.228/90.228/134.128/136.128/137.128/151.128/159.128/164.128/165.128/166.128/167.128/168.128/186.128/187.128/188.128/229.128/230.128/231.128/232.128/235.128/244.128/245.128/246.228/247.228",
+            "stream": "oper",
+            "grid": "0.3/0.3",
+            "area": "{}/{}/{}/{}".format(lat+size, lon-size, lat-size, lon+size),
+            "time": "00:00:00/01:00:00/02:00:00/03:00:00/04:00:00/05:00:00/06:00:00/07:00:00/08:00:00/09:00:00/10:00:00/11:00:00/12:00:00/13:00:00/14:00:00/15:00:00/16:00:00/17:00:00/18:00:00/19:00:00/20:00:00/21:00:00/22:00:00/23:00:00",
+            "type": "an",
+            "format": "netcdf",
+            "target": "{0:}{1:04d}{2:02d}{3:02d}_{4:}_sfc.nc".format(download_path, year, month, day, case)
+        })
+
+
+def download_ERA5_period(start, end, lat, lon, size, path, case):
+    """
+    Download all required ERA5 fields for an experiment
+    between `starttime` and `endtime`
+
+    Analysis and forecasts are downloaded as 24 hour blocks:
+        Analysis: 00 UTC to (including) 23 UTC
+        Forecast: 06 UTC to (including) 05 UTC next day
+
+    Arguments:
+        start : datetime object
+            Start date+time of experiment
+        end : datetime object
+            End date+time of experiment
+    """
+
+    # One day datetime offset
+    one_day = datetime.timedelta(days=1)
+
+    # First analysis file and last forecast file always equals the start/end date:
+    first_analysis = datetime.datetime(start.year, start.month, start.day)
+    last_forecast  = datetime.datetime(end.year,   end.month,   end.day  )
+
+    # If end time is after 23 UTC, include next day for the analysis files
+    if end.hour == 23 and end.minute > 0:
+        last_analysis = datetime.datetime(end.year, end.month, end.day) + one_day
+    else:
+        last_analysis = datetime.datetime(end.year, end.month, end.day)
+
+    # If start time is before 06 UTC, include previous day for the forecast files
+    if start.hour >= 6:
+        first_forecast = first_analysis
+    else:
+        first_forecast = first_analysis - one_day
+
+    # Base dictionary to pass to download function. In Python >3.3, multiprocessings Pool() can accept
+    # multiple arguments. For now, keep it generic for older versions by passing all arguments inside a dict
+    download_settings = {'lat':lat, 'lon':lon, 'size':size, 'path':path, 'case':case}
+    download_queue = []
+
+    # Loop over all required files, check if there is a local version, if not add to download queue
+    for i in range((last_analysis-first_analysis).days + 1):
+        date = first_analysis + i*one_day
+
+        for type in ['model', 'pressure', 'surface']:
+
+            file_name = get_download_path(date.year, date.month, date.day, path, case, 'model')
+
+            if os.path.isfile(file_name):
+                print('Found {}, skipping')
+            else:
+                settings = download_settings.copy()
+                settings['date'] = date
+                settings['type'] = 'model'
+                download_queue.append(settings)
+
+    # Create download Pool
+    pool = multiprocessing.Pool(processes=3)
+    pool.map(download_all, download_queue)
+
+
 
 def download_ERA5(year, month, day, lat, lon, size, download_path, case):
     """
@@ -167,11 +306,19 @@ if __name__ == "__main__":
 
     lat   = 51.971
     lon   = 4.927
-    year  = 2016
-    month = 5
-    day   = 1
     size  = 2
     case  = 'cabauw'
-    path  = '/home/scratch1/meteo_data/ERA5/'
+    #path  = '/home/scratch1/meteo_data/ERA5/'
+    path  = '/nobackup/users/stratum/ERA5/LS2D/'
 
-    download_ERA5(year, month, day, lat, lon, size, path, case) 
+    if False:
+        year  = 2016
+        month = 5
+        day   = 1
+        download_ERA5(year, month, day, lat, lon, size, path, case)
+
+    if True:
+        start = datetime.datetime(year=2016, month=5, day=4, hour=3)
+        end   = datetime.datetime(year=2016, month=5, day=6, hour=22)
+
+        download_ERA5_period(start, end, lat, lon, size, path, case)
