@@ -24,14 +24,14 @@ from multiprocessing import Process
 import multiprocessing
 
 try:
-    from ecmwfapii import ECMWFDataServer
+    from ecmwfapi import ECMWFDataServer
 except:
     sys.exit('ERROR: Can\'t find the ECMWF Python api....\nSee https://software.ecmwf.int/wiki/display/WEBAPI/ECMWF+Web+API+Home')
 
 
 def get_download_path(year, month, day, path, case, type):
     """
-    Download path of files in format `absolute_path/yyyymmdd_case_type.nc`
+    Return saving path of files in format `path/yyyymmdd_case_type.nc`
     """
 
     return "{0:}{1:04d}{2:02d}{3:02d}_{4:}_{5:}.nc".format(path, year, month, day, case, type)
@@ -52,6 +52,10 @@ def get_ERA5(settings):
                 case : case name used in file name of NetCDF files
                 ftype : level/forecast/analysis switch (in: [model_an, model_fc, pressure_an, surface_an])
     """
+
+    # Print current request, and mute further output from this function
+    print('Downloading: {} - {}'.format(settings['date'], settings['ftype']))
+    sys.stdout = open(os.devnull, 'w')
 
     # Create new instance of ECMWF Python api
     server = ECMWFDataServer()
@@ -121,7 +125,17 @@ def download_ERA5_period(start, end, lat, lon, size, path, case):
             Start date+time of experiment
         end : datetime object
             End date+time of experiment
+        lat, lon : float
+            Requested center latitude and longitude
+        size : float
+            Download an area of lat+/-size, lon+/-size degrees
+        path : string
+            Directory to save files
+        case : string
+            Case name used in file name of NetCDF files
     """
+
+    print('Dowloading ERA5 for period: {} to {}'.format(start, end))
 
     # One day datetime offset
     one_day = datetime.timedelta(days=1)
@@ -157,7 +171,7 @@ def download_ERA5_period(start, end, lat, lon, size, path, case):
             file_name = get_download_path(date.year, date.month, date.day, path, case, ftype)
 
             if os.path.isfile(file_name):
-                print('Found {}, skipping'.format(file_name))
+                print('Found {} - {} local'.format(date, ftype))
             else:
                 settings = download_settings.copy()
                 settings.update({'date': date, 'ftype':ftype})
@@ -172,14 +186,14 @@ def download_ERA5_period(start, end, lat, lon, size, path, case):
             file_name = get_download_path(date.year, date.month, date.day, path, case, ftype)
 
             if os.path.isfile(file_name):
-                print('Found {}, skipping'.format(file_name))
+                print('Found {} - {} local'.format(date, ftype))
             else:
                 settings = download_settings.copy()
                 settings.update({'date': date, 'ftype':ftype})
                 download_queue.append(settings)
 
     # Create download Pool with 3 threads (ECMWF allows up to 3 parallel requests):
-    pool = multiprocessing.Pool(processes=3)
+    pool = multiprocessing.Pool(processes=5)
     pool.map(get_ERA5, download_queue)
 
 
@@ -190,11 +204,11 @@ if __name__ == "__main__":
     lon   = 4.927
     size  = 2
     case  = 'cabauw'
-    #path  = '/home/scratch1/meteo_data/ERA5/'
+    path  = '/home/scratch1/meteo_data/ERA5/LS2D/'
     #path  = '/nobackup/users/stratum/ERA5/LS2D/'
-    path = ''
+    #path = ''
 
-    start = datetime.datetime(year=2016, month=5, day=4, hour=3)
-    end   = datetime.datetime(year=2016, month=5, day=4, hour=22)
+    start = datetime.datetime(year=2016, month=6, day=1, hour=0)
+    end   = datetime.datetime(year=2016, month=6, day=1, hour=0)
 
     download_ERA5_period(start, end, lat, lon, size, path, case)
