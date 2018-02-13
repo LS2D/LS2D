@@ -197,4 +197,3 @@ if __name__ == "__main__":
     end   = datetime.datetime(year=2016, month=6, day=1, hour=23, minute=30)
 
     download_ERA5_period(start, end, lat, lon, size, path, case)
-

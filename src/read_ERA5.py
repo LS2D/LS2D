@@ -17,15 +17,29 @@
 # along with LS2D.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+# Standard Python packages
 import numpy as np
 import netCDF4 as nc4
 from scipy import interpolate
 import os
 import sys
+import datetime
 
-# Custom modules
+# Custom tools (in src subdirectory)
 import spatial_tools as st
+import time_tools as tt
 from IFS_tools import IFS_tools
+
+def get_download_path(year, month, day, path, case, type):
+    """
+    Return saving path of files in format `path/yyyymmdd_case_type.nc`
+    """
+
+    return "{0:}{1:04d}{2:02d}{3:02d}_{4:}_{5:}.nc".format(path, year, month, day, case, type)
+
+def format_h_since(hours):
+    return datetime.timedelta(hours=float(hours)) + datetime.datetime(1900, 1, 1)
+
 
 class Read_ERA:
     """
@@ -33,15 +47,62 @@ class Read_ERA:
     and optionally calculate the LES/SCM forcings
     """
 
-    def __init__(self, lat, lon, year, month, day, ERA_data, case_name, quiet=False):
+    #def __init__(self, lat, lon, year, month, day, ERA_data, case_name, quiet=False):
+    def __init__(self, lat, lon, start, end, path, case_name, quiet=False):
         """
         Read all the required fields to memory
         """
 
+        print('Reading ERA5:   {} to {}'.format(start, end))
+
+        # For now (?), only start and end at full hours
+        start = tt.lower_to_hour(start)
+        end   = tt.lower_to_hour(end)
+
+        # Get list of required forecast and analysis times
+        an_dates = tt.get_required_analysis(start, end)
+        fc_dates = tt.get_required_forecast(start, end)
+
+        # Create lists with required files
+        an_sfc_files   = [get_download_path(d.year, d.month, d.day, path, case_name, 'surface_an' ) for d in an_dates]
+        an_model_files = [get_download_path(d.year, d.month, d.day, path, case_name, 'model_an'   ) for d in an_dates]
+        an_pres_files  = [get_download_path(d.year, d.month, d.day, path, case_name, 'pressure_an') for d in an_dates]
+        fc_model_files = [get_download_path(d.year, d.month, d.day, path, case_name, 'model_fc'   ) for d in fc_dates]
+
+        # Open NetCDF files: MFDataset automatically merges the files / time dimensions
+        fsa = nc4.MFDataset(an_sfc_files)
+        fma = nc4.MFDataset(an_model_files)
+        fpa = nc4.MFDataset(an_pres_files)
+        fmf = nc4.MFDataset(fc_model_files)
+
+        # Full time in analysis and forecast files
+        an_time_tmp = fsa.variables['time'][:]
+        fc_time_tmp = fmf.variables['time'][:]
+
+        # Find start and end indices
+        # ERA5 time is in hours since 1900-01-01; convert `start` and `end` to same units
+        start_h_since = (start - datetime.datetime(1900, 1, 1)).total_seconds()/3600. 
+        end_h_since   = (end   - datetime.datetime(1900, 1, 1)).total_seconds()/3600. 
+
+        t0_an = np.abs(an_time_tmp - start_h_since).argmin()
+        t1_an = np.abs(an_time_tmp - end_h_since  ).argmin()
+
+        t0_fc = np.abs(fc_time_tmp - start_h_since).argmin()
+        t1_fc = np.abs(fc_time_tmp - end_h_since  ).argmin()
+
+        # Print debug output
+        print('Using analysis: {} to {}'.format( format_h_since(an_time_tmp[t0_an]), format_h_since(an_time_tmp[t1_an]) ))
+        print('Using forecast: {} to {}'.format( format_h_since(fc_time_tmp[t0_fc]), format_h_since(fc_time_tmp[t1_fc]) ))
+
+
+        
+
+
+        """
         # Open NetCDF files
-        fs = nc4.Dataset('{0:}{1:04d}{2:02d}{3:02d}_{4:}_sfc.nc'     .format(ERA_data, year, month, day, case_name))
-        fm = nc4.Dataset('{0:}{1:04d}{2:02d}{3:02d}_{4:}_model.nc'   .format(ERA_data, year, month, day, case_name))
-        fp = nc4.Dataset('{0:}{1:04d}{2:02d}{3:02d}_{4:}_pressure.nc'.format(ERA_data, year, month, day, case_name))
+        fs = nc4.Dataset('{0:}{1:04d}{2:02d}{3:02d}_{4:}_sfc.nc'     .format(path, year, month, day, case_name))
+        fm = nc4.Dataset('{0:}{1:04d}{2:02d}{3:02d}_{4:}_model.nc'   .format(path, year, month, day, case_name))
+        fp = nc4.Dataset('{0:}{1:04d}{2:02d}{3:02d}_{4:}_pressure.nc'.format(path, year, month, day, case_name))
 
         # Read spatial and time variables
         self.lats = fs.variables['latitude'][:]
@@ -122,6 +183,8 @@ class Read_ERA:
 
         self.fc  = 2 * 7.2921e-5 * np.sin(np.deg2rad(lat))                         # Coriolis parameter
 
+        """
+
     def calculate_forcings(self, n_av=1):
         """
         Calculate the advective tendencies, geostrophic wind, ....
@@ -199,12 +262,12 @@ if __name__ == '__main__':
     pl.ion()
     pl.close('all')
 
-    year  = 2016
-    month = 5
-    day   = 1
     lat   = 51.971
     lon   = 4.927
-    ERA_data = '/home/scratch1/meteo_data/ERA5/'
+    path  = '/Users/bart/meteo/data/ERA5/LS2D/'
 
-    e5 = Read_ERA(lat, lon, year, month, day, ERA_data, 'cabauw')
-    e5.calculate_forcings(n_av=1)
+    start = datetime.datetime(year=2016, month=5, day=1, hour=5)
+    end   = datetime.datetime(year=2016, month=5, day=2, hour=23, minute=45)
+
+    e5 = Read_ERA(lat, lon, start, end, path, 'cabauw')
+    #e5.calculate_forcings(n_av=1)

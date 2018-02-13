@@ -19,7 +19,6 @@
 
 import datetime
 
-
 # One day datetime offset
 one_day = datetime.timedelta(days=1)
 
@@ -55,3 +54,10 @@ def get_required_forecast(start, end):
     dates = [first_forecast + i*one_day for i in range((last_forecast-first_forecast).days + 1)]
 
     return dates
+
+
+def lower_to_hour(time):
+    time_out = datetime.datetime(time.year, time.month, time.day, time.hour)
+    if time.minute != 0 or time.second != 0:
+        print('Changed {} to {}'.format(time, time_out))
+    return time_out
