@@ -204,9 +204,9 @@ if __name__ == "__main__":
     lon   = 4.927
     size  = 2
     case  = 'cabauw'
-    path  = '/home/scratch1/meteo_data/ERA5/LS2D/'
+    #path  = '/home/scratch1/meteo_data/ERA5/LS2D/'
     #path  = '/nobackup/users/stratum/ERA5/LS2D/'
-    #path = ''
+    path  = '/Users/bart/meteo/data/ERA5/LS2D/'
 
     start = datetime.datetime(year=2016, month=6, day=1, hour=0)
     end   = datetime.datetime(year=2016, month=6, day=1, hour=0)
