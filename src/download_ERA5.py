@@ -17,6 +17,7 @@
 # along with LS2D.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+# Standard Python packages
 import sys
 import os
 import datetime
@@ -28,6 +29,8 @@ try:
 except:
     sys.exit('ERROR: Can\'t find the ECMWF Python api....\nSee https://software.ecmwf.int/wiki/display/WEBAPI/ECMWF+Web+API+Home')
 
+# Custom tools (in src subdirectory)
+import time_tools as tt
 
 def get_download_path(year, month, day, path, case, type):
     """
@@ -137,24 +140,10 @@ def download_ERA5_period(start, end, lat, lon, size, path, case):
 
     print('Dowloading ERA5 for period: {} to {}'.format(start, end))
 
-    # One day datetime offset
-    one_day = datetime.timedelta(days=1)
 
-    # First analysis file and last forecast file always equals the start/end date:
-    first_analysis = datetime.datetime(start.year, start.month, start.day)
-    last_forecast  = datetime.datetime(end.year,   end.month,   end.day  )
-
-    # If end time is after 23 UTC, include next day for the analysis files
-    if end.hour == 23 and end.minute > 0:
-        last_analysis = datetime.datetime(end.year, end.month, end.day) + one_day
-    else:
-        last_analysis = datetime.datetime(end.year, end.month, end.day)
-
-    # If start time is before 06 UTC, include previous day for the forecast files
-    if start.hour >= 6:
-        first_forecast = first_analysis
-    else:
-        first_forecast = first_analysis - one_day
+    # Get list of required forecast and analysis times
+    an_dates = tt.get_required_analysis(start, end)
+    fc_dates = tt.get_required_forecast(start, end)
 
     # Base dictionary to pass to download function. In Python >3.3, multiprocessings Pool() can accept
     # multiple arguments. For now, keep it generic for older versions by passing all arguments inside a dict
@@ -163,9 +152,7 @@ def download_ERA5_period(start, end, lat, lon, size, path, case):
 
     # Loop over all required files, check if there is a local version, if not add to download queue
     # Analysis files:
-    for i in range((last_analysis-first_analysis).days + 1):
-        date = first_analysis + i*one_day
-
+    for date in an_dates:
         for ftype in ['model_an', 'pressure_an', 'surface_an']:
 
             file_name = get_download_path(date.year, date.month, date.day, path, case, ftype)
@@ -178,9 +165,7 @@ def download_ERA5_period(start, end, lat, lon, size, path, case):
                 download_queue.append(settings)
 
     # Forecast files
-    for i in range((last_forecast-first_forecast).days + 1):
-        date = first_forecast + i*one_day
-
+    for date in fc_dates:
         for ftype in ['model_fc']:
 
             file_name = get_download_path(date.year, date.month, date.day, path, case, ftype)
@@ -208,7 +193,8 @@ if __name__ == "__main__":
     #path  = '/nobackup/users/stratum/ERA5/LS2D/'
     path  = '/Users/bart/meteo/data/ERA5/LS2D/'
 
-    start = datetime.datetime(year=2016, month=6, day=1, hour=0)
-    end   = datetime.datetime(year=2016, month=6, day=1, hour=0)
+    start = datetime.datetime(year=2016, month=6, day=1, hour=5)
+    end   = datetime.datetime(year=2016, month=6, day=1, hour=23, minute=30)
 
     download_ERA5_period(start, end, lat, lon, size, path, case)
+
