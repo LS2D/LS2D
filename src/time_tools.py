@@ -59,5 +59,5 @@ def get_required_forecast(start, end):
 def lower_to_hour(time):
     time_out = datetime.datetime(time.year, time.month, time.day, time.hour)
     if time.minute != 0 or time.second != 0:
-        print('Changed {} to {}'.format(time, time_out))
+        print('NOTE: changed time from {} to {}'.format(time, time_out))
     return time_out
