@@ -29,6 +29,7 @@ import datetime
 import spatial_tools as st
 import time_tools as tt
 from IFS_tools import IFS_tools
+from messages import *
 
 def get_download_path(year, month, day, path, case, type):
     """
@@ -53,7 +54,7 @@ class Read_ERA:
         Read all the required fields to memory
         """
 
-        print('Reading ERA5 from {} to {}'.format(start, end))
+        header('Reading ERA5 from {} to {}'.format(start, end))
 
         # For now (?), only start and end at full hours
         start = tt.lower_to_hour(start)
@@ -116,8 +117,8 @@ class Read_ERA:
 
         # Some debugging output
         distance = st.haversine(self.lons[self.i], self.lats[self.j], lon, lat)
-        print('Using lat/lon = {0:.2f}/{1:.2f} (requested = {2:.2f}/{3:.2f}), distance = {4:.1f} km'\
-                .format(self.lats[self.j], self.lons[self.i], lat, lon, distance/1000.))
+        message('Using nearest lat/lon = {0:.2f}/{1:.2f} (requested = {2:.2f}/{3:.2f}), distance = {4:.1f} km'\
+                  .format(self.lats[self.j], self.lons[self.i], lat, lon, distance/1000.))
 
         # Read the full fields, reversing (flip) the height axis from top-to-bottom to bottom-to-top
         # ------------------------------
@@ -182,73 +183,74 @@ class Read_ERA:
 
         self.fc  = 2 * 7.2921e-5 * np.sin(np.deg2rad(lat))                         # Coriolis parameter
 
-#    def calculate_forcings(self, n_av=1):
-#        """
-#        Calculate the advective tendencies, geostrophic wind, ....
-#        """
-#
-#        # Slicing tuples to calculate means
-#        center4d = np.s_[:, :, self.j-n_av:self.j+n_av+1, self.i-n_av:self.i+n_av+1] 
-#        center3d = np.s_[:,    self.j-n_av:self.j+n_av+1, self.i-n_av:self.i+n_av+1] 
-#
-#        # Slicing of boxes east, west, north and south of main domain
-#        box_size = 2*n_av+1
-#        east  = np.s_[:, :, self.j-n_av:self.j+n_av+1,  self.i+1:self.i+box_size+1]
-#        west  = np.s_[:, :, self.j-n_av:self.j+n_av+1,  self.i-box_size:self.i    ]
-#        north = np.s_[:, :, self.j-box_size:self.j,     self.i-n_av:self.i+n_av+1 ]
-#        south = np.s_[:, :, self.j+1:self.j+box_size+1, self.i-n_av:self.i+n_av+1 ]
-#
-#        # 1. Main domain (location +/- n_av grid points)
-#        self.z_mean   = self.z   [center4d].mean(axis=(2,3))
-#        self.p_mean   = self.p   [center4d].mean(axis=(2,3))
-#        self.thl_mean = self.thl [center4d].mean(axis=(2,3))
-#        self.qt_mean  = self.qt  [center4d].mean(axis=(2,3))
-#        self.u_mean   = self.u   [center4d].mean(axis=(2,3))
-#        self.v_mean   = self.v   [center4d].mean(axis=(2,3))
-#        self.U_mean   = self.U   [center4d].mean(axis=(2,3))
-#        self.wls_mean = self.wls [center4d].mean(axis=(2,3))
-#        self.rho_mean = self.rho [center4d].mean(axis=(2,3))
-#
-#        self.ps_mean  = self.ps  [center3d].mean(axis=(1,2))
-#        self.wth_mean = self.wths[center3d].mean(axis=(1,2))
-#        self.wq_mean  = self.wqs [center3d].mean(axis=(1,2))
-#        self.ps_mean  = self.ps  [center3d].mean(axis=(1,2))
-#        self.cc_mean  = self.cc  [center3d].mean(axis=(1,2))
-#
-#        # 2. Calculate advective tendencies
-#        # Distance east-west and north_south of boxes
-#        distance_WE = st.dlon(self.lons[self.i-n_av-1], self.lons[self.i+n_av+1], self.lats[self.j]) 
-#        distance_NS = st.dlat(self.lats[self.j+n_av+1], self.lats[self.j-n_av-1])
-#
-#        # Liquid water potential temperature
-#        self.thl_advec_x = -self.u_mean * (self.thl[east] .mean(axis=(2,3)) - self.thl[west ].mean(axis=(2,3))) / distance_WE
-#        self.thl_advec_y = -self.v_mean * (self.thl[north].mean(axis=(2,3)) - self.thl[south].mean(axis=(2,3))) / distance_NS
-#        self.thl_advec   = self.thl_advec_x + self.thl_advec_y
-#
-#        # Total specific humidity
-#        self.qt_advec_x = -self.u_mean * (self.qt[east] .mean(axis=(2,3)) - self.qt[west ].mean(axis=(2,3))) / distance_WE
-#        self.qt_advec_y = -self.v_mean * (self.qt[north].mean(axis=(2,3)) - self.qt[south].mean(axis=(2,3))) / distance_NS
-#        self.qt_advec   = self.qt_advec_x + self.qt_advec_y
-#
-#        # Momentum
-#        self.u_advec_x = -self.u_mean * (self.u[east] .mean(axis=(2,3)) - self.u[west ].mean(axis=(2,3))) / distance_WE
-#        self.u_advec_y = -self.v_mean * (self.u[north].mean(axis=(2,3)) - self.u[south].mean(axis=(2,3))) / distance_NS
-#        self.u_advec   = self.u_advec_x + self.u_advec_y
-#
-#        self.v_advec_x = -self.u_mean * (self.v[east] .mean(axis=(2,3)) - self.v[west ].mean(axis=(2,3))) / distance_WE
-#        self.v_advec_y = -self.v_mean * (self.v[north].mean(axis=(2,3)) - self.v[south].mean(axis=(2,3))) / distance_NS
-#        self.v_advec   = self.v_advec_x + self.v_advec_y
-#
-#        # 3. Geostrophic wind (gradient geopotential height on constant pressure levels
-#        ug_p = -IFS_tools.grav / self.fc * (self.z_p[north].mean(axis=(2,3)) - self.z_p[south].mean(axis=(2,3))) / distance_NS
-#        vg_p =  IFS_tools.grav / self.fc * (self.z_p[east ].mean(axis=(2,3)) - self.z_p[west ].mean(axis=(2,3))) / distance_WE
-#
-#        # Interpolate geostrophic wind onto model grid. Use Scipy's interpolation, as it can extrapolate (in case ps > 1000 hPa)
-#        self.ug = np.zeros_like(self.p_mean)
-#        self.vg = np.zeros_like(self.p_mean)
-#        for t in range(self.ntime):
-#            self.ug[t,:] = interpolate.interp1d(self.p_p, ug_p[t,:], fill_value='extrapolate')(self.p_mean[t,:])
-#            self.vg[t,:] = interpolate.interp1d(self.p_p, vg_p[t,:], fill_value='extrapolate')(self.p_mean[t,:])
+    def calculate_forcings(self, n_av=1):
+        """
+        Calculate the advective tendencies, geostrophic wind, ....
+        """
+        message('Calculating large scale forcings')
+
+        # Slicing tuples to calculate means
+        center4d = np.s_[:, :, self.j-n_av:self.j+n_av+1, self.i-n_av:self.i+n_av+1] 
+        center3d = np.s_[:,    self.j-n_av:self.j+n_av+1, self.i-n_av:self.i+n_av+1] 
+
+        # Slicing of boxes east, west, north and south of main domain
+        box_size = 2*n_av+1
+        east  = np.s_[:, :, self.j-n_av:self.j+n_av+1,  self.i+1:self.i+box_size+1]
+        west  = np.s_[:, :, self.j-n_av:self.j+n_av+1,  self.i-box_size:self.i    ]
+        north = np.s_[:, :, self.j-box_size:self.j,     self.i-n_av:self.i+n_av+1 ]
+        south = np.s_[:, :, self.j+1:self.j+box_size+1, self.i-n_av:self.i+n_av+1 ]
+
+        # 1. Main domain (location +/- n_av grid points)
+        self.z_mean   = self.z   [center4d].mean(axis=(2,3))
+        self.p_mean   = self.p   [center4d].mean(axis=(2,3))
+        self.thl_mean = self.thl [center4d].mean(axis=(2,3))
+        self.qt_mean  = self.qt  [center4d].mean(axis=(2,3))
+        self.u_mean   = self.u   [center4d].mean(axis=(2,3))
+        self.v_mean   = self.v   [center4d].mean(axis=(2,3))
+        self.U_mean   = self.U   [center4d].mean(axis=(2,3))
+        self.wls_mean = self.wls [center4d].mean(axis=(2,3))
+        self.rho_mean = self.rho [center4d].mean(axis=(2,3))
+
+        self.ps_mean  = self.ps  [center3d].mean(axis=(1,2))
+        self.wth_mean = self.wths[center3d].mean(axis=(1,2))
+        self.wq_mean  = self.wqs [center3d].mean(axis=(1,2))
+        self.ps_mean  = self.ps  [center3d].mean(axis=(1,2))
+        self.cc_mean  = self.cc  [center3d].mean(axis=(1,2))
+
+        # 2. Calculate advective tendencies
+        # Distance east-west and north_south of boxes
+        distance_WE = st.dlon(self.lons[self.i-n_av-1], self.lons[self.i+n_av+1], self.lats[self.j]) 
+        distance_NS = st.dlat(self.lats[self.j+n_av+1], self.lats[self.j-n_av-1])
+
+        # Liquid water potential temperature
+        self.thl_advec_x = -self.u_mean * (self.thl[east] .mean(axis=(2,3)) - self.thl[west ].mean(axis=(2,3))) / distance_WE
+        self.thl_advec_y = -self.v_mean * (self.thl[north].mean(axis=(2,3)) - self.thl[south].mean(axis=(2,3))) / distance_NS
+        self.thl_advec   = self.thl_advec_x + self.thl_advec_y
+
+        # Total specific humidity
+        self.qt_advec_x = -self.u_mean * (self.qt[east] .mean(axis=(2,3)) - self.qt[west ].mean(axis=(2,3))) / distance_WE
+        self.qt_advec_y = -self.v_mean * (self.qt[north].mean(axis=(2,3)) - self.qt[south].mean(axis=(2,3))) / distance_NS
+        self.qt_advec   = self.qt_advec_x + self.qt_advec_y
+
+        # Momentum
+        self.u_advec_x = -self.u_mean * (self.u[east] .mean(axis=(2,3)) - self.u[west ].mean(axis=(2,3))) / distance_WE
+        self.u_advec_y = -self.v_mean * (self.u[north].mean(axis=(2,3)) - self.u[south].mean(axis=(2,3))) / distance_NS
+        self.u_advec   = self.u_advec_x + self.u_advec_y
+
+        self.v_advec_x = -self.u_mean * (self.v[east] .mean(axis=(2,3)) - self.v[west ].mean(axis=(2,3))) / distance_WE
+        self.v_advec_y = -self.v_mean * (self.v[north].mean(axis=(2,3)) - self.v[south].mean(axis=(2,3))) / distance_NS
+        self.v_advec   = self.v_advec_x + self.v_advec_y
+
+        # 3. Geostrophic wind (gradient geopotential height on constant pressure levels
+        ug_p = -IFS_tools.grav / self.fc * (self.z_p[north].mean(axis=(2,3)) - self.z_p[south].mean(axis=(2,3))) / distance_NS
+        vg_p =  IFS_tools.grav / self.fc * (self.z_p[east ].mean(axis=(2,3)) - self.z_p[west ].mean(axis=(2,3))) / distance_WE
+
+        # Interpolate geostrophic wind onto model grid. Use Scipy's interpolation, as it can extrapolate (in case ps > 1000 hPa)
+        self.ug = np.zeros_like(self.p_mean)
+        self.vg = np.zeros_like(self.p_mean)
+        for t in range(self.ntime):
+            self.ug[t,:] = interpolate.interp1d(self.p_p, ug_p[t,:], fill_value='extrapolate')(self.p_mean[t,:])
+            self.vg[t,:] = interpolate.interp1d(self.p_p, vg_p[t,:], fill_value='extrapolate')(self.p_mean[t,:])
 
      
 
@@ -263,8 +265,8 @@ if __name__ == '__main__':
     lon   = 4.927
     path  = '/Users/bart/meteo/data/ERA5/LS2D/'
 
-    start = datetime.datetime(year=2016, month=5, day=1, hour=5)
+    start = datetime.datetime(year=2016, month=5, day=1, hour=5, minute=5)
     end   = datetime.datetime(year=2016, month=5, day=2, hour=23, minute=45)
 
     e5 = Read_ERA(lat, lon, start, end, path, 'cabauw')
-    #e5.calculate_forcings(n_av=1)
+    e5.calculate_forcings(n_av=1)

@@ -19,6 +19,8 @@
 
 import datetime
 
+from messages import *
+
 # One day datetime offset
 one_day = datetime.timedelta(days=1)
 
@@ -59,5 +61,5 @@ def get_required_forecast(start, end):
 def lower_to_hour(time):
     time_out = datetime.datetime(time.year, time.month, time.day, time.hour)
     if time.minute != 0 or time.second != 0:
-        print('NOTE: changed time from {} to {}'.format(time, time_out))
+        warning('changed date/time from {} to {}'.format(time, time_out))
     return time_out
