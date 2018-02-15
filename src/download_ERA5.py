@@ -31,6 +31,7 @@ except:
 
 # Custom tools (in src subdirectory)
 import time_tools as tt
+from messages import *
 
 def get_download_path(year, month, day, path, case, type):
     """
@@ -56,9 +57,14 @@ def get_ERA5(settings):
                 ftype : level/forecast/analysis switch (in: [model_an, model_fc, pressure_an, surface_an])
     """
 
-    # Print current request, and mute further output from this function
-    print('Downloading: {} - {}'.format(settings['date'], settings['ftype']))
+    message('Downloading: {} - {}'.format(settings['date'], settings['ftype']))
+
+    # Mute the ECMWF API prints.....
+    old_stdout = sys.stdout
     sys.stdout = open(os.devnull, 'w')
+
+    # Time required download time
+    start = datetime.datetime.now()
 
     # Create new instance of ECMWF Python api
     server = ECMWFDataServer()
@@ -113,6 +119,12 @@ def get_ERA5(settings):
     # Retrieve file
     server.retrieve(request)
 
+    # Restore print
+    sys.stdout = old_stdout
+
+    message('Finished: {} - {} in {}'.format(settings['date'], settings['ftype'], datetime.datetime.now()-start))
+
+
 
 def download_ERA5_period(start, end, lat, lon, size, path, case):
     """
@@ -138,8 +150,10 @@ def download_ERA5_period(start, end, lat, lon, size, path, case):
             Case name used in file name of NetCDF files
     """
 
-    print('Dowloading ERA5 for period: {} to {}'.format(start, end))
+    header('Dowloading ERA5 for period: {} to {}'.format(start, end))
 
+    start = tt.lower_to_hour(start)
+    end   = tt.lower_to_hour(end)
 
     # Get list of required forecast and analysis times
     an_dates = tt.get_required_analysis(start, end)
@@ -158,7 +172,7 @@ def download_ERA5_period(start, end, lat, lon, size, path, case):
             file_name = get_download_path(date.year, date.month, date.day, path, case, ftype)
 
             if os.path.isfile(file_name):
-                print('Found {} - {} local'.format(date, ftype))
+                message('Found {} - {} local'.format(date, ftype))
             else:
                 settings = download_settings.copy()
                 settings.update({'date': date, 'ftype':ftype})
@@ -171,7 +185,7 @@ def download_ERA5_period(start, end, lat, lon, size, path, case):
             file_name = get_download_path(date.year, date.month, date.day, path, case, ftype)
 
             if os.path.isfile(file_name):
-                print('Found {} - {} local'.format(date, ftype))
+                message('Found {} - {} local'.format(date, ftype))
             else:
                 settings = download_settings.copy()
                 settings.update({'date': date, 'ftype':ftype})
@@ -190,10 +204,10 @@ if __name__ == "__main__":
     size  = 2
     case  = 'cabauw'
     #path  = '/home/scratch1/meteo_data/ERA5/LS2D/'
-    #path  = '/nobackup/users/stratum/ERA5/LS2D/'
-    path  = '/Users/bart/meteo/data/ERA5/LS2D/'
+    path  = '/nobackup/users/stratum/ERA5/LS2D/'
+    #path  = '/Users/bart/meteo/data/ERA5/LS2D/'
 
-    start = datetime.datetime(year=2016, month=6, day=1, hour=5)
-    end   = datetime.datetime(year=2016, month=6, day=1, hour=23, minute=30)
+    start = datetime.datetime(year=2016, month=5, day=4, hour=0)
+    end   = datetime.datetime(year=2016, month=5, day=4, hour=23, minute=30)
 
     download_ERA5_period(start, end, lat, lon, size, path, case)
