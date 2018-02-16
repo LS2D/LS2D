@@ -152,6 +152,14 @@ def download_ERA5_period(start, end, lat, lon, size, path, case):
 
     header('Dowloading ERA5 for period: {} to {}'.format(start, end))
 
+    # Check if output directory exists, and ends with '/'
+    if not os.path.isdir(path):
+        error('ERA5 output directory \"{}\" does not exist!'.format(path))
+        sys.exit()
+    if path[-1] != '/':
+        path += '/'
+
+    # Round date/time to full hours
     start = tt.lower_to_hour(start)
     end   = tt.lower_to_hour(end)
 

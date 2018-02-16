@@ -15,7 +15,8 @@ central_lon  = 4.927
 area_size    = 2   # ERA5 area size (lat+/-size, lon+/-size degrees)
 
 case_name    = 'cabauw'
-ERA5_path    = '/Users/bart/meteo/data/ERA5/LS2D/'
+#ERA5_path    = '/Users/bart/meteo/data/ERA5/LS2D/'
+ERA5_path    = '/nobackup/users/stratum/ERA5/LS2D/'
 model        = 'MicroHH'
 LES_path     = '/Users/bart/meteo/models/MicroHH/testbed_cabauw/'
 
