@@ -49,7 +49,7 @@ class Read_ERA:
     """
 
     #def __init__(self, lat, lon, year, month, day, ERA_data, case_name, quiet=False):
-    def __init__(self, lat, lon, start, end, path, case_name, quiet=False):
+    def __init__(self, start, end, lat, lon, path, case_name, quiet=False):
         """
         Read all the required fields to memory
         """
@@ -187,7 +187,7 @@ class Read_ERA:
         """
         Calculate the advective tendencies, geostrophic wind, ....
         """
-        message('Calculating large scale forcings')
+        header('Calculating large-scale forcings')
 
         # Slicing tuples to calculate means
         center4d = np.s_[:, :, self.j-n_av:self.j+n_av+1, self.i-n_av:self.i+n_av+1] 
@@ -252,7 +252,6 @@ class Read_ERA:
             self.ug[t,:] = interpolate.interp1d(self.p_p, ug_p[t,:], fill_value='extrapolate')(self.p_mean[t,:])
             self.vg[t,:] = interpolate.interp1d(self.p_p, vg_p[t,:], fill_value='extrapolate')(self.p_mean[t,:])
 
-     
 
 if __name__ == '__main__':
     """ Test / example, only executed if script is called directly """
@@ -268,5 +267,5 @@ if __name__ == '__main__':
     start = datetime.datetime(year=2016, month=5, day=1, hour=5, minute=5)
     end   = datetime.datetime(year=2016, month=5, day=2, hour=23, minute=45)
 
-    e5 = Read_ERA(lat, lon, start, end, path, 'cabauw')
+    e5 = Read_ERA(start, end, lat, lon, path, 'cabauw')
     e5.calculate_forcings(n_av=1)
