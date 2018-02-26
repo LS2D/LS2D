@@ -82,8 +82,8 @@ class Read_ERA:
 
         # Find start and end time indices
         # ERA5 time is in hours since 1900-01-01; convert `start` and `end` to same units
-        start_h_since = (start - datetime.datetime(1900, 1, 1)).total_seconds()/3600. 
-        end_h_since   = (end   - datetime.datetime(1900, 1, 1)).total_seconds()/3600. 
+        start_h_since = (start - datetime.datetime(1900, 1, 1)).total_seconds()/3600.
+        end_h_since   = (end   - datetime.datetime(1900, 1, 1)).total_seconds()/3600.
 
         t0_an = np.abs(an_time_tmp - start_h_since).argmin()
         t1_an = np.abs(an_time_tmp - end_h_since  ).argmin()
@@ -100,7 +100,7 @@ class Read_ERA:
         self.lons    = fma.variables['longitude'][:]
         self.time    = fma.variables['time'][t_an]
         self.time_fc = fmf.variables['time'][t_fc]
-        
+
         # Check if times are really synced, if not; quit, as things will go very wrong
         assert np.all(self.time == self.time_fc), 'Analysis and forecast times are not synced'
 
@@ -137,10 +137,12 @@ class Read_ERA:
         # Model level forecast data:
 
         # Surface variables:
-        self.Ts  = fsa.variables['skt'] [t_an, :, :]  # Skin temperature (K)
-        self.H   =-fsa.variables['ishf'][t_an, :, :]  # Surface sensible heat flux (W m-2)
-        self.wqs =-fsa.variables['ie']  [t_an, :, :]  # Surface kinematic moisture flux (g kg-1)
-        self.cc  = fsa.variables['tcc'] [t_an, :, :]  # Total cloud cover (-)
+        self.Ts  = fsa.variables['skt'] [t_an, :, :]          # Skin temperature (K)
+        self.H   =-fsa.variables['ishf'][t_an, :, :]          # Surface sensible heat flux (W m-2)
+        self.wqs =-fsa.variables['ie']  [t_an, :, :]          # Surface kinematic moisture flux (g kg-1)
+        self.cc  = fsa.variables['tcc'] [t_an, :, :]          # Total cloud cover (-)
+        self.z0m = fsa.variables['fsr'] [t_an, :, :]          # Surface roughness length (m)
+        self.z0h = np.exp(fsa.variables['flsr'][t_an, :, :])  # Surface roughness length heat (m)
 
         # Pressure level data:
         self.z_p = np.flip(fpa.variables['z'][t_an, :, :, :], axis=1) / IFS_tools.grav  # Geopotential height on pressure levels
@@ -161,8 +163,8 @@ class Read_ERA:
         for t in range(self.ntime):
             for la in range(self.nlat):
                 for lo in range(self.nlon):
-                    self.ph[t,:,la,lo] = IFS_tools.calc_half_level_pressure(self.ps[t,la,lo])                  
-                    self.zh[t,:,la,lo] = IFS_tools.calc_half_level_Zg(self.ph[t,:,la,lo], self.Tv[t,:,la,lo])  
+                    self.ph[t,:,la,lo] = IFS_tools.calc_half_level_pressure(self.ps[t,la,lo])
+                    self.zh[t,:,la,lo] = IFS_tools.calc_half_level_Zg(self.ph[t,:,la,lo], self.Tv[t,:,la,lo])
 
         # Full level pressure and height as interpolation of the half level values
         self.p  = 0.5 * (self.ph[:,1:,:,:] + self.ph[:,:-1:,:])  # Full level pressure (Pa)
@@ -190,8 +192,8 @@ class Read_ERA:
         header('Calculating large-scale forcings')
 
         # Slicing tuples to calculate means
-        center4d = np.s_[:, :, self.j-n_av:self.j+n_av+1, self.i-n_av:self.i+n_av+1] 
-        center3d = np.s_[:,    self.j-n_av:self.j+n_av+1, self.i-n_av:self.i+n_av+1] 
+        center4d = np.s_[:, :, self.j-n_av:self.j+n_av+1, self.i-n_av:self.i+n_av+1]
+        center3d = np.s_[:,    self.j-n_av:self.j+n_av+1, self.i-n_av:self.i+n_av+1]
 
         # Slicing of boxes east, west, north and south of main domain
         box_size = 2*n_av+1
@@ -217,9 +219,12 @@ class Read_ERA:
         self.ps_mean  = self.ps  [center3d].mean(axis=(1,2))
         self.cc_mean  = self.cc  [center3d].mean(axis=(1,2))
 
+        self.z0m_mean = self.z0m [center3d].mean(axis=(1,2))
+        self.z0h_mean = self.z0h [center3d].mean(axis=(1,2))
+
         # 2. Calculate advective tendencies
         # Distance east-west and north_south of boxes
-        distance_WE = st.dlon(self.lons[self.i-n_av-1], self.lons[self.i+n_av+1], self.lats[self.j]) 
+        distance_WE = st.dlon(self.lons[self.i-n_av-1], self.lons[self.i+n_av+1], self.lats[self.j])
         distance_NS = st.dlat(self.lats[self.j+n_av+1], self.lats[self.j-n_av-1])
 
         # Liquid water potential temperature
@@ -241,7 +246,7 @@ class Read_ERA:
         self.v_advec_y = -self.v_mean * (self.v[north].mean(axis=(2,3)) - self.v[south].mean(axis=(2,3))) / distance_NS
         self.v_advec   = self.v_advec_x + self.v_advec_y
 
-        # 3. Geostrophic wind (gradient geopotential height on constant pressure levels
+        # 3. Geostrophic wind (gradient geopotential height on constant pressure levels)
         ug_p = -IFS_tools.grav / self.fc * (self.z_p[north].mean(axis=(2,3)) - self.z_p[south].mean(axis=(2,3))) / distance_NS
         vg_p =  IFS_tools.grav / self.fc * (self.z_p[east ].mean(axis=(2,3)) - self.z_p[west ].mean(axis=(2,3))) / distance_WE
 
@@ -262,7 +267,8 @@ if __name__ == '__main__':
 
     lat   = 51.971
     lon   = 4.927
-    path  = '/Users/bart/meteo/data/ERA5/LS2D/'
+    #path  = '/Users/bart/meteo/data/ERA5/LS2D/'
+    path  = '/nobackup/users/stratum/ERA5/LS2D/'
 
     start = datetime.datetime(year=2016, month=5, day=1, hour=5, minute=5)
     end   = datetime.datetime(year=2016, month=5, day=2, hour=23, minute=45)

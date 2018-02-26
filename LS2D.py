@@ -21,8 +21,8 @@ model        = 'MicroHH'
 LES_path     = '/Users/bart/meteo/models/MicroHH/testbed_cabauw/'
 
 # Start and end date/time of experiment. For now, limited to full hours
-start_date   = datetime(year=2016, month=5, day=1, hour=5)
-end_date     = datetime(year=2016, month=5, day=2, hour=19, minute=23)
+start_date   = datetime(year=2016, month=5, day=4, hour=5)
+end_date     = datetime(year=2016, month=5, day=4, hour=18)
 # ------------------------
 
 # 1. Download the ERA5 data
@@ -39,3 +39,5 @@ if model == 'MicroHH':
     pass
 elif model == 'DALES':
     pass
+
+
