@@ -64,6 +64,10 @@ class Read_ERA:
         an_dates = tt.get_required_analysis(start, end)
         fc_dates = tt.get_required_forecast(start, end)
 
+        # Check if output directory ends with '/'
+        if path[-1] != '/':
+            path += '/'
+
         # Create lists with required files
         an_sfc_files   = [get_download_path(d.year, d.month, d.day, path, case_name, 'surface_an' ) for d in an_dates]
         an_model_files = [get_download_path(d.year, d.month, d.day, path, case_name, 'model_an'   ) for d in an_dates]
