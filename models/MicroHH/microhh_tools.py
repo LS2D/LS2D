@@ -22,7 +22,7 @@ def _int_or_float_or_str(value):
 def _convert_value(value):
     """ Helper function: convert namelist value or list """
     if ',' in value:
-        value = value.split(',') 
+        value = value.split(',')
         return [_int_or_float_or_str(val) for val in value]
     else:
         return _int_or_float_or_str(value)
@@ -32,9 +32,9 @@ def _find_namelist_file():
     """ Helper function: automatically find the .ini file in the current directory """
     namelist_file = glob.glob('*.ini')
     if len(namelist_file) == 0:
-        raise RuntimeError('Can\'t find any .ini files in the current directory!') 
+        raise RuntimeError('Can\'t find any .ini files in the current directory!')
     if len(namelist_file) > 1:
-        raise RuntimeError('There are multiple .ini files: {}'.format(namelist_file)) 
+        raise RuntimeError('There are multiple .ini files: {}'.format(namelist_file))
     else:
         return namelist_file[0]
 
@@ -51,7 +51,7 @@ def _process_endian(endian):
 # -------------------------
 
 class Read_namelist:
-    """ Reads a MicroHH .ini file to memory 
+    """ Reads a MicroHH .ini file to memory
         All available variables are accessible as e.g.:
             nl = Read_namelist()    # with no name specified, it searches for a .ini file in the current dir
             itot = nl['grid']['itot']
@@ -61,7 +61,7 @@ class Read_namelist:
     def __init__(self, namelist_file=None):
         if (namelist_file is None):
             namelist_file = _find_namelist_file()
-        
+
         self.groups = {}   # Dictionary holding all the data
         with open(namelist_file) as f:
             for line in f:
@@ -85,7 +85,7 @@ class Read_namelist:
         return 'Available groups:\n{}'.format(', '.join(self.groups.keys()))
 
 
-def replace_namelist_value(variable, new_value, namelist_file=None):
+def replace_namelist_value(variable, new_value, group=None, namelist_file=None):
     """ Replace a variables value in an existing namelist """
     if namelist_file is None:
         namelist_file = _find_namelist_file()
@@ -93,13 +93,21 @@ def replace_namelist_value(variable, new_value, namelist_file=None):
     with open(namelist_file, "r") as source:
         lines = source.readlines()
     with open(namelist_file, "w") as source:
+        current_group = None
         for line in lines:
-            source.write(re.sub(r'({}).*'.format(variable), r'\1={}'.format(new_value), line))
+            lstrip = line.strip()
+            if len(lstrip)>0 and lstrip[0] == '[' and lstrip[-1] == ']':
+                current_group = lstrip[1:-1]
+
+            if group is None or group==current_group:
+                source.write(re.sub(r'({}).*'.format(variable), r'\1={}'.format(new_value), line))
+            else:
+                source.write(line)
 
 
 class Read_statistics:
     """ Read all the NetCDF statistics
-        Example: 
+        Example:
         f = Read_statistics('drycblles.default.0000000.nc')
         print(f) prints a list with the available variables
         The data can be accessed as either f['th'] or f.th, which returns the numpy array with data
@@ -115,8 +123,8 @@ class Read_statistics:
         self.units      = {}
         self.names      = {}
         self.dimensions = {}
-     
-        # For each variable in the NetCDF file, read all the content and info 
+
+        # For each variable in the NetCDF file, read all the content and info
         for var in f.variables:
             self.data[var]       = f.variables[var].__array__()
             self.units[var]      = f.variables[var].units
@@ -130,7 +138,7 @@ class Read_statistics:
             return self.data[name]
         else:
             raise RuntimeError('Can\'t find variable \"{}\" in statistics file'.format(name))
-    
+
     def __getattr__(self, name):
         if name in self.data.keys():
             return self.data[name]
@@ -142,7 +150,7 @@ class Read_statistics:
 
 
 class Read_grid:
-    """ Read the grid file from MicroHH. 
+    """ Read the grid file from MicroHH.
         If no file name is provided, grid.0000000 from the current directory is read """
     def __init__(self, itot, jtot, ktot, zsize, filename=None, endian='little'):
         self.en  = _process_endian(endian)
@@ -174,11 +182,11 @@ class Read_grid:
 
 
 def read_restart_file(path, itot, jtot, ktot, endian='little'):
-    """ Read a MicroHH restart file into a 3D (or 2D if ktot=1) numpy array 
+    """ Read a MicroHH restart file into a 3D (or 2D if ktot=1) numpy array
         The returned array has the dimensions ordered as [z,y,x] """
 
     en = _process_endian(endian)
-    
+
     f  = open(path, 'rb')
     if (ktot > 1):
         field = np.zeros((ktot, jtot, itot))
@@ -198,24 +206,24 @@ def read_restart_file(path, itot, jtot, ktot, endian='little'):
 def write_restart_file(data, itot, jtot, ktot, path, per_slice=True, endian='little'):
     """ Write a restart file in the format requires by MicroHH.
         The input array should be indexed as [z,y,x] """
-    
+
     en = _process_endian(endian)
 
-    if(per_slice): 
+    if(per_slice):
         # Write level by level (less memory hungry.....)
         fout  = open(path, "wb")
         for k in range(ktot):
             tmp  = data[k,:,:].reshape(itot*jtot)
-            tmp2 = st.pack('{0}{1}d'.format(en, tmp.size), *tmp) 
+            tmp2 = st.pack('{0}{1}d'.format(en, tmp.size), *tmp)
             fout.write(tmp2)
         fout.close()
     else:
         # Write entire field at once (memory hungry....)
         tmp  = data.reshape(data.size)
-        tmp2 = st.pack('{0}{1}d'.format(en, tmp.size), *tmp) 
+        tmp2 = st.pack('{0}{1}d'.format(en, tmp.size), *tmp)
         fout = open(path, "wb")
         fout.write(tmp2)
-        fout.close()  
+        fout.close()
 
 
 def write_output(file_name, variables, n):
@@ -225,7 +233,7 @@ def write_output(file_name, variables, n):
     for var in variables.keys():
         f.write('{0:^21s} '.format(var))
     f.write('\n')
-    
+
     for k in range(n):
         for var in variables.keys():
             f.write('{0:+1.14E} '.format(variables[var][k]))
@@ -242,7 +250,7 @@ def write_time_profs(file_name, z, times, data):
     for time in times:
         f.write('{0:^21.0f} '.format(time))
     f.write('\n')
-    
+
     for k in range(z.size):
         f.write('{0:+1.14E} '.format(z[k]))
         for i in range(times.size):
