@@ -7,8 +7,8 @@ import sys; sys.path.append('/usr/people/stratum/meteo/models/LS2D/src/')
 
 # Import the LS2D specific scripts
 from download_ERA5 import download_ERA5_period
-from read_ERA5 import Read_ERA
-from messages import *
+from read_ERA5     import Read_ERA
+from messages      import *
 
 # Import MicroHH specific tools
 import microhh_tools as mht
@@ -19,7 +19,7 @@ def interp_time(z, ze, arr):
         out[i,:] = np.interp(z, ze[i,:], arr[i,:])
     return out
 
-if __name__ == '__main__':
+if (__name__ == '__main__'):
     # ------------------------
     # Settings
     # ------------------------
@@ -39,8 +39,10 @@ if __name__ == '__main__':
     # Download the ERA5 data (or check whether it is available local)
     download_ERA5_period(start_date, end_date, central_lat, central_lon, area_size, ERA5_path, case_name)
 
-    # Read ERA5, and calculate the large scale forcings for LES
+    # Read ERA5 data
     e5 = Read_ERA(start_date, end_date, central_lat, central_lon, ERA5_path, case_name)
+
+    # Calculate LES forcings, using +/-n_av grid point averages in ERA5
     e5.calculate_forcings(n_av=1)
 
     # Calculate LES time (seconds since start of experiment)
@@ -52,10 +54,12 @@ if __name__ == '__main__':
     nl   = mht.Read_namelist()
     grid = mht.Stretched_grid(nl['grid']['ktot'], 90, 20, 20, 250)     # 128 hrv grid
 
-    # Create nudge factor, controlling where nudging is aplied
-    z0_nudge  = 1500  # Height of transition from 0 to 1 (m)
-    dz_nudge  = 500   # ~Depth of transition layer (m)
-    nudge_fac = 0.5 + 0.5*erf((grid.z-z0_nudge)/(0.25*dz_nudge))  # Nudge factor (-)
+    # Create nudge factor, controlling where nudging is aplied, and time scale
+    tau_nudge = 7200         # Nudge time scale (s)
+    z0_nudge  = 1500         # Starting height of nudging (m)
+    dz_nudge  = 500          # Transition thickness
+    nudge_fac = 0.5 + 0.5*erf((grid.z-z0_nudge)/(0.25*dz_nudge))  # Nudge factor (0-1)
+    nudge_fac /= tau_nudge   # Nudge factor (1/s)
 
     # Interpolate ERA5 onto LES grid
     thl   = interp_time(grid.z, e5.z_mean, e5.thl_mean )
