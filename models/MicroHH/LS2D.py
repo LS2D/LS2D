@@ -1,9 +1,11 @@
 import datetime
 import numpy as np
 from scipy.special import erf
+import sys
+import os
 
 # Add `src` subdirectory of LS2D to Python path
-import sys; sys.path.append('/usr/people/stratum/meteo/models/LS2D/src/')
+sys.path.append('{}/../../src/'.format(os.path.dirname(os.path.abspath(__file__))))
 
 # Import the LS2D specific scripts
 from download_ERA5 import download_ERA5_period
