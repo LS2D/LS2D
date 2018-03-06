@@ -150,7 +150,7 @@ def download_ERA5_period(start, end, lat, lon, size, path, case):
             Case name used in file name of NetCDF files
     """
 
-    header('Dowloading ERA5 for period: {} to {}'.format(start, end))
+    header('Downloading ERA5 for period: {} to {}'.format(start, end))
 
     # Check if output directory exists, and ends with '/'
     if not os.path.isdir(path):
