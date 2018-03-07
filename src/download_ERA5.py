@@ -41,7 +41,7 @@ def get_download_path(year, month, day, path, case, type):
     return "{0:}{1:04d}{2:02d}{3:02d}_{4:}_{5:}.nc".format(path, year, month, day, case, type)
 
 
-def get_ERA5(settings):
+def download_ERA5_file(settings):
     """
     Download ERA5 analysis or forecasts on surface, model or pressure levels
     Requested parameters are hardcoded and chosen for the specific use of LS2D
@@ -59,9 +59,13 @@ def get_ERA5(settings):
 
     message('Downloading: {} - {}'.format(settings['date'], settings['ftype']))
 
-    # Mute the ECMWF API prints.....
+    # File path/name
+    nc_file = get_download_path(settings['date'].year, settings['date'].month, settings['date'].day, settings['path'], settings['case'], settings['ftype'])
+
+    # Write ECMWFapi prints to log file (NetCDF file path/name appended with .log)
+    log_file   = '{}.log'.format(nc_file)
     old_stdout = sys.stdout
-    sys.stdout = open(os.devnull, 'w')
+    sys.stdout = open(log_file, 'w')
 
     # Time required download time
     start = datetime.datetime.now()
@@ -79,7 +83,7 @@ def get_ERA5(settings):
         "grid"    : "0.3/0.3",
         "area"    : "{}/{}/{}/{}".format(settings['lat']+settings['size'], settings['lon']-settings['size'], settings['lat']-settings['size'], settings['lon']+settings['size']),
         "format"  : "netcdf",
-        "target"  : get_download_path(settings['date'].year, settings['date'].month, settings['date'].day, settings['path'], settings['case'], settings['ftype'])
+        "target"  : nc_file
     }
 
     # Update request based on level/analysis/forecast:
@@ -126,7 +130,7 @@ def get_ERA5(settings):
 
 
 
-def download_ERA5_period(start, end, lat, lon, size, path, case):
+def download_ERA5(settings):
     """
     Download all required ERA5 fields for an experiment
     between `starttime` and `endtime`
@@ -150,18 +154,18 @@ def download_ERA5_period(start, end, lat, lon, size, path, case):
             Case name used in file name of NetCDF files
     """
 
-    header('Downloading ERA5 for period: {} to {}'.format(start, end))
+    header('Downloading ERA5 for period: {} to {}'.format(settings['start_date'], settings['end_date']))
 
     # Check if output directory exists, and ends with '/'
-    if not os.path.isdir(path):
-        error('ERA5 output directory \"{}\" does not exist!'.format(path))
+    if not os.path.isdir(settings['ERA5_path']):
+        error('ERA5 output directory \"{}\" does not exist!'.format(settings['ERA5_path']))
         sys.exit()
-    if path[-1] != '/':
-        path += '/'
+    if settings['ERA5_path'][-1] != '/':
+        settings['ERA5_path'] += '/'
 
     # Round date/time to full hours
-    start = tt.lower_to_hour(start)
-    end   = tt.lower_to_hour(end)
+    start = tt.lower_to_hour(settings['start_date'])
+    end   = tt.lower_to_hour(settings['end_date']  )
 
     # Get list of required forecast and analysis times
     an_dates = tt.get_required_analysis(start, end)
@@ -169,7 +173,9 @@ def download_ERA5_period(start, end, lat, lon, size, path, case):
 
     # Base dictionary to pass to download function. In Python >3.3, multiprocessings Pool() can accept
     # multiple arguments. For now, keep it generic for older versions by passing all arguments inside a dict
-    download_settings = {'lat':lat, 'lon':lon, 'size':size, 'path':path, 'case':case}
+    download_settings = {'lat' :settings['central_lat'], 'lon' :settings['central_lon'],
+                         'size':settings['area_size'],   'path':settings['ERA5_path'],
+                         'case':settings['case_name']}
     download_queue = []
 
     # Loop over all required files, check if there is a local version, if not add to download queue
@@ -177,47 +183,46 @@ def download_ERA5_period(start, end, lat, lon, size, path, case):
     for date in an_dates:
         for ftype in ['model_an', 'pressure_an', 'surface_an']:
 
-            file_name = get_download_path(date.year, date.month, date.day, path, case, ftype)
+
+            file_name = get_download_path(date.year, date.month, date.day, settings['ERA5_path'], settings['case_name'], ftype)
 
             if os.path.isfile(file_name):
                 message('Found {} - {} local'.format(date, ftype))
             else:
-                settings = download_settings.copy()
-                settings.update({'date': date, 'ftype':ftype})
-                download_queue.append(settings)
+                settings_tmp = download_settings.copy()
+                settings_tmp.update({'date': date, 'ftype':ftype})
+                download_queue.append(settings_tmp)
 
     # Forecast files
     for date in fc_dates:
         for ftype in ['model_fc']:
 
-            file_name = get_download_path(date.year, date.month, date.day, path, case, ftype)
+            file_name = get_download_path(date.year, date.month, date.day, settings['ERA5_path'], settings['case_name'], ftype)
 
             if os.path.isfile(file_name):
                 message('Found {} - {} local'.format(date, ftype))
             else:
-                settings = download_settings.copy()
-                settings.update({'date': date, 'ftype':ftype})
-                download_queue.append(settings)
+                settings_tmp = download_settings.copy()
+                settings_tmp.update({'date': date, 'ftype':ftype})
+                download_queue.append(settings_tmp)
 
     # Create download Pool with 3 threads (ECMWF allows up to 3 parallel requests):
-    pool = multiprocessing.Pool(processes=1)
-    pool.map(get_ERA5, download_queue)
+    pool = multiprocessing.Pool(processes=3)
+    pool.map(download_ERA5_file, download_queue)
 
 
 if __name__ == "__main__":
     """ Test / example, only executed if script is called directly """
 
-    lat   = 51.971
-    lon   = 4.927
-    size  = 2
-    case  = 'cabauw'
-    #path  = '/home/scratch1/meteo_data/ERA5/LS2D/'
-    path  = '/nobackup/users/stratum/ERA5/LS2D/'
-    #path  = '/Users/bart/meteo/data/ERA5/LS2D/'
+    settings = {
+        'central_lat' : 51.971,
+        'central_lon' : 4.927,
+        'area_size'   : 2,
+        'case_name'   : 'cabauw',
+        'ERA5_path'   : '/nobackup/users/stratum/ERA5/LS2D/',
+        'start_date'  : datetime.datetime(year=2015, month=5, day=4, hour=5),
+        'end_date'    : datetime.datetime(year=2015, month=5, day=4, hour=18)
+        }
 
-    start = datetime.datetime(year=2016, month=5, day=1, hour=0)
-    end   = datetime.datetime(year=2016, month=6, day=1, hour=0)
-
-    download_ERA5_period(start, end, lat, lon, size, path, case)
-
-
+    # Download the ERA5 data (or check whether it is available local)
+    download_ERA5(settings)

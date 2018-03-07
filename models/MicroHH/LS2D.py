@@ -8,43 +8,33 @@ import os
 sys.path.append('{}/../../src/'.format(os.path.dirname(os.path.abspath(__file__))))
 
 # Import the LS2D specific scripts
-from download_ERA5 import download_ERA5_period
+from download_ERA5 import download_ERA5
 from read_ERA5     import Read_ERA
 from messages      import *
 
 # Import MicroHH specific tools
 import microhh_tools as mht
 
-def interp_time(z, ze, arr):
-    out = np.empty((arr.shape[0], z.size))
-    for i in range(arr.shape[0]):
-        out[i,:] = np.interp(z, ze[i,:], arr[i,:])
-    return out
-
 if (__name__ == '__main__'):
-    # ------------------------
-    # Settings
-    # ------------------------
-    central_lat  = 51.971
-    central_lon  = 4.927
-    area_size    = 2   # ERA5 area size (lat+/-size, lon+/-size degrees)
-    case_name    = 'cabauw'
-    ERA5_path    = '/nobackup/users/stratum/ERA5/LS2D/'
 
-    # Start and end date/time of experiment. For now, limited to full hours
-    start_date   = datetime.datetime(year=2016, month=5, day=4, hour=5)
-    end_date     = datetime.datetime(year=2016, month=5, day=4, hour=18)
-    # ------------------------
-    # End settings
-    # ------------------------
+    # Dictionary with settings
+    settings = {
+        'central_lat' : 51.971,
+        'central_lon' : 4.927,
+        'area_size'   : 2,
+        'case_name'   : 'cabauw',
+        'ERA5_path'   : '/nobackup/users/stratum/ERA5/LS2D/'
+        'log_path'    : '/dev/null',
+        'start_date'  : datetime.datetime(year=2016, month=5, day=4, hour=5),
+        'end_date'    : datetime.datetime(year=2016, month=5, day=4, hour=18)}
 
     # Download the ERA5 data (or check whether it is available local)
-    download_ERA5_period(start_date, end_date, central_lat, central_lon, area_size, ERA5_path, case_name)
+    download_ERA5(settings)
 
-    # Read ERA5 data
-    e5 = Read_ERA(start_date, end_date, central_lat, central_lon, ERA5_path, case_name)
 
-    # Calculate LES forcings, using +/-n_av grid point averages in ERA5
+    """
+    # Read ERA5 data, and calculate LES forcings, using +/-n_av grid point averages in ERA5
+    e5 = Read_ERA(settings)
     e5.calculate_forcings(n_av=1)
 
     # Calculate LES time (seconds since start of experiment)
@@ -64,6 +54,12 @@ if (__name__ == '__main__'):
     nudge_fac /= tau_nudge   # Nudge factor (1/s)
 
     # Interpolate ERA5 onto LES grid
+    def interp_time(z, ze, arr):
+        out = np.empty((arr.shape[0], z.size))
+        for i in range(arr.shape[0]):
+            out[i,:] = np.interp(z, ze[i,:], arr[i,:])
+        return out
+
     thl   = interp_time(grid.z, e5.z_mean, e5.thl_mean )
     qt    = interp_time(grid.z, e5.z_mean, e5.qt_mean  )
     u     = interp_time(grid.z, e5.z_mean, e5.u_mean   )
@@ -114,3 +110,4 @@ if (__name__ == '__main__'):
     mht.replace_namelist_value('vtrans',  v.mean())
     mht.replace_namelist_value('z0m',     e5.z0m_mean[0])
     mht.replace_namelist_value('z0h',     e5.z0h_mean[0])
+    """
