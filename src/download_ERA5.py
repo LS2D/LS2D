@@ -24,21 +24,16 @@ import datetime
 from multiprocessing import Process
 import multiprocessing
 
-try:
-    from ecmwfapi import ECMWFDataServer
-except:
-    sys.exit('ERROR: Can\'t find the ECMWF Python api....\nSee https://software.ecmwf.int/wiki/display/WEBAPI/ECMWF+Web+API+Home')
-
 # Custom tools (in src subdirectory)
 import time_tools as tt
 from messages import *
+from conventions import ERA5_file_path
 
-def get_download_path(year, month, day, path, case, type):
-    """
-    Return saving path of files in format `path/yyyymmdd_case_type.nc`
-    """
-
-    return "{0:}{1:04d}{2:02d}{3:02d}_{4:}_{5:}.nc".format(path, year, month, day, case, type)
+try:
+    from ecmwfapi import ECMWFDataServer
+except:
+    error('Can\'t find the ECMWF Python api....\nSee https://software.ecmwf.int/wiki/display/WEBAPI/ECMWF+Web+API+Home')
+    sys.exit()
 
 
 def download_ERA5_file(settings):
@@ -60,7 +55,8 @@ def download_ERA5_file(settings):
     message('Downloading: {} - {}'.format(settings['date'], settings['ftype']))
 
     # File path/name
-    nc_file = get_download_path(settings['date'].year, settings['date'].month, settings['date'].day, settings['path'], settings['case'], settings['ftype'])
+    nc_file = ERA5_file_path(settings['date'].year, settings['date'].month, settings['date'].day, 
+                             settings['path'], settings['case'], settings['ftype'])
 
     # Write ECMWFapi prints to log file (NetCDF file path/name appended with .log)
     log_file   = '{}.log'.format(nc_file)
@@ -184,7 +180,7 @@ def download_ERA5(settings):
         for ftype in ['model_an', 'pressure_an', 'surface_an']:
 
 
-            file_name = get_download_path(date.year, date.month, date.day, settings['ERA5_path'], settings['case_name'], ftype)
+            file_name = ERA5_file_path(date.year, date.month, date.day, settings['ERA5_path'], settings['case_name'], ftype)
 
             if os.path.isfile(file_name):
                 message('Found {} - {} local'.format(date, ftype))
@@ -197,7 +193,7 @@ def download_ERA5(settings):
     for date in fc_dates:
         for ftype in ['model_fc']:
 
-            file_name = get_download_path(date.year, date.month, date.day, settings['ERA5_path'], settings['case_name'], ftype)
+            file_name = ERA5_file_path(date.year, date.month, date.day, settings['ERA5_path'], settings['case_name'], ftype)
 
             if os.path.isfile(file_name):
                 message('Found {} - {} local'.format(date, ftype))
@@ -219,9 +215,10 @@ if __name__ == "__main__":
         'central_lon' : 4.927,
         'area_size'   : 2,
         'case_name'   : 'cabauw',
-        'ERA5_path'   : '/nobackup/users/stratum/ERA5/LS2D/',
-        'start_date'  : datetime.datetime(year=2015, month=5, day=4, hour=5),
-        'end_date'    : datetime.datetime(year=2015, month=5, day=4, hour=18)
+        #'ERA5_path'   : '/nobackup/users/stratum/ERA5/LS2D/',
+        'ERA5_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',
+        'start_date'  : datetime.datetime(year=2016, month=5, day=4, hour=5),
+        'end_date'    : datetime.datetime(year=2016, month=5, day=4, hour=18)
         }
 
     # Download the ERA5 data (or check whether it is available local)

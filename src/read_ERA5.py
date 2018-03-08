@@ -29,14 +29,9 @@ import datetime
 import spatial_tools as st
 import time_tools as tt
 from IFS_tools import IFS_tools
+from conventions import ERA5_file_path
 from messages import *
 
-def get_download_path(year, month, day, path, case, type):
-    """
-    Return saving path of files in format `path/yyyymmdd_case_type.nc`
-    """
-
-    return "{0:}{1:04d}{2:02d}{3:02d}_{4:}_{5:}.nc".format(path, year, month, day, case, type)
 
 def format_h_since(hours):
     return datetime.timedelta(hours=float(hours)) + datetime.datetime(1900, 1, 1)
@@ -69,10 +64,10 @@ class Read_ERA:
             path += '/'
 
         # Create lists with required files
-        an_sfc_files   = [get_download_path(d.year, d.month, d.day, path, case_name, 'surface_an' ) for d in an_dates]
-        an_model_files = [get_download_path(d.year, d.month, d.day, path, case_name, 'model_an'   ) for d in an_dates]
-        an_pres_files  = [get_download_path(d.year, d.month, d.day, path, case_name, 'pressure_an') for d in an_dates]
-        fc_model_files = [get_download_path(d.year, d.month, d.day, path, case_name, 'model_fc'   ) for d in fc_dates]
+        an_sfc_files   = [ERA5_file_path(d.year, d.month, d.day, path, case_name, 'surface_an' ) for d in an_dates]
+        an_model_files = [ERA5_file_path(d.year, d.month, d.day, path, case_name, 'model_an'   ) for d in an_dates]
+        an_pres_files  = [ERA5_file_path(d.year, d.month, d.day, path, case_name, 'pressure_an') for d in an_dates]
+        fc_model_files = [ERA5_file_path(d.year, d.month, d.day, path, case_name, 'model_fc'   ) for d in fc_dates]
 
         # Open NetCDF files: MFDataset automatically merges the files / time dimensions
         fsa = nc4.MFDataset(an_sfc_files  )
