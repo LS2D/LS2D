@@ -43,31 +43,30 @@ class Read_ERA:
     and optionally calculate the LES/SCM forcings
     """
 
-    #def __init__(self, lat, lon, year, month, day, ERA_data, case_name, quiet=False):
-    def __init__(self, start, end, lat, lon, path, case_name, quiet=False):
+    def __init__(self, settings):
         """
         Read all the required fields to memory
         """
 
-        header('Reading ERA5 from {} to {}'.format(start, end))
-
         # For now (?), only start and end at full hours
-        start = tt.lower_to_hour(start)
-        end   = tt.lower_to_hour(end)
+        start = tt.lower_to_hour(settings['start_date'])
+        end   = tt.lower_to_hour(settings['end_date']  )
+
+        header('Reading ERA5 from {} to {}'.format(start, end))
 
         # Get list of required forecast and analysis times
         an_dates = tt.get_required_analysis(start, end)
         fc_dates = tt.get_required_forecast(start, end)
 
         # Check if output directory ends with '/'
-        if path[-1] != '/':
-            path += '/'
+        if settings['ERA5_path'][-1] != '/':
+            settings['ERA5_path'] += '/'
 
         # Create lists with required files
-        an_sfc_files   = [ERA5_file_path(d.year, d.month, d.day, path, case_name, 'surface_an' ) for d in an_dates]
-        an_model_files = [ERA5_file_path(d.year, d.month, d.day, path, case_name, 'model_an'   ) for d in an_dates]
-        an_pres_files  = [ERA5_file_path(d.year, d.month, d.day, path, case_name, 'pressure_an') for d in an_dates]
-        fc_model_files = [ERA5_file_path(d.year, d.month, d.day, path, case_name, 'model_fc'   ) for d in fc_dates]
+        an_sfc_files   = [ERA5_file_path(d.year, d.month, d.day, settings['ERA5_path'], settings['case_name'], 'surface_an' ) for d in an_dates]
+        an_model_files = [ERA5_file_path(d.year, d.month, d.day, settings['ERA5_path'], settings['case_name'], 'model_an'   ) for d in an_dates]
+        an_pres_files  = [ERA5_file_path(d.year, d.month, d.day, settings['ERA5_path'], settings['case_name'], 'pressure_an') for d in an_dates]
+        fc_model_files = [ERA5_file_path(d.year, d.month, d.day, settings['ERA5_path'], settings['case_name'], 'model_fc'   ) for d in fc_dates]
 
         # Open NetCDF files: MFDataset automatically merges the files / time dimensions
         fsa = nc4.MFDataset(an_sfc_files  )
@@ -111,13 +110,13 @@ class Read_ERA:
         self.ntime = self.time.size
 
         # Find nearest location on (regular lat/lon) grid
-        self.i = np.abs(self.lons - lon).argmin()
-        self.j = np.abs(self.lats - lat).argmin()
+        self.i = np.abs(self.lons - settings['central_lon']).argmin()
+        self.j = np.abs(self.lats - settings['central_lat']).argmin()
 
         # Some debugging output
-        distance = st.haversine(self.lons[self.i], self.lats[self.j], lon, lat)
+        distance = st.haversine(self.lons[self.i], self.lats[self.j], settings['central_lon'], settings['central_lat'])
         message('Using nearest lat/lon = {0:.2f}/{1:.2f} (requested = {2:.2f}/{3:.2f}), distance = {4:.1f} km'\
-                  .format(self.lats[self.j], self.lons[self.i], lat, lon, distance/1000.))
+                  .format(self.lats[self.j], self.lons[self.i], settings['central_lat'], settings['central_lon'], distance/1000.))
 
         # Read the full fields, reversing (flip) the height axis from top-to-bottom to bottom-to-top
         # ------------------------------
@@ -182,7 +181,7 @@ class Read_ERA:
         self.exns = IFS_tools.calc_exner(self.ps)                                  # Exner at surface (-)
         self.wths = self.H / (self.rhos * IFS_tools.cpd * self.exns)               # Surface kinematic heat flux (K m s-1)
 
-        self.fc  = 2 * 7.2921e-5 * np.sin(np.deg2rad(lat))                         # Coriolis parameter
+        self.fc  = 2 * 7.2921e-5 * np.sin(np.deg2rad(settings['central_lat']))      # Coriolis parameter
 
     def calculate_forcings(self, n_av=1):
         """
@@ -260,17 +259,16 @@ class Read_ERA:
 if __name__ == '__main__':
     """ Test / example, only executed if script is called directly """
 
-    import matplotlib.pyplot as pl
-    pl.ion()
-    pl.close('all')
+    settings = {
+        'central_lat' : 51.971,
+        'central_lon' : 4.927,
+        'area_size'   : 2,
+        'case_name'   : 'cabauw',
+        #'ERA5_path'   : '/nobackup/users/stratum/ERA5/LS2D/',
+        'ERA5_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',
+        'start_date'  : datetime.datetime(year=2016, month=5, day=4, hour=5),
+        'end_date'    : datetime.datetime(year=2016, month=5, day=4, hour=18)
+        }
 
-    lat   = 51.971
-    lon   = 4.927
-    #path  = '/Users/bart/meteo/data/ERA5/LS2D/'
-    path  = '/nobackup/users/stratum/ERA5/LS2D/'
-
-    start = datetime.datetime(year=2016, month=5, day=1, hour=5, minute=5)
-    end   = datetime.datetime(year=2016, month=5, day=2, hour=23, minute=45)
-
-    e5 = Read_ERA(start, end, lat, lon, path, 'cabauw')
+    e5 = Read_ERA(settings)
     e5.calculate_forcings(n_av=1)
