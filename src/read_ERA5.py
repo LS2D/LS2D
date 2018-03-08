@@ -94,10 +94,12 @@ class Read_ERA:
         t_fc = np.s_[t0_fc:t1_fc+1]
 
         # Read spatial and time variables
-        self.lats    = fma.variables['latitude'][:]
-        self.lons    = fma.variables['longitude'][:]
-        self.time    = fma.variables['time'][t_an]
-        self.time_fc = fmf.variables['time'][t_fc]
+        self.lats     = fma.variables['latitude'][:]
+        self.lons     = fma.variables['longitude'][:]
+        self.time     = fma.variables['time'][t_an]
+        self.time_fc  = fmf.variables['time'][t_fc]
+
+        self.time_sec = (self.time-self.time[0])*3600.
 
         # Check if times are really synced, if not; quit, as things will go very wrong
         assert np.all(self.time == self.time_fc), 'Analysis and forecast times are not synced'

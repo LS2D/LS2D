@@ -10,7 +10,7 @@ sys.path.append('{}/../../src/'.format(os.path.dirname(os.path.abspath(__file__)
 # Import the LS2D specific scripts
 from download_ERA5 import download_ERA5
 from read_ERA5     import Read_ERA
-from messages      import *
+from messages      import header, message
 
 # Import MicroHH specific tools
 import microhh_tools as mht
@@ -23,25 +23,22 @@ if (__name__ == '__main__'):
         'central_lon' : 4.927,
         'area_size'   : 2,
         'case_name'   : 'cabauw',
-        'ERA5_path'   : '/nobackup/users/stratum/ERA5/LS2D/'
-        'log_path'    : '/dev/null',
+        #'ERA5_path'   : '/nobackup/users/stratum/ERA5/LS2D/',
+        'ERA5_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',
         'start_date'  : datetime.datetime(year=2016, month=5, day=4, hour=5),
-        'end_date'    : datetime.datetime(year=2016, month=5, day=4, hour=18)}
+        'end_date'    : datetime.datetime(year=2016, month=5, day=4, hour=18)
+        }
+
+    header('Creating LES input')
 
     # Download the ERA5 data (or check whether it is available local)
     download_ERA5(settings)
 
-
-    """
     # Read ERA5 data, and calculate LES forcings, using +/-n_av grid point averages in ERA5
     e5 = Read_ERA(settings)
     e5.calculate_forcings(n_av=1)
 
-    # Calculate LES time (seconds since start of experiment)
-    LES_time = (e5.time - e5.time[0])*3600.
-
     # Read MicroHH namelist and create stretched vertical grid
-    header('Creating LES input')
 
     nl   = mht.Read_namelist()
     grid = mht.Stretched_grid(nl['grid']['ktot'], 90, 20, 20, 250)     # 128 hrv grid
@@ -75,39 +72,40 @@ if (__name__ == '__main__'):
     # ----------------------
     # Write MicroHH input
     # ----------------------
-    # 1. Initial profiles
-    variables = {'z':grid.z, 'thl':thl[0,:], 'qt':qt[0,:], 'u':u[0,:], 'v':v[0,:], 'nudgefac':nudge_fac}
-    mht.write_output('testbed.prof', variables, grid.z.size)
+    message('Writing forcings as LES input')
 
-    # 2. Time varying nudging profiles
-    mht.write_time_profs('thlnudge.timeprof', grid.z, LES_time, thl)
-    mht.write_time_profs('qtnudge.timeprof',  grid.z, LES_time, qt )
-    mht.write_time_profs('unudge.timeprof',   grid.z, LES_time, u  )
-    mht.write_time_profs('vnudge.timeprof',   grid.z, LES_time, v  )
-
-    # 3. Time varying large scale advective tendencies
-    mht.write_time_profs('thlls.timeprof', grid.z, LES_time, thlls)
-    mht.write_time_profs('qtls.timeprof',  grid.z, LES_time, qtls )
-    mht.write_time_profs('uls.timeprof',   grid.z, LES_time, uls  )
-    mht.write_time_profs('vls.timeprof',   grid.z, LES_time, vls  )
-
-    # 4. Time varying geostrophic wind
-    mht.write_time_profs('ug.timeprof', grid.z, LES_time, ug)
-    mht.write_time_profs('vg.timeprof', grid.z, LES_time, vg)
-
-    # 5. Time varying subsidence
-    mht.write_time_profs('wls.timeprof', grid.z, LES_time, w)
-
-    # 6. Time varying surface variables
-    variables = {'t':LES_time, 'sbot[thl]':e5.wth_mean, 'sbot[qt]':e5.wq_mean, 'pbot':e5.ps_mean}
-    mht.write_output('testbed.time', variables, LES_time.size)
-
-    # 7. Update namelist variables
+    # 1. Update namelist variables
     mht.replace_namelist_value('zsize',   grid.zsize)
-    mht.replace_namelist_value('endtime', LES_time.max())
+    mht.replace_namelist_value('endtime', e5.time_sec.max())
     mht.replace_namelist_value('fc',      e5.fc)
     mht.replace_namelist_value('utrans',  u.mean())
     mht.replace_namelist_value('vtrans',  v.mean())
     mht.replace_namelist_value('z0m',     e5.z0m_mean[0])
     mht.replace_namelist_value('z0h',     e5.z0h_mean[0])
-    """
+
+    # 2. Initial profiles
+    variables = {'z':grid.z, 'thl':thl[0,:], 'qt':qt[0,:], 'u':u[0,:], 'v':v[0,:], 'nudgefac':nudge_fac}
+    mht.write_output('testbed.prof', variables, grid.z.size)
+
+    # 3. Time varying nudging profiles
+    mht.write_time_profs('thlnudge.timeprof', grid.z, e5.time_sec, thl)
+    mht.write_time_profs('qtnudge.timeprof',  grid.z, e5.time_sec, qt )
+    mht.write_time_profs('unudge.timeprof',   grid.z, e5.time_sec, u  )
+    mht.write_time_profs('vnudge.timeprof',   grid.z, e5.time_sec, v  )
+
+    # 4. Time varying large scale advective tendencies
+    mht.write_time_profs('thlls.timeprof',    grid.z, e5.time_sec, thlls)
+    mht.write_time_profs('qtls.timeprof',     grid.z, e5.time_sec, qtls )
+    mht.write_time_profs('uls.timeprof',      grid.z, e5.time_sec, uls  )
+    mht.write_time_profs('vls.timeprof',      grid.z, e5.time_sec, vls  )
+
+    # 5. Time varying geostrophic wind
+    mht.write_time_profs('ug.timeprof',       grid.z, e5.time_sec, ug)
+    mht.write_time_profs('vg.timeprof',       grid.z, e5.time_sec, vg)
+
+    # 6. Time varying subsidence
+    mht.write_time_profs('wls.timeprof',      grid.z, e5.time_sec, w)
+
+    # 7. Time varying surface variables
+    variables = {'t':e5.time_sec, 'sbot[thl]':e5.wth_mean, 'sbot[qt]':e5.wq_mean, 'pbot':e5.ps_mean}
+    mht.write_output('testbed.time', variables, e5.time_sec.size)
