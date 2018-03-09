@@ -136,9 +136,9 @@ class Read_ERA:
 
         # Model level forecast data:
         dTdt_sw    = np.flip(fmf.variables['mttswr']  [t_an, :, :, :], axis=1)  # Mean temperature tendency due to SW radiation (K s-1)
-        dTdt_lw    = np.flip(fmf.variables['mttswr']  [t_an, :, :, :], axis=1)  # Mean temperature tendency due to LW radiation (K s-1)
+        dTdt_lw    = np.flip(fmf.variables['mttlwr']  [t_an, :, :, :], axis=1)  # Mean temperature tendency due to LW radiation (K s-1)
         dTdt_sw_cs = np.flip(fmf.variables['mttswrcs'][t_an, :, :, :], axis=1)  # Mean temperature tendency due to SW radiation (clear sky) (K s-1)
-        dTdt_lw_cs = np.flip(fmf.variables['mttswrcs'][t_an, :, :, :], axis=1)  # Mean temperature tendency due to SW radiation (clear sky) (K s-1)
+        dTdt_lw_cs = np.flip(fmf.variables['mttlwrcs'][t_an, :, :, :], axis=1)  # Mean temperature tendency due to SW radiation (clear sky) (K s-1)
 
         # Surface variables:
         self.Ts  = fsa.variables['skt'] [t_an, :, :]          # Skin temperature (K)
@@ -223,6 +223,11 @@ class Read_ERA:
         self.wls_mean = self.wls [center4d].mean(axis=(2,3))
         self.rho_mean = self.rho [center4d].mean(axis=(2,3))
 
+        self.dthldt_sw_mean    = self.dthldt_sw   [center4d].mean(axis=(2,3))
+        self.dthldt_lw_mean    = self.dthldt_lw   [center4d].mean(axis=(2,3))
+        self.dthldt_sw_cs_mean = self.dthldt_sw_cs[center4d].mean(axis=(2,3))
+        self.dthldt_lw_cs_mean = self.dthldt_lw_cs[center4d].mean(axis=(2,3))
+
         self.ps_mean  = self.ps  [center3d].mean(axis=(1,2))
         self.wth_mean = self.wths[center3d].mean(axis=(1,2))
         self.wq_mean  = self.wqs [center3d].mean(axis=(1,2))
@@ -268,6 +273,83 @@ class Read_ERA:
             self.vg[t,:] = interpolate.interp1d(self.p_p, vg_p[t,:], fill_value='extrapolate')(self.p_mean[t,:])
 
 
+    def plot_forcings(self, zmax=10000):
+        import matplotlib.pyplot as pl
+        pl.close('all')
+
+        # Define colors
+        cc = pl.cm.jet(np.linspace(0,1,self.ntime))
+
+        # ~Index corresponding to zmax
+        kmax = np.abs(self.z_mean[0,:]-zmax).argmin()
+
+        f=pl.figure(figsize=[12,8])
+        f.subplots_adjust(left=0.09, bottom=0.08, right=0.97, top=0.91, wspace=0.29, hspace=0.28)
+
+        # Liquid water potential temperature
+        # ----------------------------------
+        pl.subplot(3,4,1)
+        pl.title('thl')
+        for t in range(self.ntime):
+            pl.plot(self.thl_advec[t,:kmax]*3600, self.z_mean[t,:kmax], color=cc[t], label='{} h'.format(self.time_sec[t]/3600))
+        pl.xlabel('advec (K h-1)')
+        pl.ylabel('z (m)')
+        pl.legend(frameon=False, ncol=self.ntime, loc='lower left',
+                  bbox_to_anchor=(0, 1.1, 1, 0.2), borderaxespad=0, columnspacing=0.5)
+
+        pl.subplot(3,4,5)
+        for t in range(self.ntime):
+            pl.plot(self.dthldt_sw_mean[t,:kmax]*3600, self.z_mean[t,:kmax], color=cc[t])
+        pl.xlabel('short wave (K h-1)')
+        pl.ylabel('z (m)')
+
+        pl.subplot(3,4,9)
+        for t in range(self.ntime):
+            pl.plot(self.dthldt_lw_mean[t,:kmax]*3600, self.z_mean[t,:kmax], color=cc[t])
+        pl.xlabel('long wave (K h-1)')
+        pl.ylabel('z (m)')
+
+        # Specific humidity
+        # ----------------------------------
+        pl.subplot(3,4,2)
+        pl.title('qt')
+        for t in range(self.ntime):
+            pl.plot(self.qt_advec[t,:kmax]*1000*3600, self.z_mean[t,:kmax], color=cc[t])
+        pl.xlabel('advec (g kg-1 h-1)')
+        pl.ylabel('z (m)')
+
+        # U-component wind
+        # ----------------------------------
+        pl.subplot(3,4,3)
+        pl.title('u')
+        for t in range(self.ntime):
+            pl.plot(self.u_advec[t,:kmax]*3600, self.z_mean[t,:kmax], color=cc[t])
+        pl.xlabel('advec (m s-1 h-1)')
+        pl.ylabel('z (m)')
+
+        pl.subplot(3,4,7)
+        for t in range(self.ntime):
+            pl.plot(self.fc*(self.v_mean[t,:kmax]-self.vg[t,:kmax])*3600., self.z_mean[t,:kmax], color=cc[t])
+        pl.xlabel('coriolis (m s-1 h-1)')
+        pl.ylabel('z (m)')
+
+        # V-component wind
+        # ----------------------------------
+        pl.subplot(3,4,4)
+        pl.title('v')
+        for t in range(self.ntime):
+            pl.plot(self.v_advec[t,:kmax]*3600, self.z_mean[t,:kmax], color=cc[t])
+        pl.xlabel('advec (m s-1 h-1)')
+        pl.ylabel('z (m)')
+
+        pl.subplot(3,4,8)
+        for t in range(self.ntime):
+            pl.plot(-self.fc*(self.u_mean[t,:kmax]-self.ug[t,:kmax])*3600., self.z_mean[t,:kmax], color=cc[t])
+        pl.xlabel('coriolis (m s-1 h-1)')
+        pl.ylabel('z (m)')
+
+
+
 if __name__ == '__main__':
     """ Test / example, only executed if script is called directly """
 
@@ -276,11 +358,12 @@ if __name__ == '__main__':
         'central_lon' : 4.927,
         'area_size'   : 2,
         'case_name'   : 'cabauw',
-        #'ERA5_path'   : '/nobackup/users/stratum/ERA5/LS2D/',
-        'ERA5_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',
+        'ERA5_path'   : '/nobackup/users/stratum/ERA5/LS2D/',
+        #'ERA5_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',
         'start_date'  : datetime.datetime(year=2016, month=5, day=4, hour=5),
         'end_date'    : datetime.datetime(year=2016, month=5, day=4, hour=18)
         }
 
     e5 = Read_ERA(settings)
     e5.calculate_forcings(n_av=1)
+    e5.plot_forcings()
