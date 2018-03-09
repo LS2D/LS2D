@@ -135,6 +135,10 @@ class Read_ERA:
         lnps     = fma.variables['lnsp'][t_an, 0, :, :]                   # Logaritm of surface pressure
 
         # Model level forecast data:
+        dTdt_sw    = np.flip(fmf.variables['mttswr']  [t_an, :, :, :], axis=1)  # Mean temperature tendency due to SW radiation (K s-1)
+        dTdt_lw    = np.flip(fmf.variables['mttswr']  [t_an, :, :, :], axis=1)  # Mean temperature tendency due to LW radiation (K s-1)
+        dTdt_sw_cs = np.flip(fmf.variables['mttswrcs'][t_an, :, :, :], axis=1)  # Mean temperature tendency due to SW radiation (clear sky) (K s-1)
+        dTdt_lw_cs = np.flip(fmf.variables['mttswrcs'][t_an, :, :, :], axis=1)  # Mean temperature tendency due to SW radiation (clear sky) (K s-1)
 
         # Surface variables:
         self.Ts  = fsa.variables['skt'] [t_an, :, :]          # Skin temperature (K)
@@ -184,6 +188,12 @@ class Read_ERA:
         self.wths = self.H / (self.rhos * IFS_tools.cpd * self.exns)               # Surface kinematic heat flux (K m s-1)
 
         self.fc  = 2 * 7.2921e-5 * np.sin(np.deg2rad(settings['central_lat']))      # Coriolis parameter
+
+        # Convert forecasted radiative temperature tendencies from T to thl
+        self.dthldt_sw    = dTdt_sw    / self.exn   # Mean potential temperature tendency due to SW radiation (K s-1)
+        self.dthldt_lw    = dTdt_lw    / self.exn   # Mean potential temperature tendency due to LW radiation (K s-1)
+        self.dthldt_sw_cs = dTdt_sw_cs / self.exn   # Mean potential temperature tendency due to SW radiation (clear sky) (K s-1)
+        self.dthldt_lw_cs = dTdt_lw_cs / self.exn   # Mean potential temperature tendency due to SW radiation (clear sky) (K s-1)
 
     def calculate_forcings(self, n_av=1):
         """
