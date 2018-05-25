@@ -51,7 +51,7 @@ def grad4(a, b, c, d, delta):
                [X]
     """
 
-    return (d - 27*c + 27*b - a) / (24*delta)
+    return (a - 27*b + 27*c - d) / (24*delta)
 
 def grad4c(a, b, c, d, delta):
     """
@@ -63,4 +63,4 @@ def grad4c(a, b, c, d, delta):
                   [X]
     """
 
-    return (d - 8*c + 8*b - a) / (12*delta)
+    return (a - 8*b + 8*c - d) / (12*delta)

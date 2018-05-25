@@ -34,11 +34,11 @@ def get_required_analysis(start, end):
         last_analysis = datetime.datetime(end.year, end.month, end.day) + one_day
     else:
         last_analysis = datetime.datetime(end.year, end.month, end.day)
-    
+
     # Create list of datetime objects:
     dates = [first_analysis + i*one_day for i in range((last_analysis-first_analysis).days + 1)]
 
-    return dates 
+    return dates
 
 
 def get_required_forecast(start, end):

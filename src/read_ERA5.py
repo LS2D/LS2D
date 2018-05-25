@@ -28,6 +28,7 @@ import datetime
 # Custom tools (in src subdirectory)
 import spatial_tools as st
 import time_tools as tt
+import finite_difference as fd
 from IFS_tools import IFS_tools
 from conventions import ERA5_file_path
 from messages import *
@@ -36,6 +37,16 @@ from messages import *
 def format_h_since(hours):
     return datetime.timedelta(hours=float(hours)) + datetime.datetime(1900, 1, 1)
 
+class Slice:
+    def __init__(self, istart, iend, jstart, jend):
+        self.istart = istart
+        self.iend   = iend
+        self.jstart = jstart
+        self.jend   = jend
+
+    def __call__(self, j, i):
+        return np.s_[:,:,self.jstart+j:self.jend+j,\
+                         self.istart+i:self.iend+i]
 
 class Read_ERA:
     """
@@ -129,16 +140,16 @@ class Read_ERA:
         self.T   = np.flip(fma.variables['t']   [t_an, :, :, :], axis=1)  # Absolute temperature (K)
         self.q   = np.flip(fma.variables['q']   [t_an, :, :, :], axis=1)  # Specific humidity (kg kg-1)
         self.qc  = np.flip(fma.variables['clwc'][t_an, :, :, :], axis=1)  # Specific cloud liquid water content (kg kg-1)
-        self.qi  = np.flip(fma.variables['ciwc'][t_an, :, :, :], axis=1)  # Specific cloud ice water content (kg kg-1)
-        self.qr  = np.flip(fma.variables['crwc'][t_an, :, :, :], axis=1)  # Specific cloud rain water content (kg kg-1)
-        self.qs  = np.flip(fma.variables['cswc'][t_an, :, :, :], axis=1)  # Specific cloud snow water content (kg kg-1)
+        self.qi  = np.flip(fma.variables['ciwc'][t_an, :, :, :], axis=1)  # Specific cloud ice content (kg kg-1)
+        self.qr  = np.flip(fma.variables['crwc'][t_an, :, :, :], axis=1)  # Specific rain water content (kg kg-1)
+        self.qs  = np.flip(fma.variables['cswc'][t_an, :, :, :], axis=1)  # Specific snow content (kg kg-1)
         lnps     = fma.variables['lnsp'][t_an, 0, :, :]                   # Logaritm of surface pressure
 
         # Model level forecast data:
         dTdt_sw    = np.flip(fmf.variables['mttswr']  [t_an, :, :, :], axis=1)  # Mean temperature tendency due to SW radiation (K s-1)
         dTdt_lw    = np.flip(fmf.variables['mttlwr']  [t_an, :, :, :], axis=1)  # Mean temperature tendency due to LW radiation (K s-1)
         dTdt_sw_cs = np.flip(fmf.variables['mttswrcs'][t_an, :, :, :], axis=1)  # Mean temperature tendency due to SW radiation (clear sky) (K s-1)
-        dTdt_lw_cs = np.flip(fmf.variables['mttlwrcs'][t_an, :, :, :], axis=1)  # Mean temperature tendency due to SW radiation (clear sky) (K s-1)
+        dTdt_lw_cs = np.flip(fmf.variables['mttlwrcs'][t_an, :, :, :], axis=1)  # Mean temperature tendency due to LW radiation (clear sky) (K s-1)
 
         # Surface variables:
         self.Ts  = fsa.variables['skt'] [t_an, :, :]          # Skin temperature (K)
@@ -195,24 +206,31 @@ class Read_ERA:
         self.dthldt_sw_cs = dTdt_sw_cs / self.exn   # Mean potential temperature tendency due to SW radiation (clear sky) (K s-1)
         self.dthldt_lw_cs = dTdt_lw_cs / self.exn   # Mean potential temperature tendency due to SW radiation (clear sky) (K s-1)
 
-    def calculate_forcings(self, n_av=1):
+
+    def calculate_forcings(self, n_av=1, method='2nd'):
         """
         Calculate the advective tendencies, geostrophic wind, ....
         """
         header('Calculating large-scale forcings')
 
-        # Slicing tuples to calculate means
-        center4d = np.s_[:, :, self.j-n_av:self.j+n_av+1, self.i-n_av:self.i+n_av+1]
-        center3d = np.s_[:,    self.j-n_av:self.j+n_av+1, self.i-n_av:self.i+n_av+1]
+        # Start and end indices of averaging domain:
+        istart = self.i - n_av
+        iend   = self.i + n_av + 1
+        jstart = self.j - n_av
+        jend   = self.j + n_av + 1
 
-        # Slicing of boxes east, west, north and south of main domain
+        # Numpy slicing tupples for averaging domain
+        center4d = np.s_[:, :, jstart:jend, istart:iend]
+        center3d = np.s_[:,    jstart:jend, istart:iend]
+
+        # Numpy slicing tupples of boxes east, west, north and south of main domain
         box_size = 2*n_av+1
-        east  = np.s_[:, :, self.j-n_av:self.j+n_av+1,  self.i+1:self.i+box_size+1]
-        west  = np.s_[:, :, self.j-n_av:self.j+n_av+1,  self.i-box_size:self.i    ]
-        north = np.s_[:, :, self.j-box_size:self.j,     self.i-n_av:self.i+n_av+1 ]
-        south = np.s_[:, :, self.j+1:self.j+box_size+1, self.i-n_av:self.i+n_av+1 ]
+        east  = np.s_[:, :, jstart:jend, self.i+1:self.i+box_size+1 ]
+        west  = np.s_[:, :, jstart:jend, self.i-box_size:self.i     ]
+        north = np.s_[:, :, self.j-box_size:self.j,     istart:iend ]
+        south = np.s_[:, :, self.j+1:self.j+box_size+1, istart:iend ]
 
-        # 1. Main domain (location +/- n_av grid points)
+        # 1. Mean values central averaging domain
         self.z_mean   = self.z   [center4d].mean(axis=(2,3))
         self.p_mean   = self.p   [center4d].mean(axis=(2,3))
         self.thl_mean = self.thl [center4d].mean(axis=(2,3))
@@ -223,11 +241,6 @@ class Read_ERA:
         self.wls_mean = self.wls [center4d].mean(axis=(2,3))
         self.rho_mean = self.rho [center4d].mean(axis=(2,3))
 
-        self.dthldt_sw_mean    = self.dthldt_sw   [center4d].mean(axis=(2,3))
-        self.dthldt_lw_mean    = self.dthldt_lw   [center4d].mean(axis=(2,3))
-        self.dthldt_sw_cs_mean = self.dthldt_sw_cs[center4d].mean(axis=(2,3))
-        self.dthldt_lw_cs_mean = self.dthldt_lw_cs[center4d].mean(axis=(2,3))
-
         self.ps_mean  = self.ps  [center3d].mean(axis=(1,2))
         self.wth_mean = self.wths[center3d].mean(axis=(1,2))
         self.wq_mean  = self.wqs [center3d].mean(axis=(1,2))
@@ -237,40 +250,95 @@ class Read_ERA:
         self.z0m_mean = self.z0m [center3d].mean(axis=(1,2))
         self.z0h_mean = self.z0h [center3d].mean(axis=(1,2))
 
-        # 2. Calculate advective tendencies
-        # Distance east-west and north_south of boxes
-        distance_WE = st.dlon(self.lons[self.i-n_av-1], self.lons[self.i+n_av+1], self.lats[self.j])
-        distance_NS = st.dlat(self.lats[self.j+n_av+1], self.lats[self.j-n_av-1])
+        self.dtthl_sw_mean    = self.dthldt_sw   [center4d].mean(axis=(2,3))
+        self.dtthl_lw_mean    = self.dthldt_lw   [center4d].mean(axis=(2,3))
+        self.dtthl_sw_cs_mean = self.dthldt_sw_cs[center4d].mean(axis=(2,3))
+        self.dtthl_lw_cs_mean = self.dthldt_lw_cs[center4d].mean(axis=(2,3))
 
-        # Liquid water potential temperature
-        self.thl_advec_x = -self.u_mean * (self.thl[east] .mean(axis=(2,3)) - self.thl[west ].mean(axis=(2,3))) / distance_WE
-        self.thl_advec_y = -self.v_mean * (self.thl[north].mean(axis=(2,3)) - self.thl[south].mean(axis=(2,3))) / distance_NS
-        self.thl_advec   = self.thl_advec_x + self.thl_advec_y
+        #if (method == '2nd'):
+        if True:
+            s = Slice(istart, iend, jstart, jend)
 
-        # Total specific humidity
-        self.qt_advec_x = -self.u_mean * (self.qt[east] .mean(axis=(2,3)) - self.qt[west ].mean(axis=(2,3))) / distance_WE
-        self.qt_advec_y = -self.v_mean * (self.qt[north].mean(axis=(2,3)) - self.qt[south].mean(axis=(2,3))) / distance_NS
-        self.qt_advec   = self.qt_advec_x + self.qt_advec_y
+            # Estimate horizontal grid spacing (assumed constant in averaging domain)\
+            dx = st.dlon(self.lons[self.i-1], self.lons[self.i+1], self.lats[self.j]) / 2.
+            dy = st.dlat(self.lats[self.j+1], self.lats[self.j-1]) / 2.
 
-        # Momentum
-        self.u_advec_x = -self.u_mean * (self.u[east] .mean(axis=(2,3)) - self.u[west ].mean(axis=(2,3))) / distance_WE
-        self.u_advec_y = -self.v_mean * (self.u[north].mean(axis=(2,3)) - self.u[south].mean(axis=(2,3))) / distance_NS
-        self.u_advec   = self.u_advec_x + self.u_advec_y
+            # ------
+            # 2nd order
+            # ------
+            #self.dtu_advec_2 = ( -self.u[s(0,0)] * fd.grad2c( self.u[s(0,-1)], self.u[s(0,+1)], dx) -
+            #                     -self.v[s(0,0)] * fd.grad2c( self.u[s(+1,0)], self.u[s(-1,0)], dy) ).mean(axis=(2,3))
 
-        self.v_advec_x = -self.u_mean * (self.v[east] .mean(axis=(2,3)) - self.v[west ].mean(axis=(2,3))) / distance_WE
-        self.v_advec_y = -self.v_mean * (self.v[north].mean(axis=(2,3)) - self.v[south].mean(axis=(2,3))) / distance_NS
-        self.v_advec   = self.v_advec_x + self.v_advec_y
+            #self.dtv_advec_2 = ( -self.u[s(0,0)] * fd.grad2c( self.v[s(0,-1)], self.v[s(0,+1)], dx) -
+            #                     -self.v[s(0,0)] * fd.grad2c( self.v[s(+1,0)], self.v[s(-1,0)], dy) ).mean(axis=(2,3))
 
-        # 3. Geostrophic wind (gradient geopotential height on constant pressure levels)
-        ug_p = -IFS_tools.grav / self.fc * (self.z_p[north].mean(axis=(2,3)) - self.z_p[south].mean(axis=(2,3))) / distance_NS
-        vg_p =  IFS_tools.grav / self.fc * (self.z_p[east ].mean(axis=(2,3)) - self.z_p[west ].mean(axis=(2,3))) / distance_WE
+            #ug_p_2 = ( -IFS_tools.grav / self.fc * fd.grad2c( self.z_p[s(+1,0)], self.z_p[s(-1,0)], dy) ).mean(axis=(2,3))
+            #vg_p_2 = (  IFS_tools.grav / self.fc * fd.grad2c( self.z_p[s(0,-1)], self.z_p[s(0,+1)], dx) ).mean(axis=(2,3))
 
-        # Interpolate geostrophic wind onto model grid. Use Scipy's interpolation, as it can extrapolate (in case ps > 1000 hPa)
-        self.ug = np.zeros_like(self.p_mean)
-        self.vg = np.zeros_like(self.p_mean)
-        for t in range(self.ntime):
-            self.ug[t,:] = interpolate.interp1d(self.p_p, ug_p[t,:], fill_value='extrapolate')(self.p_mean[t,:])
-            self.vg[t,:] = interpolate.interp1d(self.p_p, vg_p[t,:], fill_value='extrapolate')(self.p_mean[t,:])
+
+            # ------
+            # 4th order
+            # ------
+            self.dtu_advec_2 = ( -self.u[s(0,0)] * fd.grad4c( self.u[s(0,-2)], self.u[s(0,-1)], self.u[s(0,+1)], self.u[s(0,+2)], dx) -
+                                 -self.v[s(0,0)] * fd.grad4c( self.u[s(+2,0)], self.u[s(+1,0)], self.u[s(-1,0)], self.u[s(-2,0)], dy) ).mean(axis=(2,3))
+
+            self.dtv_advec_2 = ( -self.u[s(0,0)] * fd.grad4c( self.v[s(0,-2)], self.v[s(0,-1)], self.v[s(0,+1)], self.v[s(0,+2)], dx) -
+                                 -self.v[s(0,0)] * fd.grad4c( self.v[s(+2,0)], self.v[s(+1,0)], self.v[s(-1,0)], self.v[s(-2,0)], dy) ).mean(axis=(2,3))
+
+            ug_p_2 = ( -IFS_tools.grav / self.fc * fd.grad4c( self.z_p[s(+2,0)], self.z_p[s(+1,0)], self.z_p[s(-1,0)], self.z_p[s(-2,0)], dy) ).mean(axis=(2,3))
+            vg_p_2 = (  IFS_tools.grav / self.fc * fd.grad4c( self.z_p[s(0,-2)], self.z_p[s(0,-1)], self.z_p[s(0,+1)], self.z_p[s(0,+2)], dx) ).mean(axis=(2,3))
+
+
+
+
+
+            # Interpolate geostrophic wind onto model grid. Use Scipy's interpolation, as it can extrapolate (in case ps > 1000 hPa)
+            self.ug_2 = np.zeros_like(self.p_mean)
+            self.vg_2 = np.zeros_like(self.p_mean)
+            for t in range(self.ntime):
+                self.ug_2[t,:] = interpolate.interp1d(self.p_p, ug_p_2[t,:], fill_value='extrapolate')(self.p_mean[t,:])
+                self.vg_2[t,:] = interpolate.interp1d(self.p_p, vg_p_2[t,:], fill_value='extrapolate')(self.p_mean[t,:])
+
+            # Momentum tendency coriolis
+            self.dtu_coriolis_2 = +self.fc * (self.v_mean - self.vg_2)
+            self.dtv_coriolis_2 = -self.fc * (self.u_mean - self.ug_2)
+
+        #if (method == 'box'):
+        if True:
+            # 2. Calculate advective tendencies
+            # Distance east-west and north_south of boxes
+            distance_WE = st.dlon(self.lons[self.i-n_av-1], self.lons[self.i+n_av+1], self.lats[self.j])
+            distance_NS = st.dlat(self.lats[self.j+n_av+1], self.lats[self.j-n_av-1])
+
+            # Liquid water potential temperature
+            self.dtthl_advec = -self.u_mean * (self.thl[east] .mean(axis=(2,3)) - self.thl[west ].mean(axis=(2,3))) / distance_WE \
+                               -self.v_mean * (self.thl[north].mean(axis=(2,3)) - self.thl[south].mean(axis=(2,3))) / distance_NS
+
+            # Total specific humidity
+            self.dtqt_advec  = -self.u_mean * (self.qt[east] .mean(axis=(2,3)) - self.qt[west ].mean(axis=(2,3))) / distance_WE \
+                               -self.v_mean * (self.qt[north].mean(axis=(2,3)) - self.qt[south].mean(axis=(2,3))) / distance_NS
+
+            # Momentum
+            self.dtu_advec   = -self.u_mean * (self.u[east] .mean(axis=(2,3)) - self.u[west ].mean(axis=(2,3))) / distance_WE \
+                               -self.v_mean * (self.u[north].mean(axis=(2,3)) - self.u[south].mean(axis=(2,3))) / distance_NS
+
+            self.dtv_advec   = -self.u_mean * (self.v[east] .mean(axis=(2,3)) - self.v[west ].mean(axis=(2,3))) / distance_WE \
+                               -self.v_mean * (self.v[north].mean(axis=(2,3)) - self.v[south].mean(axis=(2,3))) / distance_NS
+
+            # 3. Geostrophic wind (gradient geopotential height on constant pressure levels)
+            ug_p = -IFS_tools.grav / self.fc * (self.z_p[north].mean(axis=(2,3)) - self.z_p[south].mean(axis=(2,3))) / distance_NS
+            vg_p =  IFS_tools.grav / self.fc * (self.z_p[east ].mean(axis=(2,3)) - self.z_p[west ].mean(axis=(2,3))) / distance_WE
+
+            # Interpolate geostrophic wind onto model grid. Use Scipy's interpolation, as it can extrapolate (in case ps > 1000 hPa)
+            self.ug = np.zeros_like(self.p_mean)
+            self.vg = np.zeros_like(self.p_mean)
+            for t in range(self.ntime):
+                self.ug[t,:] = interpolate.interp1d(self.p_p, ug_p[t,:], fill_value='extrapolate')(self.p_mean[t,:])
+                self.vg[t,:] = interpolate.interp1d(self.p_p, vg_p[t,:], fill_value='extrapolate')(self.p_mean[t,:])
+
+            # Momentum tendency coriolis
+            self.dtu_coriolis = +self.fc * (self.v_mean - self.vg)
+            self.dtv_coriolis = -self.fc * (self.u_mean - self.ug)
 
 
     def plot_forcings(self, zmax=10000):
@@ -283,70 +351,104 @@ class Read_ERA:
         # ~Index corresponding to zmax
         kmax = np.abs(self.z_mean[0,:]-zmax).argmin()
 
-        f=pl.figure(figsize=[12,8])
-        f.subplots_adjust(left=0.09, bottom=0.08, right=0.97, top=0.91, wspace=0.29, hspace=0.28)
 
-        # Liquid water potential temperature
-        # ----------------------------------
-        pl.subplot(3,4,1)
-        pl.title('thl')
-        for t in range(self.ntime):
-            pl.plot(self.thl_advec[t,:kmax]*3600, self.z_mean[t,:kmax], color=cc[t], label='{} h'.format(self.time_sec[t]/3600))
-        pl.xlabel('advec (K h-1)')
-        pl.ylabel('z (m)')
-        pl.legend(frameon=False, ncol=self.ntime, loc='lower left',
-                  bbox_to_anchor=(0, 1.1, 1, 0.2), borderaxespad=0, columnspacing=0.5)
+        if True:
+            pl.figure()
+            pl.subplot(321)
+            pl.plot(self.dtthl_advec[:,0]*3600.)
 
-        pl.subplot(3,4,5)
-        for t in range(self.ntime):
-            pl.plot(self.dthldt_sw_mean[t,:kmax]*3600, self.z_mean[t,:kmax], color=cc[t])
-        pl.xlabel('short wave (K h-1)')
-        pl.ylabel('z (m)')
+            pl.subplot(322)
+            pl.plot(self.dtqt_advec[:,0]*3600000.)
 
-        pl.subplot(3,4,9)
-        for t in range(self.ntime):
-            pl.plot(self.dthldt_lw_mean[t,:kmax]*3600, self.z_mean[t,:kmax], color=cc[t])
-        pl.xlabel('long wave (K h-1)')
-        pl.ylabel('z (m)')
+            pl.subplot(323)
+            pl.plot(self.dtu_advec[:,0]*3600., 'k-')
+            pl.plot(self.dtu_coriolis[:,0]*3600., 'k--')
 
-        # Specific humidity
-        # ----------------------------------
-        pl.subplot(3,4,2)
-        pl.title('qt')
-        for t in range(self.ntime):
-            pl.plot(self.qt_advec[t,:kmax]*1000*3600, self.z_mean[t,:kmax], color=cc[t])
-        pl.xlabel('advec (g kg-1 h-1)')
-        pl.ylabel('z (m)')
+            pl.plot(self.dtu_advec_2[:,0]*3600., 'r-')
+            pl.plot(self.dtu_coriolis_2[:,0]*3600., 'r--')
 
-        # U-component wind
-        # ----------------------------------
-        pl.subplot(3,4,3)
-        pl.title('u')
-        for t in range(self.ntime):
-            pl.plot(self.u_advec[t,:kmax]*3600, self.z_mean[t,:kmax], color=cc[t])
-        pl.xlabel('advec (m s-1 h-1)')
-        pl.ylabel('z (m)')
+            pl.subplot(324)
+            pl.plot(self.dtv_advec[:,0]*3600., 'k-')
+            pl.plot(self.dtv_coriolis[:,0]*3600., 'k--')
 
-        pl.subplot(3,4,7)
-        for t in range(self.ntime):
-            pl.plot(self.fc*(self.v_mean[t,:kmax]-self.vg[t,:kmax])*3600., self.z_mean[t,:kmax], color=cc[t])
-        pl.xlabel('coriolis (m s-1 h-1)')
-        pl.ylabel('z (m)')
+            pl.plot(self.dtv_advec_2[:,0]*3600., 'r-')
+            pl.plot(self.dtv_coriolis_2[:,0]*3600., 'r--')
 
-        # V-component wind
-        # ----------------------------------
-        pl.subplot(3,4,4)
-        pl.title('v')
-        for t in range(self.ntime):
-            pl.plot(self.v_advec[t,:kmax]*3600, self.z_mean[t,:kmax], color=cc[t])
-        pl.xlabel('advec (m s-1 h-1)')
-        pl.ylabel('z (m)')
+            pl.subplot(325)
+            pl.plot(self.ug[:,0],   'k-')
+            pl.plot(self.ug_2[:,0], 'r-')
 
-        pl.subplot(3,4,8)
-        for t in range(self.ntime):
-            pl.plot(-self.fc*(self.u_mean[t,:kmax]-self.ug[t,:kmax])*3600., self.z_mean[t,:kmax], color=cc[t])
-        pl.xlabel('coriolis (m s-1 h-1)')
-        pl.ylabel('z (m)')
+            pl.subplot(326)
+            pl.plot(self.vg[:,0],   'k-')
+            pl.plot(self.vg_2[:,0], 'r-')
+
+
+        if False:
+
+            f=pl.figure(figsize=[12,8])
+            f.subplots_adjust(left=0.09, bottom=0.08, right=0.97, top=0.91, wspace=0.29, hspace=0.28)
+
+            # Liquid water potential temperature
+            # ----------------------------------
+            pl.subplot(3,4,1)
+            pl.title('thl')
+            for t in range(self.ntime):
+                pl.plot(self.dtthl_advec[t,:kmax]*3600, self.z_mean[t,:kmax], color=cc[t], label='{} h'.format(self.time_sec[t]/3600))
+            pl.xlabel('advec (K h-1)')
+            pl.ylabel('z (m)')
+            pl.legend(frameon=False, ncol=self.ntime, loc='lower left',
+                      bbox_to_anchor=(0, 1.1, 1, 0.2), borderaxespad=0, columnspacing=0.5)
+
+            pl.subplot(3,4,5)
+            for t in range(self.ntime):
+                pl.plot(self.dtthl_sw_mean[t,:kmax]*3600, self.z_mean[t,:kmax], color=cc[t])
+            pl.xlabel('short wave (K h-1)')
+            pl.ylabel('z (m)')
+
+            pl.subplot(3,4,9)
+            for t in range(self.ntime):
+                pl.plot(self.dtthl_lw_mean[t,:kmax]*3600, self.z_mean[t,:kmax], color=cc[t])
+            pl.xlabel('long wave (K h-1)')
+            pl.ylabel('z (m)')
+
+            # Specific humidity
+            # ----------------------------------
+            pl.subplot(3,4,2)
+            pl.title('qt')
+            for t in range(self.ntime):
+                pl.plot(self.dtqt_advec[t,:kmax]*1000*3600, self.z_mean[t,:kmax], color=cc[t])
+            pl.xlabel('advec (g kg-1 h-1)')
+            pl.ylabel('z (m)')
+
+            # U-component wind
+            # ----------------------------------
+            pl.subplot(3,4,3)
+            pl.title('u')
+            for t in range(self.ntime):
+                pl.plot(self.dtu_advec[t,:kmax]*3600, self.z_mean[t,:kmax], color=cc[t])
+            pl.xlabel('advec (m s-1 h-1)')
+            pl.ylabel('z (m)')
+
+            pl.subplot(3,4,7)
+            for t in range(self.ntime):
+                pl.plot(self.dtu_coriolis[t,:kmax]*3600., self.z_mean[t,:kmax], color=cc[t])
+            pl.xlabel('coriolis (m s-1 h-1)')
+            pl.ylabel('z (m)')
+
+            # V-component wind
+            # ----------------------------------
+            pl.subplot(3,4,4)
+            pl.title('v')
+            for t in range(self.ntime):
+                pl.plot(self.dtv_advec[t,:kmax]*3600, self.z_mean[t,:kmax], color=cc[t])
+            pl.xlabel('advec (m s-1 h-1)')
+            pl.ylabel('z (m)')
+
+            pl.subplot(3,4,8)
+            for t in range(self.ntime):
+                pl.plot(self.dtv_coriolis[t,:kmax]*3600, self.z_mean[t,:kmax], color=cc[t])
+            pl.xlabel('coriolis (m s-1 h-1)')
+            pl.ylabel('z (m)')
 
 
 
