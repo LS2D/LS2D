@@ -111,7 +111,7 @@ def download_ERA5_file(settings):
     elif settings['ftype'] == 'surface_an':
         request.update({
             "levtype"  : "sfc",
-            "param"    : "78.128/79.128/89.228/90.228/134.128/136.128/137.128/151.128/159.128/164.128/165.128/166.128/167.128/168.128/186.128/187.128/188.128/229.128/230.128/231.128/232.128/235.128/244.128/245.128/246.228/247.228",
+            "param"    : "78.128/79.128/89.228/90.228/134.128/136.128/137.128/151.128/159.128/164.128/165.128/166.128/167.128/168.128/186.128/187.128/188.128/229.128/230.128/231.128/232.128/235.128/244.128/245.128/246.228/247.228/34.128/35.128/36.128/37.128/38.128/39.128/40.128/41.128/42.128/139.128/170.128/172.128/183.128/236.128",
             "time"     : "00:00:00/01:00:00/02:00:00/03:00:00/04:00:00/05:00:00/06:00:00/07:00:00/08:00:00/09:00:00/10:00:00/11:00:00/12:00:00/13:00:00/14:00:00/15:00:00/16:00:00/17:00:00/18:00:00/19:00:00/20:00:00/21:00:00/22:00:00/23:00:00",
             "type"     : "an"
         })
@@ -179,7 +179,6 @@ def download_ERA5(settings):
     for date in an_dates:
         for ftype in ['model_an', 'pressure_an', 'surface_an']:
 
-
             file_name = ERA5_file_path(date.year, date.month, date.day, settings['ERA5_path'], settings['case_name'], ftype)
 
             if os.path.isfile(file_name):
@@ -203,7 +202,7 @@ def download_ERA5(settings):
                 download_queue.append(settings_tmp)
 
     # Create download Pool with 3 threads (ECMWF allows up to 3 parallel requests):
-    pool = multiprocessing.Pool(processes=3)
+    pool = multiprocessing.Pool(processes=4)
     pool.map(download_ERA5_file, download_queue)
 
 
@@ -215,10 +214,10 @@ if __name__ == "__main__":
         'central_lon' : 4.927,
         'area_size'   : 2,
         'case_name'   : 'cabauw',
-        #'ERA5_path'   : '/nobackup/users/stratum/ERA5/LS2D/',
-        'ERA5_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',
-        'start_date'  : datetime.datetime(year=2016, month=5, day=4, hour=5),
-        'end_date'    : datetime.datetime(year=2016, month=5, day=4, hour=18)
+        'ERA5_path'   : '/nobackup/users/stratum/ERA5/LS2D/',
+        #'ERA5_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',
+        'start_date'  : datetime.datetime(year=2016, month=5, day=1, hour=0),
+        'end_date'    : datetime.datetime(year=2016, month=5, day=2, hour=0)
         }
 
     # Download the ERA5 data (or check whether it is available local)
