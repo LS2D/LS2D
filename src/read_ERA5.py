@@ -255,90 +255,87 @@ class Read_ERA:
         self.dtthl_sw_cs_mean = self.dthldt_sw_cs[center4d].mean(axis=(2,3))
         self.dtthl_lw_cs_mean = self.dthldt_lw_cs[center4d].mean(axis=(2,3))
 
-        #if (method == '2nd'):
-        if True:
+        # Estimate horizontal grid spacing (assumed constant in averaging domain)\
+        dx = np.abs( st.dlon(self.lons[self.i-1], self.lons[self.i+1], self.lats[self.j]) / 2. )
+        dy = np.abs( st.dlat(self.lats[self.j+1], self.lats[self.j-1]) / 2. )
+
+        if (method == '2nd'):
+
             s = Slice(istart, iend, jstart, jend)
 
-            # Estimate horizontal grid spacing (assumed constant in averaging domain)\
-            dx = st.dlon(self.lons[self.i-1], self.lons[self.i+1], self.lats[self.j]) / 2.
-            dy = st.dlat(self.lats[self.j+1], self.lats[self.j-1]) / 2.
+            # Calculate advective tendencies
+            self.dtthl_advec = ( -self.u[s(0,0)] * fd.grad2c( self.thl[s(0,-1)], self.thl[s(0,+1)], dx) -
+                                 -self.v[s(0,0)] * fd.grad2c( self.thl[s(+1,0)], self.thl[s(-1,0)], dy) ).mean(axis=(2,3))
 
-            # ------
-            # 2nd order
-            # ------
-            #self.dtu_advec_2 = ( -self.u[s(0,0)] * fd.grad2c( self.u[s(0,-1)], self.u[s(0,+1)], dx) -
-            #                     -self.v[s(0,0)] * fd.grad2c( self.u[s(+1,0)], self.u[s(-1,0)], dy) ).mean(axis=(2,3))
+            self.dtqt_advec  = ( -self.u[s(0,0)] * fd.grad2c( self.qt[s(0,-1)], self.qt[s(0,+1)], dx) -
+                                 -self.v[s(0,0)] * fd.grad2c( self.qt[s(+1,0)], self.qt[s(-1,0)], dy) ).mean(axis=(2,3))
 
-            #self.dtv_advec_2 = ( -self.u[s(0,0)] * fd.grad2c( self.v[s(0,-1)], self.v[s(0,+1)], dx) -
-            #                     -self.v[s(0,0)] * fd.grad2c( self.v[s(+1,0)], self.v[s(-1,0)], dy) ).mean(axis=(2,3))
+            self.dtu_advec   = ( -self.u[s(0,0)] * fd.grad2c( self.u[s(0,-1)], self.u[s(0,+1)], dx) -
+                                 -self.v[s(0,0)] * fd.grad2c( self.u[s(+1,0)], self.u[s(-1,0)], dy) ).mean(axis=(2,3))
 
-            #ug_p_2 = ( -IFS_tools.grav / self.fc * fd.grad2c( self.z_p[s(+1,0)], self.z_p[s(-1,0)], dy) ).mean(axis=(2,3))
-            #vg_p_2 = (  IFS_tools.grav / self.fc * fd.grad2c( self.z_p[s(0,-1)], self.z_p[s(0,+1)], dx) ).mean(axis=(2,3))
+            self.dtv_advec   = ( -self.u[s(0,0)] * fd.grad2c( self.v[s(0,-1)], self.v[s(0,+1)], dx) -
+                                 -self.v[s(0,0)] * fd.grad2c( self.v[s(+1,0)], self.v[s(-1,0)], dy) ).mean(axis=(2,3))
+
+            # Geostrophic wind (on model levels)
+            vg_p = (  IFS_tools.grav / self.fc * fd.grad2c( self.z_p[s(0,-1)], self.z_p[s(0,+1)], dx) ).mean(axis=(2,3))
+            ug_p = ( -IFS_tools.grav / self.fc * fd.grad2c( self.z_p[s(+1,0)], self.z_p[s(-1,0)], dy) ).mean(axis=(2,3))
+
+        elif (method == '4th'):
+
+            s = Slice(istart, iend, jstart, jend)
+
+            # Calculate advective tendencies
+            self.dtthl_advec = ( -self.u[s(0,0)] * fd.grad4c( self.thl[s(0,-2)], self.thl[s(0,-1)], self.thl[s(0,+1)], self.thl[s(0,+2)], dx) -
+                                 -self.v[s(0,0)] * fd.grad4c( self.thl[s(+2,0)], self.thl[s(+1,0)], self.thl[s(-1,0)], self.thl[s(-2,0)], dy) ).mean(axis=(2,3))
+
+            self.dtqt_advec  = ( -self.u[s(0,0)] * fd.grad4c( self.qt[s(0,-2)], self.qt[s(0,-1)], self.qt[s(0,+1)], self.qt[s(0,+2)], dx) -
+                                 -self.v[s(0,0)] * fd.grad4c( self.qt[s(+2,0)], self.qt[s(+1,0)], self.qt[s(-1,0)], self.qt[s(-2,0)], dy) ).mean(axis=(2,3))
+
+            self.dtu_advec = ( -self.u[s(0,0)] * fd.grad4c( self.u[s(0,-2)], self.u[s(0,-1)], self.u[s(0,+1)], self.u[s(0,+2)], dx) -
+                               -self.v[s(0,0)] * fd.grad4c( self.u[s(+2,0)], self.u[s(+1,0)], self.u[s(-1,0)], self.u[s(-2,0)], dy) ).mean(axis=(2,3))
+
+            self.dtv_advec = ( -self.u[s(0,0)] * fd.grad4c( self.v[s(0,-2)], self.v[s(0,-1)], self.v[s(0,+1)], self.v[s(0,+2)], dx) -
+                               -self.v[s(0,0)] * fd.grad4c( self.v[s(+2,0)], self.v[s(+1,0)], self.v[s(-1,0)], self.v[s(-2,0)], dy) ).mean(axis=(2,3))
+
+            # Geostrophic wind (on model levels)
+            vg_p = (  IFS_tools.grav / self.fc * fd.grad4c( self.z_p[s(0,-2)], self.z_p[s(0,-1)], self.z_p[s(0,+1)], self.z_p[s(0,+2)], dx) ).mean(axis=(2,3))
+            ug_p = ( -IFS_tools.grav / self.fc * fd.grad4c( self.z_p[s(+2,0)], self.z_p[s(+1,0)], self.z_p[s(-1,0)], self.z_p[s(-2,0)], dy) ).mean(axis=(2,3))
+
+        #elif (method == 'box'):
+            # BvS: CONTAINS ERRORS!
+
+        #    # Distance east-west and north_south of boxes
+        #    distance_WE = st.dlon(self.lons[self.i+n_av+1], self.lons[self.i-n_av-1], self.lats[self.j])
+        #    distance_NS = st.dlat(self.lats[self.j-n_av-1], self.lats[self.j+n_av+1])
+
+        #    # Calculate advective tendencies
+        #    self.dtthl_advec = -self.u_mean * (self.thl[east] .mean(axis=(2,3)) - self.thl[west ].mean(axis=(2,3))) / distance_WE \
+        #                       -self.v_mean * (self.thl[north].mean(axis=(2,3)) - self.thl[south].mean(axis=(2,3))) / distance_NS
+
+        #    self.dtqt_advec  = -self.u_mean * (self.qt[east] .mean(axis=(2,3)) - self.qt[west ].mean(axis=(2,3))) / distance_WE \
+        #                       -self.v_mean * (self.qt[north].mean(axis=(2,3)) - self.qt[south].mean(axis=(2,3))) / distance_NS
+
+        #    self.dtu_advec   = -self.u_mean * (self.u[east] .mean(axis=(2,3)) - self.u[west ].mean(axis=(2,3))) / distance_WE \
+        #                       -self.v_mean * (self.u[north].mean(axis=(2,3)) - self.u[south].mean(axis=(2,3))) / distance_NS
+
+        #    self.dtv_advec   = -self.u_mean * (self.v[east] .mean(axis=(2,3)) - self.v[west ].mean(axis=(2,3))) / distance_WE \
+        #                       -self.v_mean * (self.v[north].mean(axis=(2,3)) - self.v[south].mean(axis=(2,3))) / distance_NS
+
+        #    # 3. Geostrophic wind (gradient geopotential height on constant pressure levels)
+        #    vg_p =  IFS_tools.grav / self.fc * (self.z_p[east ].mean(axis=(2,3)) - self.z_p[west ].mean(axis=(2,3))) / distance_WE
+        #    ug_p = -IFS_tools.grav / self.fc * (self.z_p[north].mean(axis=(2,3)) - self.z_p[south].mean(axis=(2,3))) / distance_NS
 
 
-            # ------
-            # 4th order
-            # ------
-            self.dtu_advec_2 = ( -self.u[s(0,0)] * fd.grad4c( self.u[s(0,-2)], self.u[s(0,-1)], self.u[s(0,+1)], self.u[s(0,+2)], dx) -
-                                 -self.v[s(0,0)] * fd.grad4c( self.u[s(+2,0)], self.u[s(+1,0)], self.u[s(-1,0)], self.u[s(-2,0)], dy) ).mean(axis=(2,3))
+        # Interpolate geostrophic wind onto model grid. Use Scipy's interpolation, as it can extrapolate (in case ps > 1000 hPa)
+        self.ug = np.zeros_like(self.p_mean)
+        self.vg = np.zeros_like(self.p_mean)
+        for t in range(self.ntime):
+            self.ug[t,:] = interpolate.interp1d(self.p_p, ug_p[t,:], fill_value='extrapolate')(self.p_mean[t,:])
+            self.vg[t,:] = interpolate.interp1d(self.p_p, vg_p[t,:], fill_value='extrapolate')(self.p_mean[t,:])
 
-            self.dtv_advec_2 = ( -self.u[s(0,0)] * fd.grad4c( self.v[s(0,-2)], self.v[s(0,-1)], self.v[s(0,+1)], self.v[s(0,+2)], dx) -
-                                 -self.v[s(0,0)] * fd.grad4c( self.v[s(+2,0)], self.v[s(+1,0)], self.v[s(-1,0)], self.v[s(-2,0)], dy) ).mean(axis=(2,3))
-
-            ug_p_2 = ( -IFS_tools.grav / self.fc * fd.grad4c( self.z_p[s(+2,0)], self.z_p[s(+1,0)], self.z_p[s(-1,0)], self.z_p[s(-2,0)], dy) ).mean(axis=(2,3))
-            vg_p_2 = (  IFS_tools.grav / self.fc * fd.grad4c( self.z_p[s(0,-2)], self.z_p[s(0,-1)], self.z_p[s(0,+1)], self.z_p[s(0,+2)], dx) ).mean(axis=(2,3))
-
-
-
-
-
-            # Interpolate geostrophic wind onto model grid. Use Scipy's interpolation, as it can extrapolate (in case ps > 1000 hPa)
-            self.ug_2 = np.zeros_like(self.p_mean)
-            self.vg_2 = np.zeros_like(self.p_mean)
-            for t in range(self.ntime):
-                self.ug_2[t,:] = interpolate.interp1d(self.p_p, ug_p_2[t,:], fill_value='extrapolate')(self.p_mean[t,:])
-                self.vg_2[t,:] = interpolate.interp1d(self.p_p, vg_p_2[t,:], fill_value='extrapolate')(self.p_mean[t,:])
-
-            # Momentum tendency coriolis
-            self.dtu_coriolis_2 = +self.fc * (self.v_mean - self.vg_2)
-            self.dtv_coriolis_2 = -self.fc * (self.u_mean - self.ug_2)
-
-        #if (method == 'box'):
-        if True:
-            # 2. Calculate advective tendencies
-            # Distance east-west and north_south of boxes
-            distance_WE = st.dlon(self.lons[self.i-n_av-1], self.lons[self.i+n_av+1], self.lats[self.j])
-            distance_NS = st.dlat(self.lats[self.j+n_av+1], self.lats[self.j-n_av-1])
-
-            # Liquid water potential temperature
-            self.dtthl_advec = -self.u_mean * (self.thl[east] .mean(axis=(2,3)) - self.thl[west ].mean(axis=(2,3))) / distance_WE \
-                               -self.v_mean * (self.thl[north].mean(axis=(2,3)) - self.thl[south].mean(axis=(2,3))) / distance_NS
-
-            # Total specific humidity
-            self.dtqt_advec  = -self.u_mean * (self.qt[east] .mean(axis=(2,3)) - self.qt[west ].mean(axis=(2,3))) / distance_WE \
-                               -self.v_mean * (self.qt[north].mean(axis=(2,3)) - self.qt[south].mean(axis=(2,3))) / distance_NS
-
-            # Momentum
-            self.dtu_advec   = -self.u_mean * (self.u[east] .mean(axis=(2,3)) - self.u[west ].mean(axis=(2,3))) / distance_WE \
-                               -self.v_mean * (self.u[north].mean(axis=(2,3)) - self.u[south].mean(axis=(2,3))) / distance_NS
-
-            self.dtv_advec   = -self.u_mean * (self.v[east] .mean(axis=(2,3)) - self.v[west ].mean(axis=(2,3))) / distance_WE \
-                               -self.v_mean * (self.v[north].mean(axis=(2,3)) - self.v[south].mean(axis=(2,3))) / distance_NS
-
-            # 3. Geostrophic wind (gradient geopotential height on constant pressure levels)
-            ug_p = -IFS_tools.grav / self.fc * (self.z_p[north].mean(axis=(2,3)) - self.z_p[south].mean(axis=(2,3))) / distance_NS
-            vg_p =  IFS_tools.grav / self.fc * (self.z_p[east ].mean(axis=(2,3)) - self.z_p[west ].mean(axis=(2,3))) / distance_WE
-
-            # Interpolate geostrophic wind onto model grid. Use Scipy's interpolation, as it can extrapolate (in case ps > 1000 hPa)
-            self.ug = np.zeros_like(self.p_mean)
-            self.vg = np.zeros_like(self.p_mean)
-            for t in range(self.ntime):
-                self.ug[t,:] = interpolate.interp1d(self.p_p, ug_p[t,:], fill_value='extrapolate')(self.p_mean[t,:])
-                self.vg[t,:] = interpolate.interp1d(self.p_p, vg_p[t,:], fill_value='extrapolate')(self.p_mean[t,:])
-
-            # Momentum tendency coriolis
-            self.dtu_coriolis = +self.fc * (self.v_mean - self.vg)
-            self.dtv_coriolis = -self.fc * (self.u_mean - self.ug)
+        # Momentum tendency coriolis
+        self.dtu_coriolis = +self.fc * (self.v_mean - self.vg)
+        self.dtv_coriolis = -self.fc * (self.u_mean - self.ug)
 
 
     def plot_forcings(self, zmax=10000):
@@ -364,23 +361,15 @@ class Read_ERA:
             pl.plot(self.dtu_advec[:,0]*3600., 'k-')
             pl.plot(self.dtu_coriolis[:,0]*3600., 'k--')
 
-            pl.plot(self.dtu_advec_2[:,0]*3600., 'r-')
-            pl.plot(self.dtu_coriolis_2[:,0]*3600., 'r--')
-
             pl.subplot(324)
             pl.plot(self.dtv_advec[:,0]*3600., 'k-')
             pl.plot(self.dtv_coriolis[:,0]*3600., 'k--')
 
-            pl.plot(self.dtv_advec_2[:,0]*3600., 'r-')
-            pl.plot(self.dtv_coriolis_2[:,0]*3600., 'r--')
-
             pl.subplot(325)
             pl.plot(self.ug[:,0],   'k-')
-            pl.plot(self.ug_2[:,0], 'r-')
 
             pl.subplot(326)
             pl.plot(self.vg[:,0],   'k-')
-            pl.plot(self.vg_2[:,0], 'r-')
 
 
         if False:
@@ -455,6 +444,9 @@ class Read_ERA:
 if __name__ == '__main__':
     """ Test / example, only executed if script is called directly """
 
+    import copy
+    import matplotlib.pyplot as pl
+
     settings = {
         'central_lat' : 51.971,
         'central_lon' : 4.927,
@@ -462,10 +454,60 @@ if __name__ == '__main__':
         'case_name'   : 'cabauw',
         'ERA5_path'   : '/nobackup/users/stratum/ERA5/LS2D/',
         #'ERA5_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',
-        'start_date'  : datetime.datetime(year=2016, month=5, day=4, hour=5),
-        'end_date'    : datetime.datetime(year=2016, month=5, day=4, hour=18)
+        'start_date'  : datetime.datetime(year=2016, month=5, day=1, hour=0),
+        'end_date'    : datetime.datetime(year=2016, month=5, day=2, hour=0)
         }
 
     e5 = Read_ERA(settings)
-    e5.calculate_forcings(n_av=1)
-    e5.plot_forcings()
+
+    #e5_box = copy.deepcopy(e5)
+    e5_2nd = copy.deepcopy(e5)
+    e5_4th = copy.deepcopy(e5)
+
+    #e5_box.calculate_forcings(n_av=1, method='box')
+    e5_2nd.calculate_forcings(n_av=1, method='2nd')
+    e5_4th.calculate_forcings(n_av=1, method='4th')
+
+    k = 7
+
+    pl.figure()
+    pl.subplot(321)
+    #pl.plot(e5_box.dtthl_advec[:,k]*3600., label='box')
+    pl.plot(e5_2nd.dtthl_advec[:,k]*3600., label='2nd')
+    pl.plot(e5_4th.dtthl_advec[:,k]*3600., label='4th')
+    pl.legend()
+    pl.ylabel('dtthl_advec')
+
+    pl.subplot(322)
+    #pl.plot(e5_box.dtqt_advec[:,k]*3600000.)
+    pl.plot(e5_2nd.dtqt_advec[:,k]*3600000.)
+    pl.plot(e5_4th.dtqt_advec[:,k]*3600000.)
+    pl.ylabel('dtqt_advec')
+
+    pl.subplot(323)
+    #pl.plot(e5_box.dtu_advec[:,k]*3600.)
+    pl.plot(e5_2nd.dtu_advec[:,k]*3600.)
+    pl.plot(e5_4th.dtu_advec[:,k]*3600.)
+    pl.ylabel('dtu_advec')
+
+    pl.subplot(324)
+    #pl.plot(e5_box.dtv_advec[:,k]*3600.)
+    pl.plot(e5_2nd.dtv_advec[:,k]*3600.)
+    pl.plot(e5_4th.dtv_advec[:,k]*3600.)
+    pl.ylabel('dtv_advec')
+
+    pl.subplot(325)
+    #pl.plot(e5_box.ug[:,k])
+    pl.plot(e5_2nd.ug[:,k])
+    pl.plot(e5_4th.ug[:,k])
+    pl.ylabel('ug')
+
+    pl.subplot(326)
+    #pl.plot(e5_box.vg[:,k])
+    pl.plot(e5_2nd.vg[:,k])
+    pl.plot(e5_4th.vg[:,k])
+    pl.ylabel('vg')
+
+
+
+
