@@ -202,7 +202,7 @@ def download_ERA5(settings):
                 download_queue.append(settings_tmp)
 
     # Create download Pool with 3 threads (ECMWF allows up to 3 parallel requests):
-    pool = multiprocessing.Pool(processes=4)
+    pool = multiprocessing.Pool(processes=6)
     pool.map(download_ERA5_file, download_queue)
 
 
@@ -216,8 +216,8 @@ if __name__ == "__main__":
         'case_name'   : 'cabauw',
         'ERA5_path'   : '/nobackup/users/stratum/ERA5/LS2D/',
         #'ERA5_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',
-        'start_date'  : datetime.datetime(year=2016, month=12, day=1, hour=0),
-        'end_date'    : datetime.datetime(year=2017, month=1, day=1, hour=0)
+        'start_date'  : datetime.datetime(year=2017, month=1, day=1, hour=0),
+        'end_date'    : datetime.datetime(year=2018, month=1, day=1, hour=0)
         }
 
     # Download the ERA5 data (or check whether it is available local)

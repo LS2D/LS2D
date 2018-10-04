@@ -74,7 +74,12 @@ if __name__ == '__main__':
     # Positive distances from S->N and W->E
     print('dlat=', dlat(latS, latN))
     print('dlon=', dlon(lonW, lonE, latC))
+    print('dlat=', dlat(latN, latS))
+    print('dlon=', dlon(lonE, lonW, latC))
 
     # Positive gradients
     print('ddlat=', ddlat(valS, valN, latS, latN))
     print('ddlon=', ddlon(valW, valE, lonW, lonE, latC))
+
+    print('ddlat=', ddlat(valN, valS, latN, latS))
+    print('ddlon=', ddlon(valE, valW, lonE, lonW, latC))
