@@ -84,14 +84,14 @@ class Read_ERA:
         fc_dates = tt.get_required_forecast(start, end)
 
         # Check if output directory ends with '/'
-        if settings['ERA5_path'][-1] != '/':
-            settings['ERA5_path'] += '/'
+        if settings['base_path'][-1] != '/':
+            settings['base_path'] += '/'
 
         # Create lists with required files
-        an_sfc_files   = [ERA5_file_path(d.year, d.month, d.day, settings['ERA5_path'], settings['case_name'], 'surface_an' ) for d in an_dates]
-        an_model_files = [ERA5_file_path(d.year, d.month, d.day, settings['ERA5_path'], settings['case_name'], 'model_an'   ) for d in an_dates]
-        an_pres_files  = [ERA5_file_path(d.year, d.month, d.day, settings['ERA5_path'], settings['case_name'], 'pressure_an') for d in an_dates]
-        fc_model_files = [ERA5_file_path(d.year, d.month, d.day, settings['ERA5_path'], settings['case_name'], 'model_fc'   ) for d in fc_dates]
+        an_sfc_files   = [ERA5_file_path(d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'surface_an' ) for d in an_dates]
+        an_model_files = [ERA5_file_path(d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'model_an'   ) for d in an_dates]
+        an_pres_files  = [ERA5_file_path(d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'pressure_an') for d in an_dates]
+        fc_model_files = [ERA5_file_path(d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'model_fc'   ) for d in fc_dates]
 
         check_files(an_sfc_files  )
         check_files(an_model_files)
@@ -377,17 +377,11 @@ if __name__ == '__main__':
         'central_lon' : 4.927,
         'area_size'   : 2,
         'case_name'   : 'cabauw',
-        'ERA5_path'   : '/nobackup/users/stratum/ERA5/LS2D/',
-        #'ERA5_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',
+        'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',
+        #'base_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',
         'start_date'  : datetime.datetime(year=2016, month=12, day=1, hour=0),
         'end_date'    : datetime.datetime(year=2016, month=12, day=2, hour=0)
         }
-
-    # Debug BvS... Compare with Harmonie dynamic tendencies
-    #from read_DDH_netcdf import *
-    #path = '/nobackup/users/stratum/DOWA/LES_forcing/'
-    #ham  = read_DDH_netcdf(settings['start_date'], settings['end_date'], path)
-    #iloc = 7+24    # 7+24=30x30km Cabauw
 
     e5 = Read_ERA(settings)
 

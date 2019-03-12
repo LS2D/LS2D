@@ -18,6 +18,7 @@
 #
 
 import datetime
+import sys
 
 _opts = {
    'blue'   : '\033[94m',
@@ -51,8 +52,10 @@ def warning(message):
     """
     print('{}{}WARNING:{} {}'.format(_opts['purple'], _opts['bf'], _opts['end'], message))
 
-def error(message):
+def error(message, exit=True):
     """
     Format of print errors
     """
     print('{}{}ERROR:{} {}'.format(_opts['red'], _opts['bf'], _opts['end'], message))
+    sys.exit()
+

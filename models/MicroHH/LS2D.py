@@ -23,10 +23,11 @@ if (__name__ == '__main__'):
         'central_lon' : 4.927,
         'area_size'   : 2,
         'case_name'   : 'cabauw',
-        #'ERA5_path'   : '/nobackup/users/stratum/ERA5/LS2D/',
-        'ERA5_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',
-        'start_date'  : datetime.datetime(year=2016, month=5, day=4, hour=5),
-        'end_date'    : datetime.datetime(year=2016, month=5, day=4, hour=18)
+        #'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',  # KNMI
+        #'base_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',   # Macbook
+        'base_path'   : '/home/scratch1/meteo_data/LS2D/',   # Arch
+        'start_date'  : datetime.datetime(year=2016, month=8, day=1, hour=0),
+        'end_date'    : datetime.datetime(year=2016, month=8, day=1, hour=23)
         }
 
     header('Creating LES input')
