@@ -28,7 +28,6 @@ import multiprocessing
 # Custom tools (in src subdirectory)
 import time_tools as tt
 from messages import *
-from conventions import ERA5_file_path
 
 try:
     import cdsapi
@@ -65,16 +64,12 @@ def download_ERA5_file(settings):
 
     message('Downloading: {} - {}'.format(settings['date'], settings['ftype']))
 
-    # File path/name
-    ERA_dir, ERA_file = ERA5_file_path(settings['date'].year, settings['date'].month, settings['date'].day, 
-                                       settings['path'], settings['case'], settings['ftype'])
+    # Output file name
+    _, ERA_file = ERA5_file_path(settings['date'].year, settings['date'].month, settings['date'].day,\
+                                 settings['base_path'], settings['case_name'], settings['ftype'])
 
-    # Create directory if it does not exist..
-    if not os.path.exists(ERA_dir):
-        os.makedirs(ERA_dir)
-
+    # Write CDS API prints to log file (NetCDF file path/name appended with .log)
     if settings['write_log']:
-        # Write CDS API prints to log file (NetCDF file path/name appended with .log)
         log_file   = '{}.log'.format(ERA_file)
         old_stdout = sys.stdout
         sys.stdout = open(log_file, 'w')
@@ -200,9 +195,9 @@ def download_ERA5(settings):
 
     # Base dictionary to pass to download function. In Python >3.3, multiprocessings Pool() can accept
     # multiple arguments. For now, keep it generic for older versions by passing all arguments inside a dict
-    download_settings = {'lat' :settings['central_lat'], 'lon' :      settings['central_lon'],
-                         'size':settings['area_size'],   'path':      settings['base_path'],
-                         'case':settings['case_name'],   'write_log': settings['write_log']}
+    download_settings = {'lat' :      settings['central_lat'], 'lon' :      settings['central_lon'],
+                         'size':      settings['area_size'],   'base_path': settings['base_path'],
+                         'case_name': settings['case_name'],   'write_log': settings['write_log']}
     download_queue = []
 
     # Loop over all required files, check if there is a local version, if not add to download queue
@@ -210,8 +205,12 @@ def download_ERA5(settings):
     for date in an_dates:
         for ftype in ['model_an', 'pressure_an', 'surface_an']:
 
-            _, ERA_file = ERA5_file_path(date.year, date.month, date.day, settings['base_path'], settings['case_name'], ftype)
+            ERA_dir, ERA_file = ERA5_file_path(date.year, date.month, date.day, settings['base_path'], settings['case_name'], ftype)
 
+            if not os.path.exists(ERA_dir):
+                message('Creating output directory {}'.format(ERA_dir))
+                os.makedirs(ERA_dir)
+            
             if os.path.isfile(ERA_file):
                 message('Found {} - {} local'.format(date, ftype))
             else:
@@ -223,7 +222,11 @@ def download_ERA5(settings):
     for date in fc_dates:
         for ftype in ['model_fc']:
 
-            _, ERA_file = ERA5_file_path(date.year, date.month, date.day, settings['base_path'], settings['case_name'], ftype)
+            ERA_dir, ERA_file = ERA5_file_path(date.year, date.month, date.day, settings['base_path'], settings['case_name'], ftype)
+
+            if not os.path.exists(ERA_dir):
+                message('Creating output directory {}'.format(ERA_dir))
+                os.makedirs(ERA_dir)
 
             if os.path.isfile(ERA_file):
                 message('Found {} - {} local'.format(date, ftype))
@@ -245,11 +248,11 @@ if __name__ == "__main__":
         'central_lon' : 4.927,
         'area_size'   : 1,
         'case_name'   : 'cabauw',
-        #'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',  # KNMI
+        'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',  # KNMI
         #'base_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',   # Macbook
-        'base_path'   : '/home/scratch1/meteo_data/LS2D/',      # Arch
-        'start_date'  : datetime.datetime(year=2017, month=1, day=1, hour=0),
-        'end_date'    : datetime.datetime(year=2017, month=1, day=1, hour=23),
+        #'base_path'   : '/home/scratch1/meteo_data/LS2D/',      # Arch
+        'start_date'  : datetime.datetime(year=2017, month=1, day=2, hour=0),
+        'end_date'    : datetime.datetime(year=2017, month=1, day=2, hour=23),
         'write_log'   : True
         }
 
