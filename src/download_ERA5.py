@@ -35,7 +35,7 @@ except:
     error('Can\'t find the CDS Python API....\nSee https://cds.climate.copernicus.eu/api-how-to')
 
 
-def ERA5_file_path(year, month, day, path, case, ftype):
+def ERA5_file_path(year, month, day, path, case, ftype, return_dir=True):
     """
     Return saving path of files in format `path/ERA5/yyyy/mm/dd/type.nc`
     """
@@ -43,7 +43,10 @@ def ERA5_file_path(year, month, day, path, case, ftype):
     ERA_dir = "{0}/{1}/ERA5/{2:04d}/{3:02d}/{4:02d}".format(path, case, year, month, day)
     ERA_file = "{0}/{1}.nc".format(ERA_dir, ftype)
 
-    return ERA_dir, ERA_file
+    if return_dir:
+        return ERA_dir, ERA_file
+    else:
+        return ERA_file
 
 
 def download_ERA5_file(settings):
@@ -65,8 +68,8 @@ def download_ERA5_file(settings):
     message('Downloading: {} - {}'.format(settings['date'], settings['ftype']))
 
     # Output file name
-    _, ERA_file = ERA5_file_path(settings['date'].year, settings['date'].month, settings['date'].day,\
-                                 settings['base_path'], settings['case_name'], settings['ftype'])
+    ERA_file = ERA5_file_path(settings['date'].year, settings['date'].month, settings['date'].day,\
+                              settings['base_path'], settings['case_name'], settings['ftype'], return_dir=False)
 
     # Write CDS API prints to log file (NetCDF file path/name appended with .log)
     if settings['write_log']:
@@ -248,11 +251,11 @@ if __name__ == "__main__":
         'central_lon' : 4.927,
         'area_size'   : 1,
         'case_name'   : 'cabauw',
-        'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',  # KNMI
+        #'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',  # KNMI
         #'base_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',   # Macbook
-        #'base_path'   : '/home/scratch1/meteo_data/LS2D/',      # Arch
-        'start_date'  : datetime.datetime(year=2017, month=1, day=2, hour=0),
-        'end_date'    : datetime.datetime(year=2017, month=1, day=2, hour=23),
+        'base_path'   : '/home/scratch1/meteo_data/LS2D/',      # Arch
+        'start_date'  : datetime.datetime(year=2018, month=8, day=11, hour=0),
+        'end_date'    : datetime.datetime(year=2018, month=8, day=11, hour=23),
         'write_log'   : True
         }
 

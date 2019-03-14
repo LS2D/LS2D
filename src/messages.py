@@ -57,5 +57,6 @@ def error(message, exit=True):
     Format of print errors
     """
     print('{}{}ERROR:{} {}'.format(_opts['red'], _opts['bf'], _opts['end'], message))
-    sys.exit()
+    if exit:
+        sys.exit()
 

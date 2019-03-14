@@ -29,8 +29,9 @@ import datetime
 import spatial_tools as st
 import time_tools as tt
 import finite_difference as fd
+
 from IFS_tools import IFS_tools
-from conventions import ERA5_file_path
+from download_ERA5 import ERA5_file_path
 from messages import *
 
 class Slice:
@@ -44,10 +45,18 @@ class Slice:
         return np.s_[:,:,self.jstart+j:self.jend+j,\
                          self.istart+i:self.iend+i]
 
+
 def check_files(files):
+    """
+    Check whether all required `files` exists in the ERA5 archive
+    """
+    file_missing = False
     for f in files:
         if not os.path.exists(f):
-            message('file \"{}\" does not exist...'.format(f))
+            error('File \"{}\" does not exist...'.format(f), exit=False)
+            file_missing = True
+    return file_missing
+
 
 def flip(array):
     if len(array.shape) == 4:
@@ -61,6 +70,7 @@ def flip(array):
     elif len(array.shape) == 1:
         # Reverse order of 1-dimensional field (height)
         return np.flip(array, axis=0)
+
 
 class Read_ERA:
     """
@@ -88,21 +98,25 @@ class Read_ERA:
             settings['base_path'] += '/'
 
         # Create lists with required files
-        an_sfc_files   = [ERA5_file_path(d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'surface_an' ) for d in an_dates]
-        an_model_files = [ERA5_file_path(d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'model_an'   ) for d in an_dates]
-        an_pres_files  = [ERA5_file_path(d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'pressure_an') for d in an_dates]
-        fc_model_files = [ERA5_file_path(d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'model_fc'   ) for d in fc_dates]
+        an_sfc_files   = [ERA5_file_path(d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'surface_an',  False) for d in an_dates]
+        an_model_files = [ERA5_file_path(d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'model_an',    False) for d in an_dates]
+        an_pres_files  = [ERA5_file_path(d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'pressure_an', False) for d in an_dates]
+        fc_model_files = [ERA5_file_path(d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'model_fc',    False) for d in fc_dates]
 
-        check_files(an_sfc_files  )
-        check_files(an_model_files)
-        check_files(an_pres_files )
-        check_files(fc_model_files)
+        # Check if all files exist, and exit if not..
+        files_missing = False
+        files_missing += check_files(an_sfc_files  )
+        files_missing += check_files(an_model_files)
+        files_missing += check_files(an_pres_files )
+        files_missing += check_files(fc_model_files)
+        if files_missing:
+            error('One or more required ERA5 files are missing..')
 
         # Open NetCDF files: MFDataset automatically merges the files / time dimensions
-        fsa = nc4.MFDataset(an_sfc_files  )
-        fma = nc4.MFDataset(an_model_files)
-        fpa = nc4.MFDataset(an_pres_files )
-        fmf = nc4.MFDataset(fc_model_files)
+        fsa = nc4.MFDataset(an_sfc_files,   aggdim='time')
+        fma = nc4.MFDataset(an_model_files, aggdim='time')
+        fpa = nc4.MFDataset(an_pres_files,  aggdim='time')
+        fmf = nc4.MFDataset(fc_model_files, aggdim='time')
 
         # Full time records in analysis and forecast files
         an_time_tmp = fsa.variables['time'][:]
@@ -375,12 +389,14 @@ if __name__ == '__main__':
     settings = {
         'central_lat' : 51.971,
         'central_lon' : 4.927,
-        'area_size'   : 2,
+        'area_size'   : 1,
         'case_name'   : 'cabauw',
-        'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',
-        #'base_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',
-        'start_date'  : datetime.datetime(year=2016, month=12, day=1, hour=0),
-        'end_date'    : datetime.datetime(year=2016, month=12, day=2, hour=0)
+        #'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',  # KNMI
+        #'base_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',   # Macbook
+        'base_path'   : '/home/scratch1/meteo_data/LS2D/',      # Arch
+        'start_date'  : datetime.datetime(year=2018, month=8, day=11, hour=0),
+        'end_date'    : datetime.datetime(year=2018, month=8, day=11, hour=23),
+        'write_log'   : True
         }
 
     e5 = Read_ERA(settings)
@@ -395,44 +411,57 @@ if __name__ == '__main__':
 
     k = 8
 
-    pl.figure()
-    pl.subplot(321)
+    pl.figure(figsize=(10,7))
+    pl.subplot(331)
     pl.plot(e5.datetime, e5_box.dtthl_advec[:,k]*3600., label='box')
     pl.plot(e5.datetime, e5_2nd.dtthl_advec[:,k]*3600., label='2nd')
     pl.plot(e5.datetime, e5_4th.dtthl_advec[:,k]*3600., label='4th')
     #pl.plot(ham.time, ham.dtT_dyn[:,iloc,k]*3600, '--')
     pl.legend()
-    pl.ylabel('dtthl (K h-1)')
+    pl.ylabel('dtthl_advec (K h-1)')
 
-    pl.subplot(322)
+    pl.subplot(332)
+    pl.plot(e5.datetime, e5_box.dtthl_sw_mean[:,k]*3600., label='SW')
+    pl.plot(e5.datetime, e5_box.dtthl_lw_mean[:,k]*3600., label='LW')
+    #pl.plot(ham.time, ham.dtT_dyn[:,iloc,k]*3600, '--')
+    pl.legend()
+    pl.ylabel('dtthl_rad (K h-1)')
+
+    pl.subplot(333)
     pl.plot(e5.datetime, e5_box.dtqt_advec[:,k]*3600000.)
     pl.plot(e5.datetime, e5_2nd.dtqt_advec[:,k]*3600000.)
     pl.plot(e5.datetime, e5_4th.dtqt_advec[:,k]*3600000.)
     #pl.plot(ham.time, ham.dtq_dyn[:,iloc,k]*3600000, '--')
-    pl.ylabel('dtqt (g kg-1 h-1)')
+    pl.ylabel('dtqt_advec (g kg-1 h-1)')
 
-    pl.subplot(323)
+    pl.subplot(334)
     pl.plot(e5.datetime, e5_box.dtu_total[:,k]*3600.)
     pl.plot(e5.datetime, e5_2nd.dtu_total[:,k]*3600.)
     pl.plot(e5.datetime, e5_4th.dtu_total[:,k]*3600.)
     #pl.plot(ham.time, ham.dtu_dyn[:,iloc,k]*3600, '--')
-    pl.ylabel('dtu (m s-1 h-1)')
+    pl.ylabel('dtu_advec (m s-1 h-1)')
 
-    pl.subplot(324)
+    pl.subplot(335)
     pl.plot(e5.datetime, e5_box.dtv_total[:,k]*3600.)
     pl.plot(e5.datetime, e5_2nd.dtv_total[:,k]*3600.)
     pl.plot(e5.datetime, e5_4th.dtv_total[:,k]*3600.)
     #pl.plot(ham.time, ham.dtv_dyn[:,iloc,k]*3600, '--')
-    pl.ylabel('dtv (m s-1 h-1)')
+    pl.ylabel('dtv_advec (m s-1 h-1)')
 
-    pl.subplot(325)
+    pl.subplot(336)
     pl.plot(e5.datetime, e5_box.ug[:,k])
     pl.plot(e5.datetime, e5_2nd.ug[:,k])
     pl.plot(e5.datetime, e5_4th.ug[:,k])
     pl.ylabel('ug (m s-1)')
 
-    pl.subplot(326)
+    pl.subplot(337)
     pl.plot(e5.datetime, e5_box.vg[:,k])
     pl.plot(e5.datetime, e5_2nd.vg[:,k])
     pl.plot(e5.datetime, e5_4th.vg[:,k])
     pl.ylabel('vg (m s-1)')
+
+    pl.subplot(338)
+    pl.plot(e5.datetime, e5_box.wls_mean[:,k])
+    pl.ylabel('wls (m s-1)')
+
+    pl.tight_layout()

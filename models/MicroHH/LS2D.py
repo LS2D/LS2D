@@ -21,13 +21,14 @@ if (__name__ == '__main__'):
     settings = {
         'central_lat' : 51.971,
         'central_lon' : 4.927,
-        'area_size'   : 2,
+        'area_size'   : 1,
         'case_name'   : 'cabauw',
         #'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',  # KNMI
         #'base_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',   # Macbook
-        'base_path'   : '/home/scratch1/meteo_data/LS2D/',   # Arch
-        'start_date'  : datetime.datetime(year=2016, month=8, day=1, hour=0),
-        'end_date'    : datetime.datetime(year=2016, month=8, day=1, hour=23)
+        'base_path'   : '/home/scratch1/meteo_data/LS2D/',      # Arch
+        'start_date'  : datetime.datetime(year=2018, month=8, day=11, hour=4),
+        'end_date'    : datetime.datetime(year=2018, month=8, day=11, hour=20),
+        'write_log'   : True
         }
 
     header('Creating LES input')
@@ -42,7 +43,8 @@ if (__name__ == '__main__'):
     # Read MicroHH namelist and create stretched vertical grid
 
     nl   = mht.Read_namelist()
-    grid = mht.Stretched_grid(nl['grid']['ktot'], 90, 20, 20, 250)     # 128 hrv grid
+    grid = mht.Stretched_grid(nl['grid']['ktot'], 130, 30, 20, 150)     # 128 hrv grid
+    grid.plot()
 
     # Create nudge factor, controlling where nudging is aplied, and time scale
     tau_nudge = 7200         # Nudge time scale (s)
@@ -58,17 +60,21 @@ if (__name__ == '__main__'):
             out[i,:] = np.interp(z, ze[i,:], arr[i,:])
         return out
 
-    thl   = interp_time(grid.z, e5.z_mean, e5.thl_mean )
-    qt    = interp_time(grid.z, e5.z_mean, e5.qt_mean  )
-    u     = interp_time(grid.z, e5.z_mean, e5.u_mean   )
-    v     = interp_time(grid.z, e5.z_mean, e5.v_mean   )
-    w     = interp_time(grid.z, e5.z_mean, e5.wls_mean )
-    thlls = interp_time(grid.z, e5.z_mean, e5.thl_advec)
-    qtls  = interp_time(grid.z, e5.z_mean, e5.qt_advec )
-    uls   = interp_time(grid.z, e5.z_mean, e5.u_advec  )
-    vls   = interp_time(grid.z, e5.z_mean, e5.v_advec  )
-    ug    = interp_time(grid.z, e5.z_mean, e5.ug       )
-    vg    = interp_time(grid.z, e5.z_mean, e5.vg       )
+    thl   = interp_time(grid.z, e5.z_mean, e5.thl_mean   )
+    qt    = interp_time(grid.z, e5.z_mean, e5.qt_mean    )
+    u     = interp_time(grid.z, e5.z_mean, e5.u_mean     )
+    v     = interp_time(grid.z, e5.z_mean, e5.v_mean     )
+    w     = interp_time(grid.z, e5.z_mean, e5.wls_mean   )
+    thlls = interp_time(grid.z, e5.z_mean, e5.dtthl_advec)
+    qtls  = interp_time(grid.z, e5.z_mean, e5.dtqt_advec )
+    uls   = interp_time(grid.z, e5.z_mean, e5.dtu_advec  )
+    vls   = interp_time(grid.z, e5.z_mean, e5.dtv_advec  )
+    ug    = interp_time(grid.z, e5.z_mean, e5.ug         )
+    vg    = interp_time(grid.z, e5.z_mean, e5.vg         )
+
+    # Add radiative tendency
+    thlls += interp_time(grid.z, e5.z_mean, e5.dtthl_sw_mean)
+    thlls += interp_time(grid.z, e5.z_mean, e5.dtthl_lw_mean)
 
     # ----------------------
     # Write MicroHH input
