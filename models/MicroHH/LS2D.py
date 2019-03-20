@@ -16,53 +16,6 @@ from messages      import header, message, error
 # Import MicroHH specific tools
 import microhh_tools as mht
 
-
-def write_NetCDF_input(case_name, float_type, init_profiles, tdep_surface=None, tdep_ls=None):
-    """
-    Function for writing the MicroHH2 NetCDF input
-    """
-
-    def add_variable(nc_group, name, dims, data, float_type):
-        var = nc_group.createVariable(name, float_type, dims)
-        var[:] = data[:]
-
-    # Define new NetCDF file
-    nc_file = nc.Dataset('{}_input.nc'.format(case_name), mode='w', datamodel='NETCDF4')
-
-    # Create height dimension, and set height coordinate
-    nc_file.createDimension('z', init_profiles['z'].size)
-    add_variable(nc_file, 'z', ('z'), init_profiles['z'], float_type)
-
-    # Create a group called "init" for the initial profiles.
-    nc_group_init = nc_file.createGroup('init')
-
-    # Set the initial profiles
-    for name, data in init_profiles.items():
-        add_variable(nc_group_init, name, ('z'), data, float_type)
-
-    # Create a group called "timedep" for the time dependent input
-    nc_group_timedep = nc_file.createGroup('timedep')
-
-    # Write the time dependent surface values
-    if tdep_surface is not None:
-        nc_group_timedep.createDimension('time_surface', tdep_surface['time_surface'].size)
-
-        for name, data in tdep_surface.items():
-            add_variable(nc_group_timedep, name, ('time_surface'), data, float_type)
-
-    # Write the time dependent atmospheric values
-    if tdep_ls is not None:
-        nc_group_timedep.createDimension('time_ls', tdep_ls['time_ls'].size)
-
-        for name, data in tdep_ls.items():
-            dims = ('time_ls') if name == 'time_ls' else ('time_ls', 'z')
-            add_variable(nc_group_timedep, name, dims, data, float_type)
-
-    nc_file.close()
-
-
-
-
 if (__name__ == '__main__'):
 
     # Dictionary with settings
@@ -83,7 +36,6 @@ if (__name__ == '__main__'):
     use_netcdf = True       # Only for microhh_version=2
     float_type  = 'f4'      # {f4,f8}
 
-
     header('Creating LES input')
 
     # Download the ERA5 data (or check whether it is available local)
@@ -94,7 +46,6 @@ if (__name__ == '__main__'):
     e5.calculate_forcings(n_av=1)
 
     # Read MicroHH namelist and create stretched vertical grid
-
     nl   = mht.Read_namelist()
     grid = mht.Stretched_grid(nl['grid']['ktot'], 130, 30, 20, 150)     # 128 hrv grid
     grid.plot()
@@ -153,7 +104,7 @@ if (__name__ == '__main__'):
                              'thl_ls': thlls, 'qt_ls': qtls, 'u_ls': uls, 'v_ls': vls,
                              'thl_nudge': thl, 'qt_nudge': qt, 'u_nudge': u, 'v_nudge': v}
 
-            write_NetCDF_input('testbed', float_type, init_profiles, tdep_surface, tdep_ls)
+            mht.write_NetCDF_input('testbed', float_type, init_profiles, tdep_surface, tdep_ls)
 
         else:
             error('NetCDF input only supported for MicroHH >=2.0', exit=True)

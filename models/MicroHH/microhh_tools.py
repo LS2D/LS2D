@@ -260,6 +260,50 @@ def write_time_profs(file_name, z, times, data):
     f.close()
 
 
+def write_NetCDF_input(case_name, float_type, init_profiles, tdep_surface=None, tdep_ls=None):
+    """
+    Function for writing the MicroHH2 NetCDF input
+    """
+
+    def add_variable(nc_group, name, dims, data, float_type):
+        var = nc_group.createVariable(name, float_type, dims)
+        var[:] = data[:]
+
+    # Define new NetCDF file
+    nc_file = nc4.Dataset('{}_input.nc'.format(case_name), mode='w', datamodel='NETCDF4')
+
+    # Create height dimension, and set height coordinate
+    nc_file.createDimension('z', init_profiles['z'].size)
+    add_variable(nc_file, 'z', ('z'), init_profiles['z'], float_type)
+
+    # Create a group called "init" for the initial profiles.
+    nc_group_init = nc_file.createGroup('init')
+
+    # Set the initial profiles
+    for name, data in init_profiles.items():
+        add_variable(nc_group_init, name, ('z'), data, float_type)
+
+    # Create a group called "timedep" for the time dependent input
+    nc_group_timedep = nc_file.createGroup('timedep')
+
+    # Write the time dependent surface values
+    if tdep_surface is not None:
+        nc_group_timedep.createDimension('time_surface', tdep_surface['time_surface'].size)
+
+        for name, data in tdep_surface.items():
+            add_variable(nc_group_timedep, name, ('time_surface'), data, float_type)
+
+    # Write the time dependent atmospheric values
+    if tdep_ls is not None:
+        nc_group_timedep.createDimension('time_ls', tdep_ls['time_ls'].size)
+
+        for name, data in tdep_ls.items():
+            dims = ('time_ls') if name == 'time_ls' else ('time_ls', 'z')
+            add_variable(nc_group_timedep, name, dims, data, float_type)
+
+    nc_file.close()
+
+
 class Stretched_grid:
     def __init__(self, kmax, nloc1, nbuf1, dz1, dz2):
         dn         = 1./kmax
