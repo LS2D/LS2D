@@ -16,6 +16,53 @@ from messages      import header, message, error
 # Import MicroHH specific tools
 import microhh_tools as mht
 
+
+def write_NetCDF_input(case_name, float_type, init_profiles, tdep_surface=None, tdep_ls=None):
+    """
+    Function for writing the MicroHH2 NetCDF input
+    """
+
+    def add_variable(nc_group, name, dims, data, float_type):
+        var = nc_group.createVariable(name, float_type, dims)
+        var[:] = data[:]
+
+    # Define new NetCDF file
+    nc_file = nc.Dataset('{}_input.nc'.format(case_name), mode='w', datamodel='NETCDF4')
+
+    # Create height dimension, and set height coordinate
+    nc_file.createDimension('z', init_profiles['z'].size)
+    add_variable(nc_file, 'z', ('z'), init_profiles['z'], float_type)
+
+    # Create a group called "init" for the initial profiles.
+    nc_group_init = nc_file.createGroup('init')
+
+    # Set the initial profiles
+    for name, data in init_profiles.items():
+        add_variable(nc_group_init, name, ('z'), data, float_type)
+
+    # Create a group called "timedep" for the time dependent input
+    nc_group_timedep = nc_file.createGroup('timedep')
+
+    # Write the time dependent surface values
+    if tdep_surface is not None:
+        nc_group_timedep.createDimension('time_surface', tdep_surface['time_surface'].size)
+
+        for name, data in tdep_surface.items():
+            add_variable(nc_group_timedep, name, ('time_surface'), data, float_type)
+
+    # Write the time dependent atmospheric values
+    if tdep_ls is not None:
+        nc_group_timedep.createDimension('time_ls', tdep_ls['time_ls'].size)
+
+        for name, data in tdep_ls.items():
+            dims = ('time_ls') if name == 'time_ls' else ('time_ls', 'z')
+            add_variable(nc_group_timedep, name, dims, data, float_type)
+
+    nc_file.close()
+
+
+
+
 if (__name__ == '__main__'):
 
     # Dictionary with settings
@@ -96,72 +143,28 @@ if (__name__ == '__main__'):
     mht.replace_namelist_value('z0m',     e5.z0m_mean[0])
     mht.replace_namelist_value('z0h',     e5.z0h_mean[0])
 
+
     if use_netcdf:
         if microhh_version == 2:
 
-            def add_nc_var(nc_file, name, dims, data):
-                var = nc_file.createVariable(name, float_type, dims)
-                var[:] = data[:]
+            init_profiles = {'z': grid.z, 'thl': thl[0,:], 'qt': qt[0,:], 'u': u[0,:], 'v': v[0,:], 'nudgefac': nudge_fac}
+            tdep_surface  = {'time_surface': e5.time_sec, 'thl_sbot': e5.wth_mean, 'qt_sbot': e5.wq_mean, 'p_sbot': e5.ps_mean }
+            tdep_ls       = {'time_ls': e5.time_sec, 'u_geo': ug, 'v_geo': vg, 'w_ls': w,
+                             'thl_ls': thlls, 'qt_ls': qtls, 'u_ls': uls, 'v_ls': vls,
+                             'thl_nudge': thl, 'qt_nudge': qt, 'u_nudge': u, 'v_nudge': v}
 
-            nc_file = nc.Dataset('testbed_input.nc', mode='w', datamodel='NETCDF4')
-
-            # Initial profiles
-            nc_file.createDimension('z', grid.kmax)
-            add_nc_var(nc_file, 'z', ('z'), grid.z)
-
-            # Create a group called "init" for the initial profiles.
-            nc_group_init = nc_file.createGroup('init')
-
-            add_nc_var(nc_group_init, 'thl', ('z'), thl[0,:])
-            add_nc_var(nc_group_init, 'qt',  ('z'), qt [0,:])
-            add_nc_var(nc_group_init, 'u',   ('z'), u  [0,:])
-            add_nc_var(nc_group_init, 'v',   ('z'), v  [0,:])
-
-            # Create a group called "timedep" for the timedep.
-            nc_group_timedep = nc_file.createGroup('timedep')
-
-            # Write the input times:
-            nc_group_timedep.createDimension('time_surface', e5.time_sec.size)
-            nc_group_timedep.createDimension('time_ls',      e5.time_sec.size)
-
-            add_nc_var(nc_group_timedep, 'time_surface', ('time_surface'), e5.time_sec)
-            add_nc_var(nc_group_timedep, 'time_ls',      ('time_ls'),      e5.time_sec)
-
-            # Write the time dependent surface variables
-            add_nc_var(nc_group_timedep, 'thl_sbot', ('time_surface'), e5.wth_mean)
-            add_nc_var(nc_group_timedep, 'qt_sbot',  ('time_surface'), e5.wq_mean)
-            add_nc_var(nc_group_timedep, 'p_sbot',   ('time_surface'), e5.ps_mean)
-
-            # Write the dime dependent geostrophic wind
-            add_nc_var(nc_group_timedep, 'u_geo',  ('time_ls', 'z'), ug)
-            add_nc_var(nc_group_timedep, 'v_geo',  ('time_ls', 'z'), vg)
-            add_nc_var(nc_group_timedep, 'w_ls',   ('time_ls', 'z'), w)
-
-            # Write the time dependent tendencies
-            add_nc_var(nc_group_timedep, 'thl_ls', ('time_ls', 'z'), thlls)
-            add_nc_var(nc_group_timedep, 'qt_ls',  ('time_ls', 'z'), qtls)
-            add_nc_var(nc_group_timedep, 'u_ls',   ('time_ls', 'z'), uls)
-            add_nc_var(nc_group_timedep, 'v_ls',   ('time_ls', 'z'), vls)
-
-            # Write the time dependent nudging profiles
-            add_nc_var(nc_group_init,    'nudgefac',  ('z'), nudge_fac)
-            add_nc_var(nc_group_timedep, 'thl_nudge', ('time_ls', 'z'), thl)
-            add_nc_var(nc_group_timedep, 'qt_nudge',  ('time_ls', 'z'), qt)
-            add_nc_var(nc_group_timedep, 'u_nudge',   ('time_ls', 'z'), u)
-            add_nc_var(nc_group_timedep, 'v_nudge',   ('time_ls', 'z'), v)
-
-            nc_file.close()
+            write_NetCDF_input('testbed', float_type, init_profiles, tdep_surface, tdep_ls)
 
         else:
             error('NetCDF input only supported for MicroHH >=2.0', exit=True)
 
     else:
 
-        # 2. Initial profiles
+        # Initial profiles
         variables = {'z':grid.z, 'thl':thl[0,:], 'qt':qt[0,:], 'u':u[0,:], 'v':v[0,:], 'nudgefac':nudge_fac}
         mht.write_output('testbed.prof', variables, grid.z.size)
 
-        # 3. Time varying nudging profiles
+        # Time varying nudging profiles
         # Switch between old file names 1.x, and new ones in 2.0
         if microhh_version == 1:
             names = {'thl_nudge': 'thlnudge.timeprof', 'qt_nudge': 'qtnudge.timeprof',
@@ -177,23 +180,24 @@ if (__name__ == '__main__'):
                      'u_ls': 'u_ls.time', 'v_ls': 'v_ls.time',
                      'ug': 'u_geo.time', 'vg': 'v_geo.time', 'wls': 'w_ls.time'}
 
+        # Nudging profiles
         mht.write_time_profs(names['thl_nudge'], grid.z, e5.time_sec, thl)
         mht.write_time_profs(names['qt_nudge'],  grid.z, e5.time_sec, qt )
         mht.write_time_profs(names['u_nudge'],   grid.z, e5.time_sec, u  )
         mht.write_time_profs(names['v_nudge'],   grid.z, e5.time_sec, v  )
 
-        # 4. Time varying large scale advective tendencies
+        # Time varying large scale (advective) tendencies
         mht.write_time_profs(names['thl_ls'], grid.z, e5.time_sec, thlls)
         mht.write_time_profs(names['qt_ls'],  grid.z, e5.time_sec, qtls )
         mht.write_time_profs(names['u_ls'],   grid.z, e5.time_sec, uls  )
         mht.write_time_profs(names['v_ls'],   grid.z, e5.time_sec, vls  )
 
-        # 5. Time varying geostrophic wind and subsidence
+        # Time varying geostrophic wind and subsidence
         mht.write_time_profs(names['ug'],  grid.z, e5.time_sec, ug)
         mht.write_time_profs(names['vg'],  grid.z, e5.time_sec, vg)
         mht.write_time_profs(names['wls'], grid.z, e5.time_sec, w)
 
-        # 7. Time varying surface variables
+        # Time varying surface variables
         if microhh_version == 1:
             variables = {'t': e5.time_sec, 'sbot[thl]': e5.wth_mean, 'sbot[qt]': e5.wq_mean, 'pbot': e5.ps_mean}
             mht.write_output('testbed.time', variables, e5.time_sec.size)
