@@ -36,7 +36,7 @@ from messages import *
 #    error('Can\'t find the CDS Python API....\nSee https://cds.climate.copernicus.eu/api-how-to')
 
 
-def retrieve_from_MARS(request, settings, nc_file):
+def retrieve_from_MARS(request, settings, nc_dir, nc_file):
     """
     Retrieve file from MARS
     """
@@ -45,8 +45,9 @@ def retrieve_from_MARS(request, settings, nc_file):
         sp.call(task, shell=True, executable='/bin/bash')
 
     clean_name = nc_file[:-3]
-    mars_req   = '{}.mars'.format(clean_name)
-    grib_file  = '{}.grib'.format(clean_name)
+    mars_req   = '{}.mars' .format(clean_name)
+    grib_file  = '{}.grib' .format(clean_name)
+    slurm_job  = '{}.slurm'.format(clean_name)
 
     # Create MARS request
     f = open(mars_req, 'w')
@@ -56,9 +57,22 @@ def retrieve_from_MARS(request, settings, nc_file):
     f.write('target=\"{}\"\n'.format(grib_file))
     f.close()
 
-    # Retrieve GRIB file from MARS
-    execute('mars {}'.format(mars_req))
-    execute('grib_to_netcdf -o {} {}'.format(nc_file, grib_file))
+    # Create SLURM job file
+    f = open(slurm_job, 'w')
+    f.write('#!/bin/ksh\n')
+    f.write('#SBATCH --qos=express\n')
+    f.write('#SBATCH --job-name=LS2D\n')
+    f.write('#SBATCH --output={}.%N.%j.out\n'.format(slurm_job))
+    f.write('#SBATCH --error={}.%N.%j.err\n'.format(slurm_job))
+    f.write('#SBATCH --workdir={}\n'.format(nc_dir))
+    f.write('#SBATCH --time=00:30:00\n\n')
+
+    f.write('mars {}\n'.format(mars_req))
+    f.write('grib_to_netcdf -o {} {}'.format(nc_file, grib_file))
+    f.close()
+
+    # Submit job
+    execute('sbatch {}'.format(slurm_job))
 
 
 def ERA5_file_path(year, month, day, path, case, ftype, return_dir=True):
@@ -94,8 +108,8 @@ def download_ERA5_file(settings):
     message('Downloading: {} - {}'.format(settings['date'], settings['ftype']))
 
     # Output file name
-    nc_file = ERA5_file_path(settings['date'].year, settings['date'].month, settings['date'].day,\
-                              settings['base_path'], settings['case_name'], settings['ftype'], return_dir=False)
+    nc_dir, nc_file = ERA5_file_path(settings['date'].year, settings['date'].month, settings['date'].day,\
+                                     settings['base_path'], settings['case_name'], settings['ftype'])
 
     # Write CDS API prints to log file (NetCDF file path/name appended with .log)
     if settings['write_log']:
@@ -177,7 +191,7 @@ def download_ERA5_file(settings):
         server = cdsapi.Client()
         server.retrieve('reanalysis-era5-complete', request, nc_file)
     if settings['data_source'] == 'MARS':
-        retrieve_from_MARS(request, settings, nc_file)
+        retrieve_from_MARS(request, settings, nc_dir, nc_file)
 
     # Restore printing to screen
     if settings['write_log']:
