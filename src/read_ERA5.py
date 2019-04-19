@@ -392,8 +392,8 @@ if __name__ == '__main__':
         'area_size'   : 1,
         'case_name'   : 'cabauw',
         #'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',  # KNMI
-        #'base_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',   # Macbook
-        'base_path'   : '/home/scratch1/meteo_data/LS2D/',      # Arch
+        'base_path'   : '/Users/bart/meteo/data/LS2D/',   # Macbook
+        #'base_path'   : '/home/scratch1/meteo_data/LS2D/',      # Arch
         'start_date'  : datetime.datetime(year=2018, month=8, day=11, hour=0),
         'end_date'    : datetime.datetime(year=2018, month=8, day=11, hour=23),
         'write_log'   : True

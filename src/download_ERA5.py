@@ -22,8 +22,9 @@ import sys
 import os
 import datetime
 import numpy as np
-from multiprocessing import Process
-import multiprocessing
+
+import subprocess as sp
+import multiprocessing as mp
 
 # Custom tools (in src subdirectory)
 import time_tools as tt
@@ -33,6 +34,31 @@ try:
     import cdsapi
 except:
     error('Can\'t find the CDS Python API....\nSee https://cds.climate.copernicus.eu/api-how-to')
+
+
+def retrieve_from_MARS(request, settings, nc_file):
+    """
+    Retrieve file from MARS
+    """
+
+    def execute(task):
+        sp.call(task, shell=True, executable='/bin/bash')
+
+    clean_name = nc_file[:-3]
+    mars_req   = '{}.mars'.format(clean_name)
+    grib_file  = '{}.grib'.format(clean_name)
+
+    # Create MARS request
+    f = open(mars_req, 'w')
+    f.write('retrieve,\n')
+    for key, value in request.items():
+        f.write('{}={},\n'.format(key,value))
+    f.write('target=\"{}\"\n'.format(grib_file))
+    f.close()
+
+    # Retrieve GRIB file from MARS
+    execute('mars {}'.format(mars_req))
+    execute('grib_to_netcdf -o {} {}'.format(nc_file, grib_file))
 
 
 def ERA5_file_path(year, month, day, path, case, ftype, return_dir=True):
@@ -68,12 +94,12 @@ def download_ERA5_file(settings):
     message('Downloading: {} - {}'.format(settings['date'], settings['ftype']))
 
     # Output file name
-    ERA_file = ERA5_file_path(settings['date'].year, settings['date'].month, settings['date'].day,\
+    nc_file = ERA5_file_path(settings['date'].year, settings['date'].month, settings['date'].day,\
                               settings['base_path'], settings['case_name'], settings['ftype'], return_dir=False)
 
     # Write CDS API prints to log file (NetCDF file path/name appended with .log)
     if settings['write_log']:
-        log_file   = '{}.log'.format(ERA_file)
+        log_file   = '{}.log'.format(nc_file)
         old_stdout = sys.stdout
         sys.stdout = open(log_file, 'w')
 
@@ -89,22 +115,20 @@ def download_ERA5_file(settings):
         'expver'  : '1',
         'stream'  : 'oper',
         'date'    : '{0:04d}-{1:02d}-{2:02d}'.format(settings['date'].year, settings['date'].month, settings['date'].day),
-        'area'    : '{}/{}/{}/{}'.format(settings['lat']+settings['size'], settings['lon']-settings['size'],\
-                                         settings['lat']-settings['size'], settings['lon']+settings['size']),
-        'grid'    : '0.3/0.3', 
+        'area'    : '{}/{}/{}/{}'.format(settings['central_lat']+settings['area_size'], settings['central_lon']-settings['area_size'],\
+                                         settings['central_lat']-settings['area_size'], settings['central_lon']+settings['area_size']),
+        'grid'    : '0.25/0.25',
         'format'  : 'netcdf',
     }
 
     # Model levels and time steps to retrieve
-    model_levels = '/'.join(map(str, list(np.arange(1,138))))
+    model_levels = '1/to/137/by/1'
     press_levels = '1/2/3/5/7/10/20/30/50/70/100/125/150/175/200/225/250/300/350/400/450/\
-                    500/550/600/650/700/750/775/800/825/850/875/900/925/950/975/1000'
+500/550/600/650/700/750/775/800/825/850/875/900/925/950/975/1000'
 
-    an_times = '00:00:00/01:00:00/02:00:00/03:00:00/04:00:00/05:00:00/06:00:00/07:00:00/08:00:00/09:00:00/10:00:00/11:00:00/\
-                12:00:00/13:00:00/14:00:00/15:00:00/16:00:00/17:00:00/18:00:00/19:00:00/20:00:00/21:00:00/22:00:00/23:00:00'
+    an_times = '0/to/23/by/1'
     fc_times = '06:00:00/18:00:00'
-
-    fc_steps = '0/1/2/3/4/5/6/7/8/9/10/11'
+    fc_steps = '0/to/11/by/1'
 
     # Update request based on level/analysis/forecast:
     if settings['ftype'] == 'model_an':
@@ -141,13 +165,16 @@ def download_ERA5_file(settings):
             'type'     : 'an',
             'time'     : an_times,
             'param'    : '78.128/79.128/89.228/90.228/134.128/136.128/137.128/151.128/159.128/164.128/165.128/166.128/\
-                          167.128/168.128/186.128/187.128/188.128/229.128/230.128/231.128/232.128/235.128/244.128/245.128/\
-                          246.228/247.228/34.128/35.128/36.128/37.128/38.128/39.128/40.128/41.128/42.128/139.128/170.128/\
-                          172.128/183.128/236.128'
+167.128/168.128/186.128/187.128/188.128/229.128/230.128/231.128/232.128/235.128/244.128/245.128/\
+246.228/247.228/34.128/35.128/36.128/37.128/38.128/39.128/40.128/41.128/42.128/139.128/170.128/\
+172.128/183.128/236.128'
         })
 
-    # Retrieve file
-    server.retrieve('reanalysis-era5-complete', request, ERA_file)
+    # Retrieve NetCDF file from CDS or MARS:
+    if settings['data_source'] == 'CDS':
+        server.retrieve('reanalysis-era5-complete', request, nc_file)
+    if settings['data_source'] == 'MARS':
+        retrieve_from_MARS(request, settings, nc_file)
 
     # Restore printing to screen
     if settings['write_log']:
@@ -197,10 +224,8 @@ def download_ERA5(settings):
     fc_dates = tt.get_required_forecast(start, end)
 
     # Base dictionary to pass to download function. In Python >3.3, multiprocessings Pool() can accept
-    # multiple arguments. For now, keep it generic for older versions by passing all arguments inside a dict
-    download_settings = {'lat' :      settings['central_lat'], 'lon' :      settings['central_lon'],
-                         'size':      settings['area_size'],   'base_path': settings['base_path'],
-                         'case_name': settings['case_name'],   'write_log': settings['write_log']}
+    # multiple arguments. For now, keep it generic for older versions by passing all arguments inside a dict.
+    download_settings = settings.copy()
     download_queue = []
 
     # Loop over all required files, check if there is a local version, if not add to download queue
@@ -213,7 +238,7 @@ def download_ERA5(settings):
             if not os.path.exists(ERA_dir):
                 message('Creating output directory {}'.format(ERA_dir))
                 os.makedirs(ERA_dir)
-            
+
             if os.path.isfile(ERA_file):
                 message('Found {} - {} local'.format(date, ftype))
             else:
@@ -239,7 +264,7 @@ def download_ERA5(settings):
                 download_queue.append(settings_tmp)
 
     # Create download Pool with 3 threads (ECMWF allows up to 3 parallel requests):
-    pool = multiprocessing.Pool(processes=5)
+    pool = mp.Pool(processes=settings['ntasks'])
     pool.map(download_ERA5_file, download_queue)
 
 
@@ -251,12 +276,14 @@ if __name__ == "__main__":
         'central_lon' : 4.927,
         'area_size'   : 1,
         'case_name'   : 'cabauw',
-        #'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',  # KNMI
-        'base_path'   : '/Users/bart/meteo/data/LS2D/',   # Macbook
+        #'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',   # KNMI
+        'base_path'   : '/Users/bart/meteo/data/LS2D/',          # Macbook
         #'base_path'   : '/home/scratch1/meteo_data/LS2D/',      # Arch
-        'start_date'  : datetime.datetime(year=2018, month=8, day=11, hour=0),
-        'end_date'    : datetime.datetime(year=2018, month=8, day=11, hour=23),
-        'write_log'   : True
+        'start_date'  : datetime.datetime(year=2016, month=8, day=4, hour=0),
+        'end_date'    : datetime.datetime(year=2016, month=8, day=4, hour=23),
+        'write_log'   : False,
+        'data_source' : 'MARS',
+        'ntasks'      : 1
         }
 
     # Download the ERA5 data (or check whether it is available local)
