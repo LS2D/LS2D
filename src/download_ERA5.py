@@ -30,10 +30,10 @@ import multiprocessing as mp
 import time_tools as tt
 from messages import *
 
-try:
-    import cdsapi
-except:
-    error('Can\'t find the CDS Python API....\nSee https://cds.climate.copernicus.eu/api-how-to')
+#try:
+#    import cdsapi
+#except:
+#    error('Can\'t find the CDS Python API....\nSee https://cds.climate.copernicus.eu/api-how-to')
 
 
 def retrieve_from_MARS(request, settings, nc_file):
@@ -106,8 +106,6 @@ def download_ERA5_file(settings):
     # Monitor the required download time
     start = datetime.datetime.now()
 
-    # Create new instance of CDS Python API
-    server = cdsapi.Client()
 
     # Shared set of CDS Python API settings for all download types:
     request = {
@@ -126,9 +124,12 @@ def download_ERA5_file(settings):
     press_levels = '1/2/3/5/7/10/20/30/50/70/100/125/150/175/200/225/250/300/350/400/450/\
 500/550/600/650/700/750/775/800/825/850/875/900/925/950/975/1000'
 
+    #model_levels = '1/to/2/by/1'
+    #press_levels = '975/1000'
+
     an_times = '0/to/23/by/1'
     fc_times = '06:00:00/18:00:00'
-    fc_steps = '0/to/11/by/1'
+    fc_steps = '1/to/12/by/1'
 
     # Update request based on level/analysis/forecast:
     if settings['ftype'] == 'model_an':
@@ -172,6 +173,8 @@ def download_ERA5_file(settings):
 
     # Retrieve NetCDF file from CDS or MARS:
     if settings['data_source'] == 'CDS':
+        import cdsapi
+        server = cdsapi.Client()
         server.retrieve('reanalysis-era5-complete', request, nc_file)
     if settings['data_source'] == 'MARS':
         retrieve_from_MARS(request, settings, nc_file)
@@ -263,9 +266,15 @@ def download_ERA5(settings):
                 settings_tmp.update({'date': date, 'ftype':ftype})
                 download_queue.append(settings_tmp)
 
-    # Create download Pool with 3 threads (ECMWF allows up to 3 parallel requests):
-    pool = mp.Pool(processes=settings['ntasks'])
-    pool.map(download_ERA5_file, download_queue)
+    if settings['ntasks'] > 1:
+        # Create download Pool:
+        pool = mp.Pool(processes=settings['ntasks'])
+        pool.map(download_ERA5_file, download_queue)
+    else:
+        # Simple serial retrieve:
+        for req in download_queue:
+            download_ERA5_file(req)
+
 
 
 if __name__ == "__main__":
@@ -276,9 +285,10 @@ if __name__ == "__main__":
         'central_lon' : 4.927,
         'area_size'   : 1,
         'case_name'   : 'cabauw',
-        #'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',   # KNMI
-        'base_path'   : '/Users/bart/meteo/data/LS2D/',          # Macbook
-        #'base_path'   : '/home/scratch1/meteo_data/LS2D/',      # Arch
+        #'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',  # KNMI
+        #'base_path'   : '/Users/bart/meteo/data/LS2D/',        # Macbook
+        #'base_path'   : '/home/scratch1/meteo_data/LS2D/',     # Arch
+        'base_path'   : '/scratch/ms/nl/nkbs/LS2D/',            # ECMWF
         'start_date'  : datetime.datetime(year=2016, month=8, day=4, hour=0),
         'end_date'    : datetime.datetime(year=2016, month=8, day=4, hour=23),
         'write_log'   : False,
