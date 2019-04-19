@@ -58,10 +58,14 @@ def retrieve_from_MARS(request, settings, nc_dir, nc_file):
     f.close()
 
     # Create SLURM job file
+    date  = settings['date']
+    ftype = settings['ftype'].split('_')
+    jobname = '{0:04d}{1:02d}{2:02d}{3:}{4:}'.format(date.year, date.month, date.day, ftype[1], ftype[0])
+
     f = open(slurm_job, 'w')
     f.write('#!/bin/ksh\n')
     f.write('#SBATCH --qos=express\n')
-    f.write('#SBATCH --job-name=LS2D\n')
+    f.write('#SBATCH --job-name={}\n'.format(jobname))
     f.write('#SBATCH --output={}.%N.%j.out\n'.format(slurm_job))
     f.write('#SBATCH --error={}.%N.%j.err\n'.format(slurm_job))
     f.write('#SBATCH --workdir={}\n'.format(nc_dir))
