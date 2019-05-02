@@ -94,7 +94,6 @@ if (__name__ == '__main__'):
     mht.replace_namelist_value('z0m',     e5.z0m_mean[0])
     mht.replace_namelist_value('z0h',     e5.z0h_mean[0])
 
-
     if use_netcdf:
         if microhh_version == 2:
 
