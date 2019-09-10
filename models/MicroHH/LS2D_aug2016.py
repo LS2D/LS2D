@@ -21,14 +21,16 @@ if (__name__ == '__main__'):
 
     # Start, end, and size of individual runs (dt)
     start = datetime.datetime(year=2016, month=8, day=4,  hour=0)
-    end   = datetime.datetime(year=2016, month=8, day=18, hour=0)
+    end   = datetime.datetime(year=2016, month=8, day=5, hour=0)
     dt    = datetime.timedelta(hours=24)
 
     # Working directory; individual cases are placed in yyyymmdd subdirectory
-    workdir = '/scratch-shared/bstratum/cabauw_aug2016/'
+    #workdir = '/scratch-shared/bstratum/cabauw_aug2016/'
+    workdir = '.'
 
     # Path to MicroHH binary
-    microhh_bin = '/home/bstratum/models/microhh2/build_gpu_double/microhh'
+    #microhh_bin = '/home/bstratum/models/microhh2/build_gpu_double/microhh'
+    microhh_bin = '/Users/bart/meteo/models/microhh2/build_serial_dp/microhh'
 
     # Create cases for each individual `dt`
     date = start
@@ -41,9 +43,9 @@ if (__name__ == '__main__'):
             'area_size'   : 1,
             'case_name'   : 'cabauw',
             #'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',  # KNMI
-            #'base_path'   : '/Users/bart/meteo/data/LS2D/',   # Macbook
+            'base_path'   : '/Users/bart/meteo/data/LS2D/',   # Macbook
             #'base_path'   : '/home/scratch1/meteo_data/LS2D/',      # Arch
-            'base_path'   : '/home/bstratum/data/LS2D/',
+            #'base_path'   : '/home/bstratum/data/LS2D/',
             'start_date'  : date,
             'end_date'    : date+dt,
             'write_log'   : False,

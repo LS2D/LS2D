@@ -195,6 +195,13 @@ class Read_ERA:
         self.z0m = flip( fsa.variables['fsr'] [t_an, :, :])   # Surface roughness length (m)
         self.z0h = flip( np.exp(fsa.variables['flsr'][t_an, :, :]))   # Surface roughness length heat (m)
 
+        # Soil variables:
+        self.Tsoil   = np.zeros((self.ntime, 4, self.nlat, self.nlon))
+        self.phisoil = np.zeros((self.ntime, 4, self.nlat, self.nlon))
+        for k in range(4):
+            self.Tsoil  [:,k,:,:] = fsa.variables['stl{}' .format(k+1)][t_an]
+            self.phisoil[:,k,:,:] = fsa.variables['swvl{}'.format(k+1)][t_an]
+
         # Pressure level data:
         self.z_p = flip(fpa.variables['z'][t_an, :, :, :]) / IFS_tools.grav  # Geopotential height on pressure levels
         self.p_p = flip(fpa.variables['level'][:]) * 100.            # Pressure levels (Pa)
@@ -270,6 +277,7 @@ class Read_ERA:
         # 1. Mean values central averaging domain
         self.z_mean   = self.z   [center4d].mean(axis=(2,3))
         self.p_mean   = self.p   [center4d].mean(axis=(2,3))
+        self.T_mean   = self.T   [center4d].mean(axis=(2,3))
         self.thl_mean = self.thl [center4d].mean(axis=(2,3))
         self.qt_mean  = self.qt  [center4d].mean(axis=(2,3))
         self.u_mean   = self.u   [center4d].mean(axis=(2,3))
@@ -279,10 +287,17 @@ class Read_ERA:
         self.rho_mean = self.rho [center4d].mean(axis=(2,3))
 
         self.ps_mean  = self.ps  [center3d].mean(axis=(1,2))
+        self.Ts_mean  = self.Ts  [center3d].mean(axis=(1,2))
         self.wth_mean = self.wths[center3d].mean(axis=(1,2))
         self.wq_mean  = self.wqs [center3d].mean(axis=(1,2))
         self.ps_mean  = self.ps  [center3d].mean(axis=(1,2))
         self.cc_mean  = self.cc  [center3d].mean(axis=(1,2))
+
+        #self.Tsoil_mean = self.Tsoil[center4d].mean(axis=(2,3))
+        #self.phisoil_mean = self.phisoil[center4d].mean(axis=(2,3))
+
+        self.Tsoil_mean   = self.Tsoil  [:,:,self.j,self.i]
+        self.phisoil_mean = self.phisoil[:,:,self.j,self.i]
 
         self.z0m_mean = self.z0m [center3d].mean(axis=(1,2))
         self.z0h_mean = self.z0h [center3d].mean(axis=(1,2))
