@@ -24,7 +24,7 @@ if (__name__ == '__main__'):
 
     # Start, end, and size of individual runs (dt)
     start = datetime.datetime(year=2016, month=8, day=4, hour=0)
-    end   = datetime.datetime(year=2016, month=8, day=5, hour=0)
+    end   = datetime.datetime(year=2016, month=8, day=19, hour=0)
     dt    = datetime.timedelta(hours=24)
 
     # Working directory; individual cases are placed in yyyymmdd subdirectory
@@ -211,7 +211,7 @@ if (__name__ == '__main__'):
             os.makedirs(dir)
 
         strexp = '{0:03d}'.format(settings['expnr'])
-        to_copy = ['namoptions.{}'.format(strexp), dales_bin]
+        to_copy = ['namoptions.{}'.format(strexp), dales_bin, 'rrtmg_lw.nc', 'rrtmg_sw.nc']
         to_move = ['backrad.inp.{}.nc'.format(strexp), 'ls_flux.inp.{}'.format(strexp),
                    'lscale.inp.{}'.format(strexp), 'nudge.inp.{}'.format(strexp),
                    'prof.inp.{}'.format(strexp), 'scalar.inp.{}'.format(strexp)]
