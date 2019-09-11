@@ -12,23 +12,17 @@ irandom = 1
 randthl = 0.01
 randqt = 2.5e-5
 nsv = 2
-!nprocx = 12
-!nprocy = 8
-nprocx = 1
-nprocy = 1
+nprocx = 12
+nprocy = 8
 /
 
 &DOMAIN
-!itot = 192
-!jtot = 192
-itot = 8
-jtot = 8
+itot = 192
+jtot = 192
 kmax  = 160
 
-!xsize = 15000
-!ysize = 15000
-xsize = 800
-ysize = 800
+xsize = 15000
+ysize = 15000
 
 xlat  = 51.971
 xlon  = 4.927
@@ -38,9 +32,9 @@ xtime  = 0
 
 &PHYSICS
 ps = 1e5
-thls = 300       ! Surface thl
+thls = 300          ! Surface thl
 lmoist = .true.
-lcoriol = .false.
+lcoriol = .true.
 ltimedep = .true.
 iradiation = 4      ! 4 = RRTMG
 igrw_damp = 3       ! 3 = nudge (damping) to mean profile

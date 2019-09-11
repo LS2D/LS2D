@@ -203,19 +203,23 @@ if (__name__ == '__main__'):
         replace_namelist_value(namelist, 'phifc',    soil_out.phi_fc)
 
 
-#        # Copy files to working directory
-#        dir = '{0}/{1:04d}{2:02d}{3:02d}_t{4:02d}'.format(workdir, date.year, date.month, date.day, date.hour)
-#        if os.path.exists(dir):
-#            error('Work directory {} already exists!!'.format(dir))
-#        else:
-#            os.makedirs(dir)
-#
-#        to_copy = ['testbed.ini', microhh_bin]
-#        to_move = ['testbed_input.nc']
-#        for f in to_copy:
-#            shutil.copy(f, dir)
-#        for f in to_move:
-#            shutil.move(f, dir)
+        # Copy files to working directory
+        dir = '{0}/{1:04d}{2:02d}{3:02d}_t{4:02d}'.format(workdir, date.year, date.month, date.day, date.hour)
+        if os.path.exists(dir):
+            error('Work directory {} already exists!!'.format(dir))
+        else:
+            os.makedirs(dir)
+
+        strexp = '{0:03d}'.format(settings['expnr'])
+        to_copy = ['namoptions.{}'.format(strexp), dales_bin]
+        to_move = ['backrad.inp.{}.nc'.format(strexp), 'ls_flux.inp.{}'.format(strexp),
+                   'lscale.inp.{}'.format(strexp), 'nudge.inp.{}'.format(strexp),
+                   'prof.inp.{}'.format(strexp), 'scalar.inp.{}'.format(strexp)]
+
+        for f in to_copy:
+            shutil.copy(f, dir)
+        for f in to_move:
+            shutil.move(f, dir)
 
         # Advance time
         date += dt
