@@ -83,6 +83,7 @@ class Read_ERA:
         Read all the required fields to memory
         """
 
+
         # For now (?), only start and end at full hours
         start = tt.lower_to_hour(settings['start_date'])
         end   = tt.lower_to_hour(settings['end_date']  )

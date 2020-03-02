@@ -355,10 +355,18 @@ def get_cross_indices(variable, mode):
     indices.sort()
     return indices
 
+
+
+
+
 if (__name__ == "__main__"):
+
     import matplotlib.pylab as pl
     pl.close('all')
     pl.ion()
 
-    grid = Stretched_grid(128, 90, 20, 20, 250)
+    #grid = Stretched_grid(kmax=140, nloc1=80, nbuf1=20, dz1=25, dz2=250)    # Same as DALES testbed
+    grid = Stretched_grid(kmax=512, nloc1=150, nbuf1=60, dz1=10, dz2=100)    # Same as DALES testbed
     grid.plot()
+
+

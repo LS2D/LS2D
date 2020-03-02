@@ -30,11 +30,6 @@ import multiprocessing as mp
 import time_tools as tt
 from messages import *
 
-#try:
-#    import cdsapi
-#except:
-#    error('Can\'t find the CDS Python API....\nSee https://cds.climate.copernicus.eu/api-how-to')
-
 
 def retrieve_from_MARS(request, settings, nc_dir, nc_file):
     """
@@ -81,10 +76,10 @@ def retrieve_from_MARS(request, settings, nc_dir, nc_file):
 
 def ERA5_file_path(year, month, day, path, case, ftype, return_dir=True):
     """
-    Return saving path of files in format `path/ERA5/yyyy/mm/dd/type.nc`
+    Return saving path of files in format `path/yyyy/mm/dd/type.nc`
     """
 
-    ERA_dir = "{0}/{1}/ERA5/{2:04d}/{3:02d}/{4:02d}".format(path, case, year, month, day)
+    ERA_dir = "{0}/{1}/{2:04d}/{3:02d}/{4:02d}".format(path, case, year, month, day)
     ERA_file = "{0}/{1}.nc".format(ERA_dir, ftype)
 
     if return_dir:
@@ -306,12 +301,13 @@ if __name__ == "__main__":
         #'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',  # KNMI
         #'base_path'   : '/Users/bart/meteo/data/LS2D/',        # Macbook
         #'base_path'   : '/home/scratch1/meteo_data/LS2D/',     # Arch
-        'base_path'   : '/scratch/ms/nl/nkbs/LS2D/',            # ECMWF
-        'start_date'  : datetime.datetime(year=2016, month=8, day=4, hour=0),
-        'end_date'    : datetime.datetime(year=2016, month=8, day=4, hour=23),
+        #'base_path'   : '/scratch/ms/nl/nkbs/LS2D/',           # ECMWF
+        'base_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',    # ECMWF
+        'start_date'  : datetime.datetime(year=2018, month=8, day=11, hour=0),
+        'end_date'    : datetime.datetime(year=2018, month=8, day=12, hour=0),
         'write_log'   : False,
-        'data_source' : 'MARS',
-        'ntasks'      : 1
+        'data_source' : 'CDS',  # or 'MARS'
+        'ntasks'      : 4
         }
 
     # Download the ERA5 data (or check whether it is available local)
