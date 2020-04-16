@@ -34,6 +34,7 @@ from IFS_tools import IFS_tools
 from download_ERA5 import ERA5_file_path
 from messages import *
 
+
 class Slice:
     def __init__(self, istart, iend, jstart, jend):
         self.istart = istart
@@ -99,10 +100,14 @@ class Read_ERA:
             settings['base_path'] += '/'
 
         # Create lists with required files
-        an_sfc_files   = [ERA5_file_path(d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'surface_an',  False) for d in an_dates]
-        an_model_files = [ERA5_file_path(d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'model_an',    False) for d in an_dates]
-        an_pres_files  = [ERA5_file_path(d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'pressure_an', False) for d in an_dates]
-        fc_model_files = [ERA5_file_path(d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'model_fc',    False) for d in fc_dates]
+        an_sfc_files   = [ERA5_file_path(
+            d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'surface_an',  False) for d in an_dates]
+        an_model_files = [ERA5_file_path(
+            d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'model_an',    False) for d in an_dates]
+        an_pres_files  = [ERA5_file_path(
+            d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'pressure_an', False) for d in an_dates]
+        fc_model_files = [ERA5_file_path(
+            d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'model_fc',    False) for d in fc_dates]
 
         # Check if all files exist, and exit if not..
         files_missing = False
@@ -277,7 +282,9 @@ class Read_ERA:
 
         # 1. Mean values central averaging domain
         self.z_mean   = self.z   [center4d].mean(axis=(2,3))
+        self.zh_mean  = self.zh  [center4d].mean(axis=(2,3))
         self.p_mean   = self.p   [center4d].mean(axis=(2,3))
+        self.ph_mean  = self.ph  [center4d].mean(axis=(2,3))
         self.T_mean   = self.T   [center4d].mean(axis=(2,3))
         self.thl_mean = self.thl [center4d].mean(axis=(2,3))
         self.qt_mean  = self.qt  [center4d].mean(axis=(2,3))
@@ -294,11 +301,11 @@ class Read_ERA:
         self.ps_mean  = self.ps  [center3d].mean(axis=(1,2))
         self.cc_mean  = self.cc  [center3d].mean(axis=(1,2))
 
-        #self.Tsoil_mean = self.Tsoil[center4d].mean(axis=(2,3))
-        #self.phisoil_mean = self.phisoil[center4d].mean(axis=(2,3))
+        self.Tsoil_mean = self.Tsoil[center4d].mean(axis=(2,3))
+        self.phisoil_mean = self.phisoil[center4d].mean(axis=(2,3))
 
-        self.Tsoil_mean   = self.Tsoil  [:,:,self.j,self.i]
-        self.phisoil_mean = self.phisoil[:,:,self.j,self.i]
+        #self.Tsoil_mean   = self.Tsoil  [:,:,self.j,self.i]
+        #self.phisoil_mean = self.phisoil[:,:,self.j,self.i]
 
         self.z0m_mean = self.z0m [center3d].mean(axis=(1,2))
         self.z0h_mean = self.z0h [center3d].mean(axis=(1,2))
@@ -307,6 +314,16 @@ class Read_ERA:
         self.dtthl_lw_mean    = self.dthldt_lw   [center4d].mean(axis=(2,3))
         self.dtthl_sw_cs_mean = self.dthldt_sw_cs[center4d].mean(axis=(2,3))
         self.dtthl_lw_cs_mean = self.dthldt_lw_cs[center4d].mean(axis=(2,3))
+
+        # Half level values temperature for radiation
+        self.Th_mean = np.zeros_like(self.zh_mean)
+        self.Th_mean[:,1:-1] = 0.5 * (self.T_mean[:,1:] + self.T_mean[:,:-1])
+
+        dTdz = (self.Th_mean[:,1] - self.T_mean[:,0]) / (self.zh_mean[:,1] - self.z_mean[:,0])
+        self.Th_mean[:,0] = self.T_mean[:,0] - dTdz * self.z_mean[:,0]
+
+        dTdz = (self.T_mean[:,-1] - self.Th_mean[:,-2]) / (self.z_mean[:,-1] - self.zh_mean[:,-2])
+        self.Th_mean[:,-1] = self.T_mean[:,-1] + dTdz * (self.zh_mean[:,-1] - self.z_mean[:,-1])
 
         # Estimate horizontal grid spacing (assumed constant in averaging domain)\
         dx = st.dlon(self.lons[self.i-1], self.lons[self.i+1], self.lats[self.j]) / 2.
