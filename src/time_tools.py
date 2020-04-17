@@ -47,7 +47,7 @@ def get_required_forecast(start, end):
     last_forecast = datetime.datetime(end.year, end.month, end.day)
 
     # If start time is before 06 UTC, include previous day for the forecast files
-    if start.hour >= 6:
+    if start.hour > 6:
         first_forecast = datetime.datetime(start.year, start.month, start.day)
     else:
         first_forecast = datetime.datetime(start.year, start.month, start.day) - one_day
