@@ -155,7 +155,10 @@ class Read_ERA:
         self.datetime = [datetime.datetime(1900, 1, 1) + datetime.timedelta(hours=int(h)) for h in self.time]
 
         # Check if times are really synced, if not; quit, as things will go very wrong
-        assert np.all(self.time == self.time_fc), 'Analysis and forecast times are not synced'
+        if self.time.size != self.time_fc.size:
+            error('ERA5 analysis and forecast times are not synced (different size)')
+        if not np.all(self.time == self.time_fc):
+            error('ERA5 analysis and forecast times are not synced (different times)')
 
         # Grid and time dimensions
         self.nfull = fma.dimensions['level'].size
