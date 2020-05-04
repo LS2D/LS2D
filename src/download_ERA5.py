@@ -69,7 +69,7 @@ def retrieve_from_MARS(request, settings, nc_dir, nc_file):
     f.write('#SBATCH --output={}.%N.%j.out\n'.format(slurm_job))
     f.write('#SBATCH --error={}.%N.%j.err\n'.format(slurm_job))
     f.write('#SBATCH --workdir={}\n'.format(nc_dir))
-    f.write('#SBATCH --time=00:30:00\n\n')
+    f.write('#SBATCH --time=03:00:00\n\n')
 
     f.write('mars {}\n'.format(mars_req))
     f.write('grib_to_netcdf -o {} {}'.format(nc_file, grib_file))
@@ -84,7 +84,7 @@ def ERA5_file_path(year, month, day, path, case, ftype, return_dir=True):
     Return saving path of files in format `path/ERA5/yyyy/mm/dd/type.nc`
     """
 
-    ERA_dir = "{0}/{1}/ERA5/{2:04d}/{3:02d}/{4:02d}".format(path, case, year, month, day)
+    ERA_dir = "{0}/{1}/{2:04d}/{3:02d}/{4:02d}".format(path, case, year, month, day)
     ERA_file = "{0}/{1}.nc".format(ERA_dir, ftype)
 
     if return_dir:
@@ -298,6 +298,7 @@ def download_ERA5(settings):
 if __name__ == "__main__":
     """ Test / example, only executed if script is called directly """
 
+    # Cabauw
     settings = {
         'central_lat' : 51.971,
         'central_lon' : 4.927,
@@ -307,12 +308,43 @@ if __name__ == "__main__":
         #'base_path'   : '/Users/bart/meteo/data/LS2D/',        # Macbook
         #'base_path'   : '/home/scratch1/meteo_data/LS2D/',     # Arch
         'base_path'   : '/scratch/ms/nl/nkbs/LS2D/',            # ECMWF
-        'start_date'  : datetime.datetime(year=2016, month=8, day=4, hour=0),
-        'end_date'    : datetime.datetime(year=2016, month=8, day=4, hour=23),
+        'start_date'  : datetime.datetime(year=2018, month=8, day=11, hour=0),
+        'end_date'    : datetime.datetime(year=2018, month=8, day=12, hour=0),
         'write_log'   : False,
         'data_source' : 'MARS',
         'ntasks'      : 1
         }
+
+    # Amazon
+    #settings = {
+    #    'central_lat' : -2.6091,
+    #    'central_lon' : -60.2093,
+    #    'area_size'   : 1,
+    #    'case_name'   : 'amazon',
+    #    #'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',  # KNMI
+    #    #'base_path'   : '/Users/bart/meteo/data/LS2D/',        # Macbook
+    #    #'base_path'   : '/home/scratch1/meteo_data/LS2D/',     # Arch
+    #    'base_path'   : '/scratch/ms/nl/nkbs/LS2D/',            # ECMWF
+    #    'start_date'  : datetime.datetime(year=2014, month=9,  day=7,  hour=0),
+    #    'end_date'    : datetime.datetime(year=2014, month=10, day=17, hour=0),
+    #    'write_log'   : False,
+    #    'data_source' : 'MARS',
+    #    'ntasks'      : 1
+    #    }
+
+    # NEMO field experiment
+    #settings = {
+    #    'central_lat' : 44.9579,
+    #    'central_lon' : 25.7794,
+    #    'area_size'   : 1,
+    #    'case_name'   : 'romania',
+    #    'base_path'   : '/scratch/ms/nl/nkbs/LS2D/',            # ECMWF
+    #    'start_date'  : datetime.datetime(year=2019, month=10, day=17, hour=0),
+    #    'end_date'    : datetime.datetime(year=2019, month=10, day=19, hour=0),
+    #    'write_log'   : False,
+    #    'data_source' : 'MARS',
+    #    'ntasks'      : 1
+    #    }
 
     # Download the ERA5 data (or check whether it is available local)
     download_ERA5(settings)
