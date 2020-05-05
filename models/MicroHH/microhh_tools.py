@@ -260,7 +260,7 @@ def write_time_profs(file_name, z, times, data):
     f.close()
 
 
-def write_NetCDF_input(case_name, float_type, init_profiles, tdep_surface=None, tdep_ls=None):
+def write_NetCDF_input(case_name, float_type, init_profiles, tdep_surface=None, tdep_ls=None, radiation=None, soil=None):
     """
     Function for writing the MicroHH2 NetCDF input
     """
@@ -284,7 +284,8 @@ def write_NetCDF_input(case_name, float_type, init_profiles, tdep_surface=None, 
         add_variable(nc_group_init, name, ('z'), data, float_type)
 
     # Create a group called "timedep" for the time dependent input
-    nc_group_timedep = nc_file.createGroup('timedep')
+    if tdep_surface is not None or tdep_ls is not None:
+        nc_group_timedep = nc_file.createGroup('timedep')
 
     # Write the time dependent surface values
     if tdep_surface is not None:
@@ -300,6 +301,25 @@ def write_NetCDF_input(case_name, float_type, init_profiles, tdep_surface=None, 
         for name, data in tdep_ls.items():
             dims = ('time_ls') if name == 'time_ls' else ('time_ls', 'z')
             add_variable(nc_group_timedep, name, dims, data, float_type)
+
+    if radiation is not None:
+        nc_group_rad = nc_file.createGroup('radiation')
+
+        nc_group_rad.createDimension("lay", radiation['p_lay'].size)
+        nc_group_rad.createDimension("lev", radiation['p_lev'].size)
+
+        for name, data in radiation.items():
+            dims = ('lay') if data.size == radiation['p_lay'].size else ('lev')
+            add_variable(nc_group_rad, name, dims, data, float_type)
+
+    if soil is not None:
+        nc_group_soil = nc_file.createGroup('soil')
+        nc_group_soil.createDimension("z", soil['z'].size)
+
+        for name, data in soil.items():
+            add_variable(nc_group_soil, name, 'z', data, float_type)
+
+
 
     nc_file.close()
 
@@ -355,10 +375,16 @@ def get_cross_indices(variable, mode):
     indices.sort()
     return indices
 
+
+
 if (__name__ == "__main__"):
+
     import matplotlib.pylab as pl
     pl.close('all')
     pl.ion()
 
-    grid = Stretched_grid(128, 90, 20, 20, 250)
+    #grid = Stretched_grid(kmax=140, nloc1=80, nbuf1=20, dz1=25, dz2=250)    # Same as DALES testbed
+    grid = Stretched_grid(kmax=512, nloc1=150, nbuf1=60, dz1=10, dz2=100)    # Same as DALES testbed
     grid.plot()
+
+

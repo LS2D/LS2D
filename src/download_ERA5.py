@@ -30,11 +30,6 @@ import multiprocessing as mp
 import time_tools as tt
 from messages import *
 
-#try:
-#    import cdsapi
-#except:
-#    error('Can\'t find the CDS Python API....\nSee https://cds.climate.copernicus.eu/api-how-to')
-
 
 def retrieve_from_MARS(request, settings, nc_dir, nc_file):
     """
@@ -81,7 +76,7 @@ def retrieve_from_MARS(request, settings, nc_dir, nc_file):
 
 def ERA5_file_path(year, month, day, path, case, ftype, return_dir=True):
     """
-    Return saving path of files in format `path/ERA5/yyyy/mm/dd/type.nc`
+    Return saving path of files in format `path/yyyy/mm/dd/type.nc`
     """
 
     ERA_dir = "{0}/{1}/{2:04d}/{3:02d}/{4:02d}".format(path, case, year, month, day)
