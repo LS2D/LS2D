@@ -302,7 +302,7 @@ if __name__ == "__main__":
         'base_path'   : '/scratch/ms/nl/nkbs/LS2D/',            # ECMWF
         #'start_date'  : datetime.datetime(year=2018, month=8, day=11, hour=0),
         #'end_date'    : datetime.datetime(year=2018, month=8, day=12, hour=0),
-        'start_date'  : datetime.datetime(year=2016, month=8, day=04, hour=0),
+        'start_date'  : datetime.datetime(year=2016, month=8, day=4, hour=0),
         'end_date'    : datetime.datetime(year=2016, month=8, day=18, hour=0),
         'write_log'   : False,
         'data_source' : 'MARS',

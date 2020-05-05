@@ -34,7 +34,6 @@ from IFS_tools import IFS_tools
 from download_ERA5 import ERA5_file_path
 from messages import *
 
-
 class Slice:
     def __init__(self, istart, iend, jstart, jend):
         self.istart = istart
@@ -188,6 +187,7 @@ class Read_ERA:
         self.qi  = flip(fma.variables['ciwc'][t_an, :, :, :])  # Specific cloud ice content (kg kg-1)
         self.qr  = flip(fma.variables['crwc'][t_an, :, :, :])  # Specific rain water content (kg kg-1)
         self.qs  = flip(fma.variables['cswc'][t_an, :, :, :])  # Specific snow content (kg kg-1)
+        self.o3  = flip(fma.variables['o3']  [t_an, :, :, :])  # Ozone (kg kg-1)
         lnps     = flip(fma.variables['lnsp'][t_an, 0, :, :])  # Logaritm of surface pressure
 
         # Model level forecast data:
@@ -279,7 +279,6 @@ class Read_ERA:
         box_size = 2*n_av+1
         east  = np.s_[:, :, jstart:jend, self.i+1:self.i+box_size+1]
         west  = np.s_[:, :, jstart:jend, self.i-box_size:self.i    ]
-
         north = np.s_[:, :, self.j+1:self.j+box_size+1, istart:iend]
         south = np.s_[:, :, self.j-box_size:self.j,     istart:iend]
 
@@ -296,6 +295,7 @@ class Read_ERA:
         self.U_mean   = self.U   [center4d].mean(axis=(2,3))
         self.wls_mean = self.wls [center4d].mean(axis=(2,3))
         self.rho_mean = self.rho [center4d].mean(axis=(2,3))
+        self.o3_mean  = self.o3  [center4d].mean(axis=(2,3))
 
         self.ps_mean  = self.ps  [center3d].mean(axis=(1,2))
         self.Ts_mean  = self.Ts  [center3d].mean(axis=(1,2))
