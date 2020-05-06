@@ -16,11 +16,11 @@ from messages      import header, message, error
 import microhh_tools as mht
 
 # Start and end of experiment
-start = datetime.datetime(year=2018, month=8, day=11,  hour=5)
-end   = datetime.datetime(year=2018, month=8, day=11,  hour=19)
+#start = datetime.datetime(year=2018, month=8, day=11,  hour=5)
+#end   = datetime.datetime(year=2018, month=8, day=11,  hour=19)
 
-#start = datetime.datetime(year=2016, month=8, day=17,  hour=5)
-#end   = datetime.datetime(year=2016, month=8, day=17,  hour=19)
+start = datetime.datetime(year=2016, month=8, day=17,  hour=5)
+end   = datetime.datetime(year=2016, month=8, day=17,  hour=19)
 
 # Working directory; individual cases are placed in `YYYYMMDD_tHH` subdirectory
 workdir = '.'
@@ -71,7 +71,6 @@ e5.calculate_forcings(n_av=0, method='4th')
 # Read MicroHH namelist and create stretched vertical grid
 #
 grid = mht.Stretched_grid(kmax=128, nloc1=80, nbuf1=20, dz1=25, dz2=300)    # Same as DALES testbed
-#grid = mht.Stretched_grid(kmax=144, nloc1=80, nbuf1=20, dz1=25, dz2=400)
 grid.plot()
 
 #
@@ -188,8 +187,8 @@ radiation  = {
         'n2o': n2o_rad, 'n2': n2_rad, 'o2': o2_rad, 'o3': o3_rad, 'h2o': h2o_rad}
 
 tdep_surface = {
-        'time_surface': e5.time_sec, 'thl_sbot': e5.wth_mean,
-        'qt_sbot': e5.wq_mean, 'p_sbot': e5.ps_mean }
+        'time_surface': e5.time_sec, 'thl_sbot': e5.wths_mean,
+        'qt_sbot': e5.wqs_mean, 'p_sbot': e5.ps_mean }
 
 tdep_ls = {
         'time_ls': e5.time_sec, 'u_geo': ug, 'v_geo': vg, 'w_ls': w,

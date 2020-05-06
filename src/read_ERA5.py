@@ -178,31 +178,38 @@ class Read_ERA:
         # Read the full fields, reversing (flip) the height axis from top-to-bottom to bottom-to-top
         # ------------------------------
         # Model level analysis data:
-        self.u   = flip(fma.variables['u']   [t_an, :, :, :])  # u-component wind (m s-1)
-        self.v   = flip(fma.variables['v']   [t_an, :, :, :])  # v-component wind (m s-1)
-        self.w   = flip(fma.variables['w']   [t_an, :, :, :])  # Vertical velocity (Pa s-1)
-        self.T   = flip(fma.variables['t']   [t_an, :, :, :])  # Absolute temperature (K)
-        self.q   = flip(fma.variables['q']   [t_an, :, :, :])  # Specific humidity (kg kg-1)
-        self.qc  = flip(fma.variables['clwc'][t_an, :, :, :])  # Specific cloud liquid water content (kg kg-1)
-        self.qi  = flip(fma.variables['ciwc'][t_an, :, :, :])  # Specific cloud ice content (kg kg-1)
-        self.qr  = flip(fma.variables['crwc'][t_an, :, :, :])  # Specific rain water content (kg kg-1)
-        self.qs  = flip(fma.variables['cswc'][t_an, :, :, :])  # Specific snow content (kg kg-1)
-        self.o3  = flip(fma.variables['o3']  [t_an, :, :, :])  # Ozone (kg kg-1)
-        lnps     = flip(fma.variables['lnsp'][t_an, 0, :, :])  # Logaritm of surface pressure
+        self.u  = flip( fma.variables['u']   [t_an, :, :, :] )  # u-component wind (m s-1)
+        self.v  = flip( fma.variables['v']   [t_an, :, :, :] )  # v-component wind (m s-1)
+        self.w  = flip( fma.variables['w']   [t_an, :, :, :] )  # Vertical velocity (Pa s-1)
+        self.T  = flip( fma.variables['t']   [t_an, :, :, :] )  # Absolute temperature (K)
+        self.q  = flip( fma.variables['q']   [t_an, :, :, :] )  # Specific humidity (kg kg-1)
+        self.qc = flip( fma.variables['clwc'][t_an, :, :, :] )  # Specific cloud liquid water content (kg kg-1)
+        self.qi = flip( fma.variables['ciwc'][t_an, :, :, :] )  # Specific cloud ice content (kg kg-1)
+        self.qr = flip( fma.variables['crwc'][t_an, :, :, :] )  # Specific rain water content (kg kg-1)
+        self.qs = flip( fma.variables['cswc'][t_an, :, :, :] )  # Specific snow content (kg kg-1)
+        self.o3 = flip( fma.variables['o3']  [t_an, :, :, :] )  # Ozone (kg kg-1)
+        lnps    = flip( fma.variables['lnsp'][t_an, 0, :, :] )  # Logaritm of surface pressure
 
         # Model level forecast data:
-        dTdt_sw    = flip(fmf.variables['mttswr']  [t_an, :, :, :])  # Mean temperature tendency due to SW radiation (K s-1)
-        dTdt_lw    = flip(fmf.variables['mttlwr']  [t_an, :, :, :])  # Mean temperature tendency due to LW radiation (K s-1)
-        dTdt_sw_cs = flip(fmf.variables['mttswrcs'][t_an, :, :, :])  # Mean temperature tendency due to SW radiation (clear sky) (K s-1)
-        dTdt_lw_cs = flip(fmf.variables['mttlwrcs'][t_an, :, :, :])  # Mean temperature tendency due to LW radiation (clear sky) (K s-1)
+        dTdt_sw    = flip( fmf.variables['mttswr']  [t_an, :, :, :] )  # Mean temperature tendency due to SW radiation (K s-1)
+        dTdt_lw    = flip( fmf.variables['mttlwr']  [t_an, :, :, :] )  # Mean temperature tendency due to LW radiation (K s-1)
+        dTdt_sw_cs = flip( fmf.variables['mttswrcs'][t_an, :, :, :] )  # Mean temperature tendency due to SW radiation (clear sky) (K s-1)
+        dTdt_lw_cs = flip( fmf.variables['mttlwrcs'][t_an, :, :, :] )  # Mean temperature tendency due to LW radiation (clear sky) (K s-1)
 
         # Surface variables:
-        self.Ts  = flip( fsa.variables['skt'] [t_an, :, :])   # Skin temperature (K)
-        self.H   = flip(-fsa.variables['ishf'][t_an, :, :])   # Surface sensible heat flux (W m-2)
-        self.wqs = flip(-fsa.variables['ie']  [t_an, :, :])   # Surface kinematic moisture flux (g kg-1)
-        self.cc  = flip( fsa.variables['tcc'] [t_an, :, :])   # Total cloud cover (-)
-        self.z0m = flip( fsa.variables['fsr'] [t_an, :, :])   # Surface roughness length (m)
-        self.z0h = flip( np.exp(fsa.variables['flsr'][t_an, :, :]))   # Surface roughness length heat (m)
+        self.Ts  = flip( fsa.variables['skt'] [t_an, :, :] )          # Skin temperature (K)
+        self.H   = flip(-fsa.variables['ishf'][t_an, :, :] )          # Surface sensible heat flux (W m-2)
+        self.wqs = flip(-fsa.variables['ie']  [t_an, :, :] )          # Surface kinematic moisture flux (g kg-1)
+        self.cc  = flip( fsa.variables['tcc'] [t_an, :, :] )          # Total cloud cover (-)
+        self.z0m = flip( fsa.variables['fsr'] [t_an, :, :] )          # Surface roughness length (m)
+        self.z0h = flip( np.exp(fsa.variables['flsr'][t_an, :, :]) )  # Surface roughness length heat (m)
+
+        self.soil_type     = np.round( flip( fsa.variables['slt'][t_an,:,:] ))   # Soil type (-)
+        self.low_veg_type  = np.round( flip( fsa.variables['tvl'][t_an,:,:] ))   # Low vegetation type (-)
+        self.high_veg_type = np.round( flip( fsa.variables['tvh'][t_an,:,:] ))   # High vegetation type (-)
+
+        self.lai_low  = flip(fsa.variables['lai_lv'][t_an,:,:])   # LAI low veg (-)
+        self.lai_high = flip(fsa.variables['lai_hv'][t_an,:,:])   # LAI low veg (-)
 
         # Soil variables:
         self.Tsoil   = np.zeros((self.ntime, 4, self.nlat, self.nlon))
@@ -212,8 +219,8 @@ class Read_ERA:
             self.phisoil[:,k,:,:] = fsa.variables['swvl{}'.format(k+1)][t_an]
 
         # Pressure level data:
-        self.z_p = flip(fpa.variables['z'][t_an, :, :, :]) / IFS_tools.grav  # Geopotential height on pressure levels
-        self.p_p = flip(fpa.variables['level'][:]) * 100.            # Pressure levels (Pa)
+        self.z_p = flip( fpa.variables['z'][t_an, :, :, :]) / IFS_tools.grav  # Geopotential height on pressure levels
+        self.p_p = flip( fpa.variables['level'][:]) * 100.            # Pressure levels (Pa)
 
         # Calculate derived variables:
         # ------------------------------
@@ -253,10 +260,10 @@ class Read_ERA:
         self.fc  = 2 * 7.2921e-5 * np.sin(np.deg2rad(settings['central_lat']))      # Coriolis parameter
 
         # Convert forecasted radiative temperature tendencies from T to thl
-        self.dthldt_sw    = dTdt_sw    / self.exn   # Mean potential temperature tendency due to SW radiation (K s-1)
-        self.dthldt_lw    = dTdt_lw    / self.exn   # Mean potential temperature tendency due to LW radiation (K s-1)
-        self.dthldt_sw_cs = dTdt_sw_cs / self.exn   # Mean potential temperature tendency due to SW radiation (clear sky) (K s-1)
-        self.dthldt_lw_cs = dTdt_lw_cs / self.exn   # Mean potential temperature tendency due to SW radiation (clear sky) (K s-1)
+        self.dtthl_sw    = dTdt_sw    / self.exn   # Mean potential temperature tendency due to SW radiation (K s-1)
+        self.dtthl_lw    = dTdt_lw    / self.exn   # Mean potential temperature tendency due to LW radiation (K s-1)
+        self.dtthl_sw_cs = dTdt_sw_cs / self.exn   # Mean potential temperature tendency due to SW radiation (clear sky) (K s-1)
+        self.dtthl_lw_cs = dTdt_lw_cs / self.exn   # Mean potential temperature tendency due to SW radiation (clear sky) (K s-1)
 
 
     def calculate_forcings(self, n_av=1, method='2nd'):
@@ -271,52 +278,33 @@ class Read_ERA:
         jstart = self.j - n_av
         jend   = self.j + n_av + 1
 
-        # Numpy slicing tupples for averaging domain
+        # Numpy slicing tuples for averaging domain
         center4d = np.s_[:, :, jstart:jend, istart:iend]
         center3d = np.s_[:,    jstart:jend, istart:iend]
 
-        # Numpy slicing tupples of boxes east, west, north and south of main domain
-        box_size = 2*n_av+1
-        east  = np.s_[:, :, jstart:jend, self.i+1:self.i+box_size+1]
-        west  = np.s_[:, :, jstart:jend, self.i-box_size:self.i    ]
-        north = np.s_[:, :, self.j+1:self.j+box_size+1, istart:iend]
-        south = np.s_[:, :, self.j-box_size:self.j,     istart:iend]
+        # Variables averaged from (time, height, lon, lat) to (time, height):
+        var_4d_mean = [
+                'z', 'zh', 'p', 'ph', 'T', 'thl', 'qt',
+                'u', 'v', 'U', 'wls', 'rho', 'o3', 'dtthl_sw',
+                'dtthl_lw', 'dtthl_sw_cs', 'dtthl_lw_cs',
+                'Tsoil', 'phisoil']
+        for var in var_4d_mean:
+            mean = getattr(self, var)[center4d].mean(axis=(2,3))
+            setattr(self, '{}_mean'.format(var), mean)
 
-        # 1. Mean values central averaging domain
-        self.z_mean   = self.z   [center4d].mean(axis=(2,3))
-        self.zh_mean  = self.zh  [center4d].mean(axis=(2,3))
-        self.p_mean   = self.p   [center4d].mean(axis=(2,3))
-        self.ph_mean  = self.ph  [center4d].mean(axis=(2,3))
-        self.T_mean   = self.T   [center4d].mean(axis=(2,3))
-        self.thl_mean = self.thl [center4d].mean(axis=(2,3))
-        self.qt_mean  = self.qt  [center4d].mean(axis=(2,3))
-        self.u_mean   = self.u   [center4d].mean(axis=(2,3))
-        self.v_mean   = self.v   [center4d].mean(axis=(2,3))
-        self.U_mean   = self.U   [center4d].mean(axis=(2,3))
-        self.wls_mean = self.wls [center4d].mean(axis=(2,3))
-        self.rho_mean = self.rho [center4d].mean(axis=(2,3))
-        self.o3_mean  = self.o3  [center4d].mean(axis=(2,3))
+        # Variables averaged from (time, lon, lat) to (time):
+        var_3d_mean = [
+                'ps', 'Ts', 'wths', 'wqs', 'ps', 'cc',
+                'lai_low', 'lai_high', 'z0m', 'z0h']
+        for var in var_3d_mean:
+            mean = getattr(self, var)[center3d].mean(axis=(1,2))
+            setattr(self, '{}_mean'.format(var), mean)
 
-        self.ps_mean  = self.ps  [center3d].mean(axis=(1,2))
-        self.Ts_mean  = self.Ts  [center3d].mean(axis=(1,2))
-        self.wth_mean = self.wths[center3d].mean(axis=(1,2))
-        self.wq_mean  = self.wqs [center3d].mean(axis=(1,2))
-        self.ps_mean  = self.ps  [center3d].mean(axis=(1,2))
-        self.cc_mean  = self.cc  [center3d].mean(axis=(1,2))
-
-        self.Tsoil_mean = self.Tsoil[center4d].mean(axis=(2,3))
-        self.phisoil_mean = self.phisoil[center4d].mean(axis=(2,3))
-
-        #self.Tsoil_mean   = self.Tsoil  [:,:,self.j,self.i]
-        #self.phisoil_mean = self.phisoil[:,:,self.j,self.i]
-
-        self.z0m_mean = self.z0m [center3d].mean(axis=(1,2))
-        self.z0h_mean = self.z0h [center3d].mean(axis=(1,2))
-
-        self.dtthl_sw_mean    = self.dthldt_sw   [center4d].mean(axis=(2,3))
-        self.dtthl_lw_mean    = self.dthldt_lw   [center4d].mean(axis=(2,3))
-        self.dtthl_sw_cs_mean = self.dthldt_sw_cs[center4d].mean(axis=(2,3))
-        self.dtthl_lw_cs_mean = self.dthldt_lw_cs[center4d].mean(axis=(2,3))
+        # Variables selected as nearest-neighbour
+        var_nn = ['soil_type', 'low_veg_type', 'high_veg_type']
+        for var in var_nn:
+            data = getattr(self, var)
+            setattr(self, '{}_nn'.format(var), data[:, self.j, self.i])
 
         # Half level values temperature for radiation
         self.Th_mean = np.zeros_like(self.zh_mean)
@@ -337,17 +325,21 @@ class Read_ERA:
             s = Slice(istart, iend, jstart, jend)
 
             # Calculate advective tendencies
-            self.dtthl_advec = ( -self.u[s(0,0)] * fd.grad2c( self.thl[s(0,-1)], self.thl[s(0,+1)], dx) \
-                                 -self.v[s(0,0)] * fd.grad2c( self.thl[s(-1,0)], self.thl[s(+1,0)], dy) ).mean(axis=(2,3))
+            self.dtthl_advec = (
+                    -self.u[s(0,0)] * fd.grad2c( self.thl[s(0,-1)], self.thl[s(0,+1)], dx) \
+                    -self.v[s(0,0)] * fd.grad2c( self.thl[s(-1,0)], self.thl[s(+1,0)], dy) ).mean(axis=(2,3))
 
-            self.dtqt_advec  = ( -self.u[s(0,0)] * fd.grad2c( self.qt[s(0,-1)], self.qt[s(0,+1)], dx) \
-                                 -self.v[s(0,0)] * fd.grad2c( self.qt[s(-1,0)], self.qt[s(+1,0)], dy) ).mean(axis=(2,3))
+            self.dtqt_advec = (
+                    -self.u[s(0,0)] * fd.grad2c( self.qt[s(0,-1)], self.qt[s(0,+1)], dx) \
+                    -self.v[s(0,0)] * fd.grad2c( self.qt[s(-1,0)], self.qt[s(+1,0)], dy) ).mean(axis=(2,3))
 
-            self.dtu_advec   = ( -self.u[s(0,0)] * fd.grad2c( self.u[s(0,-1)], self.u[s(0,+1)], dx) \
-                                 -self.v[s(0,0)] * fd.grad2c( self.u[s(-1,0)], self.u[s(+1,0)], dy) ).mean(axis=(2,3))
+            self.dtu_advec = (
+                    -self.u[s(0,0)] * fd.grad2c( self.u[s(0,-1)], self.u[s(0,+1)], dx) \
+                    -self.v[s(0,0)] * fd.grad2c( self.u[s(-1,0)], self.u[s(+1,0)], dy) ).mean(axis=(2,3))
 
-            self.dtv_advec   = ( -self.u[s(0,0)] * fd.grad2c( self.v[s(0,-1)], self.v[s(0,+1)], dx) \
-                                 -self.v[s(0,0)] * fd.grad2c( self.v[s(-1,0)], self.v[s(+1,0)], dy) ).mean(axis=(2,3))
+            self.dtv_advec = (
+                    -self.u[s(0,0)] * fd.grad2c( self.v[s(0,-1)], self.v[s(0,+1)], dx) \
+                    -self.v[s(0,0)] * fd.grad2c( self.v[s(-1,0)], self.v[s(+1,0)], dy) ).mean(axis=(2,3))
 
             # Geostrophic wind (on model levels)
             vg_p = (  IFS_tools.grav / self.fc * fd.grad2c( self.z_p[s(0,-1)], self.z_p[s(0,+1)], dx) ).mean(axis=(2,3))
@@ -375,6 +367,13 @@ class Read_ERA:
             ug_p = ( -IFS_tools.grav / self.fc * fd.grad4c( self.z_p[s(-2,0)], self.z_p[s(-1,0)], self.z_p[s(+1,0)], self.z_p[s(+2,0)], dy) ).mean(axis=(2,3))
 
         elif (method == 'box'):
+
+            # Numpy slicing tupples of boxes east, west, north and south of main domain
+            box_size = 2*n_av+1
+            east  = np.s_[:, :, jstart:jend, self.i+1:self.i+box_size+1]
+            west  = np.s_[:, :, jstart:jend, self.i-box_size:self.i    ]
+            north = np.s_[:, :, self.j+1:self.j+box_size+1, istart:iend]
+            south = np.s_[:, :, self.j-box_size:self.j,     istart:iend]
 
             # Distance east-west and north_south of boxes
             distance_WE = st.dlon(self.lons[self.i-n_av-1], self.lons[self.i+n_av+1], self.lats[self.j])
