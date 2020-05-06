@@ -16,11 +16,11 @@ from messages      import header, message, error
 import microhh_tools as mht
 
 # Start and end of experiment
-#start = datetime.datetime(year=2018, month=8, day=11,  hour=5)
-#end   = datetime.datetime(year=2018, month=8, day=11,  hour=19)
+start = datetime.datetime(year=2018, month=8, day=11,  hour=5)
+end   = datetime.datetime(year=2018, month=8, day=11,  hour=19)
 
-start = datetime.datetime(year=2016, month=8, day=17,  hour=5)
-end   = datetime.datetime(year=2016, month=8, day=17,  hour=19)
+#start = datetime.datetime(year=2016, month=8, day=17,  hour=5)
+#end   = datetime.datetime(year=2016, month=8, day=17,  hour=19)
 
 # Working directory; individual cases are placed in `YYYYMMDD_tHH` subdirectory
 workdir = '.'
@@ -32,6 +32,8 @@ microhh_bin = '/home/bart/meteo/models/microhh/build_dp_cpu/microhh'
 rrtmgp_path = '/home/bart/meteo/models/rte-rrtmgp/'
 
 float_type  = 'f8'  # MicroHH float type ('f4', 'f8')
+
+link_files = True       # Switch between linking or copying files
 
 # Dictionary with settings
 settings = {
@@ -69,6 +71,7 @@ e5.calculate_forcings(n_av=0, method='4th')
 # Read MicroHH namelist and create stretched vertical grid
 #
 grid = mht.Stretched_grid(kmax=128, nloc1=80, nbuf1=20, dz1=25, dz2=300)    # Same as DALES testbed
+#grid = mht.Stretched_grid(kmax=144, nloc1=80, nbuf1=20, dz1=25, dz2=400)
 grid.plot()
 
 #
@@ -206,20 +209,29 @@ if os.path.exists(path):
 else:
     os.makedirs(path)
 
-to_copy = ['cabauw.ini', microhh_bin]
+to_copy = ['cabauw.ini', 'van_genuchten_parameters.nc']
 to_move = ['cabauw_input.nc']
 to_link = {
-        'coefficients_lw.nc': '{}/rrtmgp/data/rrtmgp-data-lw-g256-2018-12-04.nc'.format(rrtmgp_path),
-        'coefficients_sw.nc': '{}/rrtmgp/data/rrtmgp-data-sw-g224-2018-12-04.nc'.format(rrtmgp_path),
-        'cloud_coefficients_lw.nc': '{}/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-lw.nc'.format(rrtmgp_path),
-        'cloud_coefficients_sw.nc': '{}/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-sw.nc'.format(rrtmgp_path)}
+        'microhh': microhh_bin,
+        'coefficients_lw.nc':
+            '{}/rrtmgp/data/rrtmgp-data-lw-g256-2018-12-04.nc'.format(rrtmgp_path),
+        'coefficients_sw.nc':
+            '{}/rrtmgp/data/rrtmgp-data-sw-g224-2018-12-04.nc'.format(rrtmgp_path),
+        'cloud_coefficients_lw.nc':
+            '{}/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-lw.nc'.format(rrtmgp_path),
+        'cloud_coefficients_sw.nc':
+        '{}/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-sw.nc'.format(rrtmgp_path)}
 
 for f in to_copy:
     shutil.copy(f, path)
 for f in to_move:
     shutil.move(f, path)
+
 for dst,src in to_link.items():
-    shutil.copy(src, '{}/{}'.format(path,dst))
+    if link_files:
+        os.symlink(src, '{}/{}'.format(path,dst))
+    else:
+        shutil.copy(src, '{}/{}'.format(path,dst))
 
 # Restore namelist file
 shutil.copyfile(nl_backup, nl_file)
