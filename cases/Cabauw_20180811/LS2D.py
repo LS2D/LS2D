@@ -1,3 +1,4 @@
+import matplotlib.pyplot as pl
 import datetime
 import numpy as np
 import sys
@@ -19,8 +20,8 @@ import microhh_tools as mht
 #start = datetime.datetime(year=2018, month=8, day=11,  hour=5)
 #end   = datetime.datetime(year=2018, month=8, day=11,  hour=19)
 
-start = datetime.datetime(year=2016, month=8, day=17,  hour=5)
-end   = datetime.datetime(year=2016, month=8, day=17,  hour=19)
+start = datetime.datetime(year=2016, month=8, day=11,  hour=5)
+end   = datetime.datetime(year=2016, month=8, day=11,  hour=19)
 
 # Working directory; individual cases are placed in `YYYYMMDD_tHH` subdirectory
 workdir = '.'
@@ -70,8 +71,9 @@ e5.calculate_forcings(n_av=0, method='4th')
 #
 # Read MicroHH namelist and create stretched vertical grid
 #
-grid = mht.Stretched_grid(kmax=128, nloc1=80, nbuf1=20, dz1=25, dz2=300)    # Same as DALES testbed
-grid.plot()
+grid = mht.Stretched_grid(kmax=144, nloc1=100, nbuf1=20, dz1=20, dz2=300)    # Same as DALES testbed
+#grid.plot()
+#pl.savefig('grid.png')
 
 #
 # Create nudge factor, controlling where nudging is aplied, and time scale
