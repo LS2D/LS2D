@@ -31,7 +31,7 @@ env_arch = {
         'rrtmgp_path': '/home/bart/meteo/models/rte-rrtmgp/'}
 
 # Switch between different systems:
-env = env_arch
+env = env_cartesius
 
 float_type  = 'f8'   # MicroHH float type ('f4', 'f8')
 link_files = False   # Switch between linking or copying files
@@ -42,7 +42,7 @@ end_hour = 19
 
 # Days in Aug 2016:
 start_day = 4
-end_day = 5#18
+end_day = 18
 
 for day in range(start_day, end_day):
 
@@ -217,7 +217,7 @@ for day in range(start_day, end_day):
     else:
         os.makedirs(path)
 
-    to_copy = ['cabauw.ini', '../van_genuchten_parameters.nc']
+    to_copy = ['cabauw.ini', '../van_genuchten_parameters.nc', 'run.slurm']
     to_move = ['cabauw_input.nc']
     to_link = {
             'microhh': env['microhh_bin'],
