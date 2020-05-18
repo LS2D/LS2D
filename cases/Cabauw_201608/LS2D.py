@@ -77,7 +77,7 @@ for day in range(start_day, end_day):
     #
     # Read MicroHH namelist and create stretched vertical grid
     #
-    grid = Grid_stretched(kmax=224, dz0=20, nloc1=100, nbuf1=20, dz1=100, nloc2=210, nbuf2=10, dz2=500)
+    grid = Grid_stretched(kmax=228, dz0=20, nloc1=100, nbuf1=20, dz1=100, nloc2=210, nbuf2=10, dz2=500)
     grid.plot()
 
     #
