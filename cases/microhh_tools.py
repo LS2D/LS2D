@@ -80,7 +80,7 @@ def write_namelist(namelist_file, namelist_dict):
             f.write('[{}]\n'.format(group))
             for variable,value in items.items():
                 if isinstance(value, list):
-                    value = ','.join(value)
+                    value = ','.join([str(elem) for elem in value])
                 f.write('{}={}\n'.format(variable, value))
             f.write('\n')
 
