@@ -3,6 +3,7 @@ import numpy   as np
 import struct  as st
 import glob
 import re
+from collections import OrderedDict
 
 # -------------------------
 # General help functions
@@ -55,14 +56,14 @@ def read_namelist(namelist_file=None):
     Read a .ini namelist into a nested dictionary (dict[group][variable])
     """
 
-    ini = {}
+    ini = OrderedDict()
     with open(namelist_file, 'r') as f:
         for line in f:
             lstrip = line.strip()
             if (len(lstrip) > 0 and lstrip[0] != "#"):
                 if lstrip[0] == '[' and lstrip[-1] == ']':
                     group_name = lstrip[1:-1]
-                    ini[group_name] = {}
+                    ini[group_name] = OrderedDict()
                 elif ("=" in line):
                     var_name = lstrip.split('=')[0]
                     value = _convert_value(lstrip.split('=')[1])
