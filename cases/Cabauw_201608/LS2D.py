@@ -18,20 +18,23 @@ from messages      import header, message, error
 import microhh_tools as mht
 from grid import Grid_stretched
 
-# Path to the ERA5 files
-era5_path = '/archive/bstratum/ERA5/'
+env_cartesius = {
+        'era5_path': '/archive/bstratum/ERA5/',
+        'work_path': '/home/bstratum/scratch/cabauw_aug2016/',
+        'microhh_bin': '/home/bstratum/models/microhh/build_dp_cpumpi/microhh',
+        'rrtmgp_path': '/home/bstratum/models/rte-rrtmgp/'}
 
-# Working directory; individual cases are placed in `YYYYMMDD_tHH` subdirectory
-workdir = '/home/bstratum/scratch/cabauw_aug2016/'
+env_arch = {
+        'era5_path': '/home/scratch1/meteo_data/LS2D/',
+        'work_path': '.',
+        'microhh_bin': '/home/bart/meteo/models/microhh/build_dp_cpu/microhh',
+        'rrtmgp_path': '/home/bart/meteo/models/rte-rrtmgp/'}
 
-# Path to MicroHH binary
-microhh_bin = '/home/bstratum/models/microhh/build_dp_cpumpi/microhh'
+# Switch between different systems:
+env = env_arch
 
-# Path to RRTMGP repository, for radiation coefficient files.
-rrtmgp_path = '/home/bstratum/models/rte-rrtmgp/'
-
-float_type  = 'f8'    # MicroHH float type ('f4', 'f8')
-link_files = False    # Switch between linking or copying files
+float_type  = 'f8'   # MicroHH float type ('f4', 'f8')
+link_files = False   # Switch between linking or copying files
 
 # Time of day to simulate
 start_hour = 5
@@ -52,7 +55,7 @@ for day in range(start_day, end_day):
         'central_lon' : 4.927,
         'area_size'   : 1,
         'case_name'   : 'cabauw',
-        'base_path'   : era5_path,      # Arch
+        'base_path'   : env['era5_path'],
         'start_date'  : start,
         'end_date'    : end,
         'write_log'   : False,
@@ -76,13 +79,8 @@ for day in range(start_day, end_day):
     #
     # Read MicroHH namelist and create stretched vertical grid
     #
-<<<<<<< HEAD
-    grid = Grid_stretched(kmax=224, dz0=20, nloc1=100, nbuf1=20, dz1=100, nloc2=210, nbuf2=10, dz2=500)
-    #grid.plot()
-=======
     grid = Grid_stretched(kmax=228, dz0=20, nloc1=100, nbuf1=20, dz1=100, nloc2=210, nbuf2=10, dz2=500)
-    grid.plot()
->>>>>>> 38abfb1910318650440ce086168c857f3b3ece6f
+    #grid.plot()
 
     #
     # Create nudge factor, controlling where nudging is aplied, and time scale
@@ -213,7 +211,7 @@ for day in range(start_day, end_day):
     #
     # Copy/move/link files to working directory.
     #
-    path = '{0}/{1:04d}{2:02d}{3:02d}_t{4:02d}'.format(workdir, start.year, start.month, start.day, start.hour)
+    path = '{0}/{1:04d}{2:02d}{3:02d}_t{4:02d}'.format(env['work_path'], start.year, start.month, start.day, start.hour)
     if os.path.exists(path):
         error('Work directory {} already exists!!'.format(path))
     else:
@@ -222,15 +220,15 @@ for day in range(start_day, end_day):
     to_copy = ['cabauw.ini', '../van_genuchten_parameters.nc']
     to_move = ['cabauw_input.nc']
     to_link = {
-            'microhh': microhh_bin,
+            'microhh': env['microhh_bin'],
             'coefficients_lw.nc':
-                '{}/rrtmgp/data/rrtmgp-data-lw-g256-2018-12-04.nc'.format(rrtmgp_path),
+                '{}/rrtmgp/data/rrtmgp-data-lw-g256-2018-12-04.nc'.format(env['rrtmgp_path']),
             'coefficients_sw.nc':
-                '{}/rrtmgp/data/rrtmgp-data-sw-g224-2018-12-04.nc'.format(rrtmgp_path),
+                '{}/rrtmgp/data/rrtmgp-data-sw-g224-2018-12-04.nc'.format(env['rrtmgp_path']),
             'cloud_coefficients_lw.nc':
-                '{}/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-lw.nc'.format(rrtmgp_path),
+                '{}/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-lw.nc'.format(env['rrtmgp_path']),
             'cloud_coefficients_sw.nc':
-            '{}/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-sw.nc'.format(rrtmgp_path)}
+            '{}/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-sw.nc'.format(env['rrtmgp_path'])}
 
     for f in to_copy:
         shutil.copy(f, path)
