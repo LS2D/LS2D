@@ -3,6 +3,7 @@ import numpy   as np
 import struct  as st
 import glob
 import re
+from collections import OrderedDict
 
 # -------------------------
 # General help functions
@@ -49,25 +50,25 @@ def _process_endian(endian):
 # -------------------------
 # Classes and functions to read and write MicroHH things
 # -------------------------
-
 def read_namelist(namelist_file=None):
     """
     Read a .ini namelist into a nested dictionary (dict[group][variable])
     """
 
-    ini = {}
+    ini = OrderedDict()
     with open(namelist_file, 'r') as f:
         for line in f:
             lstrip = line.strip()
             if (len(lstrip) > 0 and lstrip[0] != "#"):
                 if lstrip[0] == '[' and lstrip[-1] == ']':
                     group_name = lstrip[1:-1]
-                    ini[group_name] = {}
+                    ini[group_name] = OrderedDict()
                 elif ("=" in line):
                     var_name = lstrip.split('=')[0]
                     value = _convert_value(lstrip.split('=')[1])
                     ini[group_name][var_name] = value
     return ini
+
 
 def write_namelist(namelist_file, namelist_dict):
     """
@@ -82,50 +83,6 @@ def write_namelist(namelist_file, namelist_dict):
                     value = ','.join(value)
                 f.write('{}={}\n'.format(variable, value))
             f.write('\n')
-
-
-class Read_statistics:
-    """ Read all the NetCDF statistics
-        Example:
-        f = Read_statistics('drycblles.default.0000000.nc')
-        print(f) prints a list with the available variables
-        The data can be accessed as either f['th'] or f.th, which returns the numpy array with data
-        The variable names can be accessed as f.names['th'], the units as f.units['th'], the dimensions as f.dimensions['th']
-        This allows you to automatically format axis labels as e.g.:
-        pl.xlabel("{0:} ({1:})".format(f.names['th'], f.units['th']))
-        """
-    def __init__(self, stat_file):
-        f = nc4.Dataset(stat_file, 'r')
-
-        # Dictionaries which hold the variable names, units, etc.
-        self.data       = {}
-        self.units      = {}
-        self.names      = {}
-        self.dimensions = {}
-
-        # For each variable in the NetCDF file, read all the content and info
-        for var in f.variables:
-            self.data[var]       = f.variables[var].__array__()
-            self.units[var]      = f.variables[var].units
-            self.names[var]      = f.variables[var].long_name
-            self.dimensions[var] = f.variables[var].dimensions
-
-        f.close()
-
-    def __getitem__(self, name):
-        if name in self.data.keys():
-            return self.data[name]
-        else:
-            raise RuntimeError('Can\'t find variable \"{}\" in statistics file'.format(name))
-
-    def __getattr__(self, name):
-        if name in self.data.keys():
-            return self.data[name]
-        else:
-            raise RuntimeError('Can\'t find variable \"{}\" in statistics file'.format(name))
-
-    def __repr__(self):
-        return 'Available variables:\n{}'.format(', '.join(self.names.keys()))
 
 
 class Read_grid:
@@ -205,7 +162,9 @@ def write_restart_file(data, itot, jtot, ktot, path, per_slice=True, endian='lit
         fout.close()
 
 
-def write_NetCDF_input(case_name, float_type, init_profiles, tdep_surface=None, tdep_ls=None, radiation=None, soil=None):
+def write_NetCDF_input(
+        case_name, float_type, init_profiles, tdep_surface=None,
+        tdep_ls=None, radiation=None, soil=None):
     """
     Function for writing the MicroHH2 NetCDF input
     """
@@ -265,39 +224,3 @@ def write_NetCDF_input(case_name, float_type, init_profiles, tdep_surface=None, 
             add_variable(nc_group_soil, name, 'z', data, float_type)
 
     nc_file.close()
-
-
-
-def get_cross_indices(variable, mode):
-    """ Find the cross-section indices given a variable name and mode (in 'xy','xz','yz') """
-    if mode not in ['xy','xz','yz']:
-        raise ValueError('\"mode\" should be in {\"xy\", \"xz\", \"yz\"}')
-
-    # Get a list of all the cross-section files
-    files = glob.glob('{}.{}.*.*'.format(variable, mode))
-    if len(files) == 0:
-        raise Exception('Cannot find any cross-section')
-
-    # Get a list with all the cross-section files for one time
-    time  = files[0].split('.')[-1]
-    files = glob.glob('{}.{}.*.{}'.format(variable, mode, time))
-
-    # Get the indices
-    indices = [int(f.split('.')[-2]) for f in files]
-    indices.sort()
-    return indices
-
-
-
-if (__name__ == "__main__"):
-
-    import matplotlib.pylab as pl
-    pl.close('all')
-    pl.ion()
-
-    #grid = Stretched_grid(kmax=140, nloc1=80, nbuf1=20, dz1=25, dz2=250)
-    #grid = Stretched_grid(kmax=512, nloc1=150, nbuf1=60, dz1=10, dz2=100)
-    grid = Stretched_grid(kmax=192, nloc1=140, nbuf1=30, dz1=20, dz2=300)
-    grid.plot()
-
-
