@@ -75,7 +75,9 @@ if __name__ == '__main__':
     # Read MicroHH experiment
     #
     #nc = 'tmp.nc'
-    nc = '{0:04d}{1:02d}{2:02d}_t{3:02d}/cabauw.default.0000000.nc'.format(
+    #nc = '{0:04d}{1:02d}{2:02d}_t{3:02d}/cabauw.default.0000000.nc'.format(
+    #        start.year, start.month, start.day, start.hour)
+    nc = '{0:04d}{1:02d}{2:02d}_t{3:02d}/tmp.nc'.format(
             start.year, start.month, start.day, start.hour)
 
     groups = ['', 'default', 'radiation', 'thermo', 'land_surface', 'tend']
@@ -137,7 +139,7 @@ if __name__ == '__main__':
 
 
 
-    if False:
+    if True:
         #
         # ASDF
         #

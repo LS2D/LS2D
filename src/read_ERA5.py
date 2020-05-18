@@ -99,14 +99,16 @@ class Read_ERA:
             settings['base_path'] += '/'
 
         # Create lists with required files
+        path = settings['base_path']
+        case = settings['case_name']
         an_sfc_files   = [ERA5_file_path(
-            d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'surface_an',  False) for d in an_dates]
+            d.year, d.month, d.day, path, case, 'surface_an',  False) for d in an_dates]
         an_model_files = [ERA5_file_path(
-            d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'model_an',    False) for d in an_dates]
+            d.year, d.month, d.day, path, case, 'model_an',    False) for d in an_dates]
         an_pres_files  = [ERA5_file_path(
-            d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'pressure_an', False) for d in an_dates]
+            d.year, d.month, d.day, path, case, 'pressure_an', False) for d in an_dates]
         fc_model_files = [ERA5_file_path(
-            d.year, d.month, d.day, settings['base_path'], settings['case_name'], 'model_fc',    False) for d in fc_dates]
+            d.year, d.month, d.day, path, case, 'model_fc',    False) for d in fc_dates]
 
         # Check if all files exist, and exit if not..
         files_missing = False
@@ -411,7 +413,6 @@ class Read_ERA:
         # Total momentum tendency
         self.dtu_total = self.dtu_advec + self.dtu_coriolis
         self.dtv_total = self.dtv_advec + self.dtv_coriolis
-
 
 
 if __name__ == '__main__':

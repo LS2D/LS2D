@@ -1,3 +1,4 @@
+import matplotlib.pyplot as pl
 import numpy as np
 
 #
@@ -14,7 +15,7 @@ class Grid:
 
     def plot(self):
         pl.figure()
-        pl.title(r'$z_\mathrm{size} = {0:.1f} m'.format(self.zsize), loc='left')
+        pl.title(r'$z_\mathrm{{size}}$ = {0:.1f} m'.format(self.zsize), loc='left')
         pl.plot(self.dz, self.z, '-x')
         pl.xlabel(r'$\Delta z$ (m)')
         pl.ylabel(r'$z$ (m)')
