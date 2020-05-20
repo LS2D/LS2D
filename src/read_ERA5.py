@@ -45,21 +45,6 @@ class Slice:
         return np.s_[:,:,self.jstart+dj:self.jend+dj,\
                          self.istart+di:self.iend+di]
 
-
-def check_files(files):
-    """
-    Check whether all required `files` exists in the ERA5 archive
-    """
-    file_missing = False
-    for f in files:
-        if not os.path.exists(f):
-            error('File \"{}\" does not exist...'.format(f), exit=False)
-            file_missing = True
-    return file_missing
-
-
-
-
 class Read_ERA:
     """
     Read the ERA5 model/pressure/surface level data,
@@ -109,6 +94,14 @@ class Read_ERA:
             d.year, d.month, d.day, path, case, 'model_fc',    False) for d in fc_dates]
 
         # Check if all files exist, and exit if not..
+        def check_files(files):
+            file_missing = False
+            for f in files:
+                if not os.path.exists(f):
+                    error('File \"{}\" does not exist...'.format(f), exit=False)
+                    file_missing = True
+            return file_missing
+
         files_missing = False
         files_missing += check_files(an_sfc_files  )
         files_missing += check_files(an_model_files)
@@ -406,12 +399,11 @@ class Read_ERA:
                 -self.u[s(0,0)] * fd.grad2c( self.v[s(0,-1)], self.v[s(0,+1)], dx) \
                 -self.v[s(0,0)] * fd.grad2c( self.v[s(-1,0)], self.v[s(+1,0)], dy) ).mean(axis=(2,3))
 
-            # Geostrophic wind (on model levels)
+            # Geostrophic wind (gradient geopotential height on constant pressure levels)
             vg_p_mean = (  IFS_tools.grav / self.fc * fd.grad2c(
                 self.z_p[s(0,-1)], self.z_p[s(0,+1)], dx) ).mean(axis=(2,3))
             ug_p_mean = ( -IFS_tools.grav / self.fc * fd.grad2c(
                 self.z_p[s(-1,0)], self.z_p[s(+1,0)], dy) ).mean(axis=(2,3))
-
 
         elif (method == '4th'):
 
@@ -446,7 +438,7 @@ class Read_ERA:
                     self.v[s(-2,0)], self.v[s(-1,0)], self.v[s(+1,0)], self.v[s(+2,0)], dy)
                                   ).mean(axis=(2,3))
 
-            # Geostrophic wind (on model levels)
+            # Geostrophic wind (gradient geopotential height on constant pressure levels)
             vg_p_mean = (
                 IFS_tools.grav / self.fc * fd.grad4c(
                     self.z_p[s(0,-2)], self.z_p[s(0,-1)], self.z_p[s(0,+1)], self.z_p[s(0,+2)], dx)
@@ -455,7 +447,6 @@ class Read_ERA:
                -IFS_tools.grav / self.fc * fd.grad4c(
                     self.z_p[s(-2,0)], self.z_p[s(-1,0)], self.z_p[s(+1,0)], self.z_p[s(+2,0)], dy)
                         ).mean(axis=(2,3))
-
 
         elif (method == 'box'):
 
@@ -495,7 +486,7 @@ class Read_ERA:
                 -self.v_mean * (
                     self.v[north].mean(axis=(2,3)) - self.v[south].mean(axis=(2,3))) / distance_NS
 
-            # 3. Geostrophic wind (gradient geopotential height on constant pressure levels)
+            # Geostrophic wind (gradient geopotential height on constant pressure levels)
             vg_p_mean =  IFS_tools.grav / self.fc * (
                 self.z_p[east ].mean(axis=(2,3)) - self.z_p[west ].mean(axis=(2,3))) / distance_WE
             ug_p_mean = -IFS_tools.grav / self.fc * (
@@ -518,6 +509,28 @@ class Read_ERA:
         # Total momentum tendency
         self.dtu_total_mean = self.dtu_advec_mean + self.dtu_coriolis_mean
         self.dtv_total_mean = self.dtv_advec_mean + self.dtv_coriolis_mean
+
+
+    def interpolate_to_fixed_height(self, variables, z):
+        """
+        Interpolate list of `variables` to a requested (fixed in time) height `z`.
+        """
+
+        def interp_z(array, z):
+            out = np.empty((self.ntime, z.size))
+            for t in range(self.ntime):
+                out[t,:] = np.interp(z, self.z_mean[t,:], array[t,:])
+            return out
+
+        output = {}
+        for var in variables:
+            var_era5 = '{}_mean'.format(var)
+            if hasattr(self, var_era5):
+                output[var] = interp_z(getattr(self, var_era5), z)
+            else:
+                error('Can\'t interpolate variable \"{}\"...'.format(var))
+
+        return output
 
 
     def save_forcings(self, file_name):
@@ -584,9 +597,8 @@ class Read_ERA:
 if __name__ == '__main__':
     """ Test / example, only executed if script is called directly """
 
-    import copy
     import matplotlib.pyplot as pl
-    pl.close('all')
+    pl.close('all'); pl.ion()
 
     settings = {
         'central_lat' : 51.971,
@@ -595,8 +607,7 @@ if __name__ == '__main__':
         'case_name'   : 'cabauw',
         #'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',  # KNMI
         #'base_path'   : '/Users/bart/meteo/data/LS2D/',   # Macbook
-        #'base_path'   : '/home/scratch1/meteo_data/LS2D/',      # Arch
-        'base_path'   : '/home/scratch1/meteo_data/LS2D/',
+        'base_path'   : '/home/scratch1/meteo_data/LS2D/',      # Arch
         #'start_date'  : datetime.datetime(year=2016, month=9, day=5, hour=0),
         #'end_date'    : datetime.datetime(year=2016, month=9, day=6, hour=0),
         'start_date'  : datetime.datetime(year=2016, month=5, day=3, hour=0),
@@ -604,6 +615,18 @@ if __name__ == '__main__':
         'write_log'   : True
         }
 
+
+    if True:
+        e5 = Read_ERA(settings)
+        e5.calculate_forcings(n_av=0, method='4th')
+
+        variables = [
+                'thl', 'qt', 'u', 'v', 'wls', 'p',
+                'dtthl_advec', 'dtqt_advec', 'dtu_advec', 'dtv_advec',
+                'ug' ,'vg' ,'o3', 'z']
+
+        z = np.arange(10,1000.01,10)
+        les_data = e5.interpolate_to_fixed_height(variables, z)
 
 
     if False:
@@ -615,7 +638,7 @@ if __name__ == '__main__':
         e5.save_forcings(name)
 
 
-    if True:
+    if False:
         e5_box = Read_ERA(settings)
         e5_2nd = Read_ERA(settings)
         e5_4th = Read_ERA(settings)
