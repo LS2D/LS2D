@@ -4,6 +4,7 @@ import numpy as np
 import sys
 import os
 import shutil
+import subprocess
 
 # Add `src` subdirectory of LS2D to Python path
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -18,9 +19,12 @@ from messages      import header, message, error
 import microhh_tools as mht
 from grid import Grid_stretched
 
+def execute(task):
+   subprocess.call(task, shell=True, executable='/bin/bash')
+
 env_cartesius = {
         'era5_path': '/archive/bstratum/ERA5/',
-        'work_path': '/home/bstratum/scratch/cabauw_aug2016/',
+        'work_path': '/home/bstratum/scratch/cabauw_aug2016_small24h/',
         'microhh_bin': '/home/bstratum/models/microhh/build_dp_cpumpi/microhh',
         'rrtmgp_path': '/home/bstratum/models/rte-rrtmgp/'}
 
@@ -34,20 +38,25 @@ env_arch = {
 env = env_cartesius
 
 float_type  = 'f8'   # MicroHH float type ('f4', 'f8')
+auto_submit = True   # Submit the case to load balancer
 link_files = False   # Switch between linking or copying files
+auto_submit = True   # Submit the case to load balancer
 
 # Time of day to simulate
-start_hour = 5
-end_hour = 19
+start_hour = 0
+run_time = 24*3600
 
 # Days in Aug 2016:
 start_day = 4
 end_day = 18
 
+column_x = np.array([1300,1800,2300])
+column_y = np.array([1300,1800,2300])
+
 for day in range(start_day, end_day):
 
     start = datetime.datetime(year=2016, month=8, day=day, hour=start_hour)
-    end   = datetime.datetime(year=2016, month=8, day=day, hour=end_hour)
+    end   = start + datetime.timedelta(seconds=run_time)
 
     # Dictionary with settings
     settings = {
@@ -180,6 +189,11 @@ for day in range(start_day, end_day):
             start.year, start.month, start.day, start.hour, start.minute, start.second)
     nl['time']['datetime_utc'] = datetime_utc
 
+    # Add column locations
+    x,y = np.meshgrid(column_x, column_y)
+    nl['column']['coordinates[x]'] = list(x.flatten())
+    nl['column']['coordinates[y]'] = list(y.flatten())
+
     mht.write_namelist(nl_file, nl)
 
     #
@@ -211,14 +225,48 @@ for day in range(start_day, end_day):
     #
     # Copy/move/link files to working directory.
     #
-    path = '{0}/{1:04d}{2:02d}{3:02d}_t{4:02d}'.format(env['work_path'], start.year, start.month, start.day, start.hour)
+    path = '{0}/{1:04d}{2:02d}{3:02d}_t{4:02d}'.format(
+            env['work_path'], start.year, start.month, start.day, start.hour)
     if os.path.exists(path):
         error('Work directory {} already exists!!'.format(path))
     else:
         os.makedirs(path)
 
-    to_copy = ['cabauw.ini', '../van_genuchten_parameters.nc', 'run.slurm']
-    to_move = ['cabauw_input.nc']
+    #
+    # Create slurm runscript
+    #
+    def create_runscript(path, workdir, ntasks, wc_time, job_name):
+        with open(path, 'w') as f:
+            f.write('#!/bin/bash\n')
+            f.write('#SBATCH -p normal\n')
+            f.write('#SBATCH -n {}\n'.format(ntasks))
+            f.write('#SBATCH -t {}\n'.format(wc_time))
+            f.write('#SBATCH --job-name={}\n'.format(job_name))
+            f.write('#SBATCH --output={}/mhh-%j.out\n'.format(workdir))
+            f.write('#SBATCH --error={}/mhh-%j.err\n'.format(workdir))
+            f.write('#SBATCH --constraint=haswell\n\n')
+
+            f.write('module purge\n')
+            f.write('module load surfsara\n')
+            f.write('module load compilerwrappers\n')
+            f.write('module load 2019\n')
+            f.write('module load CMake\n')
+            f.write('module load intel/2018b\n')
+            f.write('module load netCDF/4.6.1-intel-2018b\n')
+            f.write('module load FFTW/3.3.8-intel-2018b\n\n')
+
+            f.write('cd {}\n\n'.format(workdir))
+
+            f.write('srun ./microhh init cabauw\n')
+            f.write('srun ./microhh run cabauw\n')
+
+    create_runscript(
+            'run.slurm', path,
+            nl['master']['npx']*nl['master']['npy'],
+            '24:00:00', 'mhh{0:02d}{1:02d}'.format(start.month, start.day))
+
+    to_copy = ['cabauw.ini', '../van_genuchten_parameters.nc']
+    to_move = ['cabauw_input.nc', 'run.slurm']
     to_link = {
             'microhh': env['microhh_bin'],
             'coefficients_lw.nc':
@@ -240,6 +288,9 @@ for day in range(start_day, end_day):
             os.symlink(src, '{}/{}'.format(path,dst))
         else:
             shutil.copy(src, '{}/{}'.format(path,dst))
+
+    if auto_submit:
+        execute('sbatch {}/run.slurm'.format(path))
 
     # Restore namelist file
     shutil.copyfile(nl_backup, nl_file)
