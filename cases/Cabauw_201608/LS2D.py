@@ -35,20 +35,22 @@ env_arch = {
         'rrtmgp_path': '/home/bart/meteo/models/rte-rrtmgp/'}
 
 # Switch between different systems:
-env = env_cartesius
+env = env_arch
 
 float_type  = 'f8'   # MicroHH float type ('f4', 'f8')
-auto_submit = True   # Submit the case to load balancer
-link_files = False   # Switch between linking or copying files
-auto_submit = True   # Submit the case to load balancer
+auto_submit = False  # Submit the case to load balancer
+link_files = True    # Switch between linking or copying files
 
 # Time of day to simulate
 start_hour = 0
 run_time = 24*3600
 
+#start_hour = 8
+#run_time = 4*3600
+
 # Days in Aug 2016:
 start_day = 4
-end_day = 18
+end_day = 8#18
 
 column_x = np.array([1300,1800,2300])
 column_y = np.array([1300,1800,2300])
@@ -74,51 +76,26 @@ for day in range(start_day, end_day):
 
     header('Creating LES input')
 
-    #
     # Download the ERA5 data (or check whether it is available local).
-    #
     download_ERA5(settings)
 
-    #
     # Read ERA5 data, and calculate LES forcings, using +/-`n_av` grid point averages in ERA5.
-    #
     e5 = Read_ERA(settings)
     e5.calculate_forcings(n_av=0, method='4th')
 
-    #
-    # Read MicroHH namelist and create stretched vertical grid
-    #
+    # Create stretched vertical grid
     grid = Grid_stretched(kmax=228, dz0=20, nloc1=100, nbuf1=20, dz1=100, nloc2=210, nbuf2=10, dz2=500)
-    #grid.plot()
 
-    #
+    # Interpolate ERA5 variables and forcings onto LES grid
+    variables = [
+            'thl', 'qt', 'u', 'v', 'wls', 'p',
+            'dtthl_advec', 'dtqt_advec', 'dtu_advec', 'dtv_advec',
+            'ug' ,'vg' ,'o3', 'z']
+    e5_z = e5.interpolate_to_fixed_height(variables, grid.z)
+
     # Create nudge factor, controlling where nudging is aplied, and time scale
-    #
-    tau_nudge = 10800        # Nudge time scale (s)
-    nudge_fac = np.ones(grid.z.size) / tau_nudge
-
-    #
-    # Interpolate ERA5 onto LES grid
-    #
-    def interp_time(z, ze, arr):
-        out = np.empty((arr.shape[0], z.size))
-        for i in range(arr.shape[0]):
-            out[i,:] = np.interp(z, ze[i,:], arr[i,:])
-        return out
-
-    thl   = interp_time(grid.z, e5.z_mean, e5.thl_mean   )
-    qt    = interp_time(grid.z, e5.z_mean, e5.qt_mean    )
-    u     = interp_time(grid.z, e5.z_mean, e5.u_mean     )
-    v     = interp_time(grid.z, e5.z_mean, e5.v_mean     )
-    w     = interp_time(grid.z, e5.z_mean, e5.wls_mean   )
-    p     = interp_time(grid.z, e5.z_mean, e5.p_mean     )
-    thlls = interp_time(grid.z, e5.z_mean, e5.dtthl_advec)
-    qtls  = interp_time(grid.z, e5.z_mean, e5.dtqt_advec )
-    uls   = interp_time(grid.z, e5.z_mean, e5.dtu_advec  )
-    vls   = interp_time(grid.z, e5.z_mean, e5.dtv_advec  )
-    ug    = interp_time(grid.z, e5.z_mean, e5.ug         )
-    vg    = interp_time(grid.z, e5.z_mean, e5.vg         )
-    o3    = interp_time(grid.z, e5.z_mean, e5.o3_mean    )
+    tau_nudge = 10800  # Nudge time scale (s)
+    nudge_fac = np.ones(grid.kmax) / tau_nudge
 
     # Surface / soil
     z_soil = np.array([-1.945, -0.64, -0.175, -0.035])
@@ -156,13 +133,13 @@ for day in range(start_day, end_day):
     o3_rad  = e5.o3_mean[0,:]
 
     # Profiles on LES grid
-    h2o_atmo = qt[0,:]
+    h2o_atmo = e5_z['qt'][0,:]
     co2_atmo = np.ones(grid.kmax) * co2
     ch4_atmo = np.ones(grid.kmax) * ch4
     n2o_atmo = np.ones(grid.kmax) * n2o
     n2_atmo  = np.ones(grid.kmax) * n2
     o2_atmo  = np.ones(grid.kmax) * o2
-    o3_atmo  = o3[0,:]
+    o3_atmo  = e5_z['o3'][0,:]
 
     #
     # Write MicroHH input
@@ -200,8 +177,8 @@ for day in range(start_day, end_day):
     # Write NetCDF file
     #
     init_profiles = {
-            'z': grid.z, 'thl': thl[0,:], 'qt': qt[0,:], 'u': u[0,:],
-            'v': v[0,:], 'nudgefac': nudge_fac, 'co2': co2_atmo, 'ch4': ch4_atmo,
+            'z': grid.z, 'thl': e5_z['thl'][0,:], 'qt': e5_z['qt'][0,:], 'u': e5_z['u'][0,:],
+            'v': e5_z['v'][0,:], 'nudgefac': nudge_fac, 'co2': co2_atmo, 'ch4': ch4_atmo,
             'n2o': n2o_atmo, 'n2': n2_atmo, 'o2': o2_atmo, 'o3': o3_atmo, 'h2o': h2o_atmo}
 
     radiation  = {
@@ -214,11 +191,13 @@ for day in range(start_day, end_day):
             'qt_sbot': e5.wqs_mean, 'p_sbot': e5.ps_mean }
 
     tdep_ls = {
-            'time_ls': e5.time_sec, 'u_geo': ug, 'v_geo': vg, 'w_ls': w,
-            'thl_ls': thlls, 'qt_ls': qtls, 'u_ls': uls, 'v_ls': vls,
-            'thl_nudge': thl, 'qt_nudge': qt, 'u_nudge': u, 'v_nudge': v}
+            'time_ls': e5.time_sec, 'u_geo': e5_z['ug'], 'v_geo': e5_z['vg'],
+            'w_ls': e5_z['wls'], 'thl_ls': e5_z['dtthl_advec'], 'qt_ls': e5_z['dtqt_advec'],
+            'u_ls': e5_z['dtu_advec'], 'v_ls': e5_z['dtv_advec'],
+            'thl_nudge': e5_z['thl'], 'qt_nudge': e5_z['qt'],
+            'u_nudge': e5_z['u'], 'v_nudge': e5_z['v']}
 
-    soil = {'z': z_soil, 'theta': e5.phisoil_mean[0,::-1], 't': e5.Tsoil_mean[0,::-1], 'index': soil_index}
+    soil = {'z': z_soil, 'theta': e5.theta_soil_mean[0,::-1], 't': e5.T_soil_mean[0,::-1], 'index': soil_index}
 
     mht.write_NetCDF_input('cabauw', float_type, init_profiles, tdep_surface, tdep_ls, radiation, soil)
 

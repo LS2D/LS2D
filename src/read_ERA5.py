@@ -291,7 +291,7 @@ class Read_ERA:
         self.exns = IFS_tools.calc_exner(self.ps)  # Exner at surface (-)
         self.wths = self.H / (self.rhos * IFS_tools.cpd * self.exns)  # Surface kinematic heat flux (K m s-1)
 
-        self.fc  = 2 * 7.2921e-5 * np.sin(np.deg2rad(settings['central_lat']))  # Coriolis parameter
+        self.fc  = 2 * 7.2921e-5 * np.sin(np.deg2rad(self.settings['central_lat']))  # Coriolis parameter
 
         # Convert forecasted radiative temperature tendencies from T to thl
         self.dtthl_sw = self.dtT_sw / self.exn   # Mean potential temperature tendency SW radiation (K s-1)
