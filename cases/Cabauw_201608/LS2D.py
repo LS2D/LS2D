@@ -31,7 +31,7 @@ env_cartesius = {
 env_arch = {
         'era5_path': '/home/scratch1/meteo_data/LS2D/',
         'work_path': '.',
-        'microhh_bin': '/home/bart/meteo/models/microhh/build_dp_cpu/microhh',
+        'microhh_bin': '/home/bart/meteo/models/microhh/build_dp_cpumpi/microhh',
         'rrtmgp_path': '/home/bart/meteo/models/rte-rrtmgp/'}
 
 # Switch between different systems:
@@ -45,15 +45,9 @@ link_files = True    # Switch between linking or copying files
 start_hour = 0
 run_time = 24*3600
 
-#start_hour = 8
-#run_time = 4*3600
-
 # Days in Aug 2016:
 start_day = 4
-end_day = 8#18
-
-column_x = np.array([1300,1800,2300])
-column_y = np.array([1300,1800,2300])
+end_day = 18
 
 for day in range(start_day, end_day):
 
@@ -91,7 +85,7 @@ for day in range(start_day, end_day):
             'thl', 'qt', 'u', 'v', 'wls', 'p',
             'dtthl_advec', 'dtqt_advec', 'dtu_advec', 'dtv_advec',
             'ug' ,'vg' ,'o3', 'z']
-    e5_z = e5.interpolate_to_fixed_height(variables, grid.z)
+    e5_at_z = e5.interpolate_to_fixed_height(variables, grid.z)
 
     # Create nudge factor, controlling where nudging is aplied, and time scale
     tau_nudge = 10800  # Nudge time scale (s)
@@ -133,13 +127,13 @@ for day in range(start_day, end_day):
     o3_rad  = e5.o3_mean[0,:]
 
     # Profiles on LES grid
-    h2o_atmo = e5_z['qt'][0,:]
+    h2o_atmo = e5_at_z['qt'][0,:]
     co2_atmo = np.ones(grid.kmax) * co2
     ch4_atmo = np.ones(grid.kmax) * ch4
     n2o_atmo = np.ones(grid.kmax) * n2o
     n2_atmo  = np.ones(grid.kmax) * n2
     o2_atmo  = np.ones(grid.kmax) * o2
-    o3_atmo  = e5_z['o3'][0,:]
+    o3_atmo  = e5_at_z['o3'][0,:]
 
     #
     # Write MicroHH input
@@ -167,6 +161,8 @@ for day in range(start_day, end_day):
     nl['time']['datetime_utc'] = datetime_utc
 
     # Add column locations
+    column_x = np.array([1300,1800,2300])
+    column_y = np.array([1300,1800,2300])
     x,y = np.meshgrid(column_x, column_y)
     nl['column']['coordinates[x]'] = list(x.flatten())
     nl['column']['coordinates[y]'] = list(y.flatten())
@@ -177,9 +173,10 @@ for day in range(start_day, end_day):
     # Write NetCDF file
     #
     init_profiles = {
-            'z': grid.z, 'thl': e5_z['thl'][0,:], 'qt': e5_z['qt'][0,:], 'u': e5_z['u'][0,:],
-            'v': e5_z['v'][0,:], 'nudgefac': nudge_fac, 'co2': co2_atmo, 'ch4': ch4_atmo,
-            'n2o': n2o_atmo, 'n2': n2_atmo, 'o2': o2_atmo, 'o3': o3_atmo, 'h2o': h2o_atmo}
+            'z': grid.z, 'thl': e5_at_z['thl'][0,:], 'qt': e5_at_z['qt'][0,:],
+            'u': e5_at_z['u'][0,:], 'v': e5_at_z['v'][0,:], 'nudgefac': nudge_fac,
+            'co2': co2_atmo, 'ch4': ch4_atmo, 'n2o': n2o_atmo, 'n2': n2_atmo,
+            'o2': o2_atmo, 'o3': o3_atmo, 'h2o': h2o_atmo}
 
     radiation  = {
             'z_lay': z_lay, 'z_lev': z_lev, 'p_lay': p_lay, 'p_lev': p_lev,
@@ -191,11 +188,11 @@ for day in range(start_day, end_day):
             'qt_sbot': e5.wqs_mean, 'p_sbot': e5.ps_mean }
 
     tdep_ls = {
-            'time_ls': e5.time_sec, 'u_geo': e5_z['ug'], 'v_geo': e5_z['vg'],
-            'w_ls': e5_z['wls'], 'thl_ls': e5_z['dtthl_advec'], 'qt_ls': e5_z['dtqt_advec'],
-            'u_ls': e5_z['dtu_advec'], 'v_ls': e5_z['dtv_advec'],
-            'thl_nudge': e5_z['thl'], 'qt_nudge': e5_z['qt'],
-            'u_nudge': e5_z['u'], 'v_nudge': e5_z['v']}
+            'time_ls': e5.time_sec, 'u_geo': e5_at_z['ug'], 'v_geo': e5_at_z['vg'],
+            'w_ls': e5_at_z['wls'], 'thl_ls': e5_at_z['dtthl_advec'], 'qt_ls': e5_at_z['dtqt_advec'],
+            'u_ls': e5_at_z['dtu_advec'], 'v_ls': e5_at_z['dtv_advec'],
+            'thl_nudge': e5_at_z['thl'], 'qt_nudge': e5_at_z['qt'],
+            'u_nudge': e5_at_z['u'], 'v_nudge': e5_at_z['v']}
 
     soil = {'z': z_soil, 'theta': e5.theta_soil_mean[0,::-1], 't': e5.T_soil_mean[0,::-1], 'index': soil_index}
 
