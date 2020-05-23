@@ -4,6 +4,7 @@ import numpy as np
 import sys
 import os
 import shutil
+import subprocess
 
 # Add `src` subdirectory of LS2D to Python path
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -14,27 +15,36 @@ sys.path.append('{}/..'.format(abs_path))
 from download_ERA5 import download_ERA5
 from read_ERA5     import Read_ERA
 from messages      import header, message, error
+
 import microhh_tools as mht
+from grid import Grid_stretched
 
-# Start and end of experiment
-#start = datetime.datetime(year=2018, month=8, day=11,  hour=5)
-#end   = datetime.datetime(year=2018, month=8, day=11,  hour=19)
+def execute(task):
+   subprocess.call(task, shell=True, executable='/bin/bash')
 
-start = datetime.datetime(year=2016, month=8, day=11,  hour=5)
-end   = datetime.datetime(year=2016, month=8, day=11,  hour=19)
+env_cartesius = {
+        'era5_path': '/archive/bstratum/ERA5/',
+        'work_path': '/home/bstratum/scratch/cabauw_aug2016_small24h/',
+        'microhh_bin': '/home/bstratum/models/microhh/build_dp_cpumpi/microhh',
+        'rrtmgp_path': '/home/bstratum/models/rte-rrtmgp/'}
 
-# Working directory; individual cases are placed in `YYYYMMDD_tHH` subdirectory
-workdir = '.'
+env_arch = {
+        'era5_path': '/home/scratch1/meteo_data/LS2D/',
+        'work_path': '.',
+        'microhh_bin': '/home/bart/meteo/models/microhh/build_dp_cpu/microhh',
+        'rrtmgp_path': '/home/bart/meteo/models/rte-rrtmgp/'}
 
-# Path to MicroHH binary
-microhh_bin = '/home/bart/meteo/models/microhh/build_dp_cpu/microhh'
+# Switch between different systems:
+env = env_cartesius
 
-# Path to RRTMGP repository, for radiation coefficient files.
-rrtmgp_path = '/home/bart/meteo/models/rte-rrtmgp/'
+float_type  = 'f8'    # MicroHH float type ('f4', 'f8')
+auto_submit = True    # Submit the case to load balancer
+link_files = False    # Switch between linking or copying files
+auto_submit = True    # Submit the case to load balancer
+set_lfs_stripe = True # Set the LFS striping on new directories
 
-float_type  = 'f8'  # MicroHH float type ('f4', 'f8')
-
-link_files = True       # Switch between linking or copying files
+start = datetime.datetime(year=2018, month=8, day=11, hour=5)
+end   = start + datetime.timedelta(hours=13)
 
 # Dictionary with settings
 settings = {
@@ -42,18 +52,13 @@ settings = {
     'central_lon' : 4.927,
     'area_size'   : 1,
     'case_name'   : 'cabauw',
-    #'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',  # KNMI
-    #'base_path'   : '/Users/bart/meteo/data/LS2D/',   # Macbook
-    'base_path'   : '/home/scratch1/meteo_data/LS2D/',      # Arch
-    #'base_path'   : '/home/bstratum/data/LS2D/',
-    #'base_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',
+    'base_path'   : env['era5_path'],
     'start_date'  : start,
     'end_date'    : end,
     'write_log'   : False,
     'data_source' : 'MARS',
     'ntasks'      : 1
     }
-
 
 header('Creating LES input')
 
@@ -71,9 +76,8 @@ e5.calculate_forcings(n_av=0, method='4th')
 #
 # Read MicroHH namelist and create stretched vertical grid
 #
-grid = mht.Stretched_grid(kmax=144, nloc1=100, nbuf1=20, dz1=20, dz2=300)    # Same as DALES testbed
+grid = Grid_stretched(kmax=228, dz0=20, nloc1=100, nbuf1=20, dz1=100, nloc2=210, nbuf2=10, dz2=500)
 #grid.plot()
-#pl.savefig('grid.png')
 
 #
 # Create nudge factor, controlling where nudging is aplied, and time scale
@@ -173,6 +177,13 @@ datetime_utc = '{0:04d}-{1:02d}-{2:02d} {3:02d}:{4:02d}:{5:02d}'.format(
         start.year, start.month, start.day, start.hour, start.minute, start.second)
 nl['time']['datetime_utc'] = datetime_utc
 
+# Add column locations
+column_x = np.array([1300,1800,2300])
+column_y = np.array([1300,1800,2300])
+x,y = np.meshgrid(column_x, column_y)
+nl['column']['coordinates[x]'] = list(x.flatten())
+nl['column']['coordinates[y]'] = list(y.flatten())
+
 mht.write_namelist(nl_file, nl)
 
 #
@@ -204,24 +215,61 @@ mht.write_NetCDF_input('cabauw', float_type, init_profiles, tdep_surface, tdep_l
 #
 # Copy/move/link files to working directory.
 #
-path = '{0}/{1:04d}{2:02d}{3:02d}_t{4:02d}'.format(workdir, start.year, start.month, start.day, start.hour)
+path = '{0}/{1:04d}{2:02d}{3:02d}_t{4:02d}'.format(
+        env['work_path'], start.year, start.month, start.day, start.hour)
 if os.path.exists(path):
     error('Work directory {} already exists!!'.format(path))
 else:
     os.makedirs(path)
 
-to_copy = ['cabauw.ini', 'van_genuchten_parameters.nc']
-to_move = ['cabauw_input.nc']
+if set_lfs_stripe:
+    execute('lfs setstripe -c 50 {}'.format(path))
+
+#
+# Create slurm runscript
+#
+def create_runscript(path, workdir, ntasks, wc_time, job_name):
+    with open(path, 'w') as f:
+        f.write('#!/bin/bash\n')
+        f.write('#SBATCH -p normal\n')
+        f.write('#SBATCH -n {}\n'.format(ntasks))
+        f.write('#SBATCH -t {}\n'.format(wc_time))
+        f.write('#SBATCH --job-name={}\n'.format(job_name))
+        f.write('#SBATCH --output={}/mhh-%j.out\n'.format(workdir))
+        f.write('#SBATCH --error={}/mhh-%j.err\n'.format(workdir))
+        f.write('#SBATCH --constraint=haswell\n\n')
+
+        f.write('module purge\n')
+        f.write('module load surfsara\n')
+        f.write('module load compilerwrappers\n')
+        f.write('module load 2019\n')
+        f.write('module load CMake\n')
+        f.write('module load intel/2018b\n')
+        f.write('module load netCDF/4.6.1-intel-2018b\n')
+        f.write('module load FFTW/3.3.8-intel-2018b\n\n')
+
+        f.write('cd {}\n\n'.format(workdir))
+
+        f.write('srun ./microhh init cabauw\n')
+        f.write('srun ./microhh run cabauw\n')
+
+create_runscript(
+        'run.slurm', path,
+        nl['master']['npx']*nl['master']['npy'],
+        '24:00:00', 'mhh{0:02d}{1:02d}'.format(start.month, start.day))
+
+to_copy = ['cabauw.ini', '../van_genuchten_parameters.nc']
+to_move = ['cabauw_input.nc', 'run.slurm']
 to_link = {
-        'microhh': microhh_bin,
+        'microhh': env['microhh_bin'],
         'coefficients_lw.nc':
-            '{}/rrtmgp/data/rrtmgp-data-lw-g256-2018-12-04.nc'.format(rrtmgp_path),
+            '{}/rrtmgp/data/rrtmgp-data-lw-g256-2018-12-04.nc'.format(env['rrtmgp_path']),
         'coefficients_sw.nc':
-            '{}/rrtmgp/data/rrtmgp-data-sw-g224-2018-12-04.nc'.format(rrtmgp_path),
+            '{}/rrtmgp/data/rrtmgp-data-sw-g224-2018-12-04.nc'.format(env['rrtmgp_path']),
         'cloud_coefficients_lw.nc':
-            '{}/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-lw.nc'.format(rrtmgp_path),
+            '{}/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-lw.nc'.format(env['rrtmgp_path']),
         'cloud_coefficients_sw.nc':
-        '{}/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-sw.nc'.format(rrtmgp_path)}
+        '{}/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-sw.nc'.format(env['rrtmgp_path'])}
 
 for f in to_copy:
     shutil.copy(f, path)
@@ -233,6 +281,9 @@ for dst,src in to_link.items():
         os.symlink(src, '{}/{}'.format(path,dst))
     else:
         shutil.copy(src, '{}/{}'.format(path,dst))
+
+if auto_submit:
+    execute('sbatch {}/run.slurm'.format(path))
 
 # Restore namelist file
 shutil.copyfile(nl_backup, nl_file)

@@ -37,10 +37,11 @@ env_arch = {
 # Switch between different systems:
 env = env_cartesius
 
-float_type  = 'f8'   # MicroHH float type ('f4', 'f8')
-auto_submit = True   # Submit the case to load balancer
-link_files = False   # Switch between linking or copying files
-auto_submit = True   # Submit the case to load balancer
+float_type  = 'f8'    # MicroHH float type ('f4', 'f8')
+auto_submit = True    # Submit the case to load balancer
+link_files = False    # Switch between linking or copying files
+auto_submit = True    # Submit the case to load balancer
+set_lfs_stripe = True # Set the LFS striping on new directories
 
 # Time of day to simulate
 start_hour = 0
@@ -231,6 +232,9 @@ for day in range(start_day, end_day):
         error('Work directory {} already exists!!'.format(path))
     else:
         os.makedirs(path)
+
+    if set_lfs_stripe:
+        execute('lfs setstripe -c 50 {}'.format(path))
 
     #
     # Create slurm runscript
