@@ -37,17 +37,10 @@ env_arch = {
 # Switch between different systems:
 env = env_arch
 
-<<<<<<< HEAD
 float_type  = 'f8'    # MicroHH float type ('f4', 'f8')
-auto_submit = True    # Submit the case to load balancer
 link_files = False    # Switch between linking or copying files
 auto_submit = True    # Submit the case to load balancer
 set_lfs_stripe = True # Set the LFS striping on new directories
-=======
-float_type  = 'f8'   # MicroHH float type ('f4', 'f8')
-auto_submit = False  # Submit the case to load balancer
-link_files = True    # Switch between linking or copying files
->>>>>>> 8a1fdd9653c053ca264e4f1d736941f0fa45f35c
 
 # Time of day to simulate
 start_hour = 0
