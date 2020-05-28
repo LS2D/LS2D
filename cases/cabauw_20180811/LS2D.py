@@ -90,7 +90,7 @@ nudge_fac = np.ones(grid.z.size) / tau_nudge
 z_soil = np.array([-1.945, -0.64, -0.175, -0.035])
 soil_index = np.ones_like(z_soil)*2
 
-if False:
+if True:
     # Debug/fix soil moisture ERA5
     vg = xr.open_dataset('../van_genuchten_parameters.nc')
 
@@ -98,7 +98,7 @@ if False:
     theta_soil_rel_e5 = (e5.theta_soil_mean[0,:] - vg['theta_wp'][si].values)\
             / (vg['theta_fc'][si].values - vg['theta_wp'][si].values)
 
-    theta_soil_new = np.array([0.35, 0.35, 0.14, 0.14])
+    theta_soil_new = np.array([0.30, 0.30, 0.30, 0.35])
     theta_soil_rel_e5_new = (theta_soil_new - vg['theta_wp'][si].values)\
             / (vg['theta_fc'][si].values - vg['theta_wp'][si].values)
 
@@ -126,6 +126,7 @@ if False:
     pl.xlim(0,1)
     pl.grid()
 
+"""
 # Radiation profiles for RRTMGP
 co2 = 348.e-6
 ch4 = 1650.e-9
@@ -299,3 +300,4 @@ if auto_submit:
 
 # Restore namelist file
 shutil.copyfile(nl_backup, nl_file)
+"""

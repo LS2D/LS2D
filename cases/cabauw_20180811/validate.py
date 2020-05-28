@@ -30,7 +30,8 @@ def k_cb(z):
 
 def interp_z(array, z, z_goal):
     k0 = np.abs(z-z_goal).argmin()
-    k0 -=1 if z[k0]>z_goal and k0>0 else k0
+    if z[k0] > z_goal and k0>0:
+        k0 -= 1
     f1 = (z_goal-z[k0]) / (z[k0+1]-z[k0])
     return (1-f1)*array[:,k0] + f1*array[:,k0+1]
 
@@ -45,53 +46,57 @@ if __name__ == '__main__':
     #
     # Read Cabauw observations
     #
-    cb_path = '/home/scratch1/meteo_data/observations/cabauw/'
-    to_drop = ['valid_dates', 'time_bnds']
+    if 'cb_rad' not in locals():
+        cb_path = '/home/scratch1/meteo_data/observations/cabauw/'
+        to_drop = ['valid_dates', 'time_bnds']
 
-    cb_rad = xr.open_dataset(
-            '{0}/surface_radiation_lc1/cesar_surface_radiation_lc1_t10_v1.0_{1:04d}{2:02d}.nc'.format(
-                cb_path, start.year, start.month), drop_variables=to_drop)
-    cb_rad = cb_rad.to_dataframe()
-    cb_rad = cb_rad.loc[start:end]
+        cb_rad = xr.open_dataset(
+                '{0}/surface_radiation_lc1/cesar_surface_radiation_lc1_t10_v1.0_{1:04d}{2:02d}.nc'.format(
+                    cb_path, start.year, start.month), drop_variables=to_drop)
+        cb_rad = cb_rad.to_dataframe()
+        cb_rad = cb_rad.loc[start:end]
 
-    cb_flux = xr.open_dataset(
-            '{0}/surface_flux_lc1/cesar_surface_flux_lc1_t10_v1.0_{1:04d}{2:02d}.nc'.format(
-                cb_path, start.year, start.month), drop_variables=to_drop)
-    cb_flux = cb_flux.to_dataframe()
-    cb_flux = cb_flux.loc[start:end]
+        cb_flux = xr.open_dataset(
+                '{0}/surface_flux_lc1/cesar_surface_flux_lc1_t10_v1.0_{1:04d}{2:02d}.nc'.format(
+                    cb_path, start.year, start.month), drop_variables=to_drop)
+        cb_flux = cb_flux.to_dataframe()
+        cb_flux = cb_flux.loc[start:end]
 
-    cb_tower = xr.open_dataset(
-            '{0}/tower_meteo_lc1/cesar_tower_meteo_lc1_t10_v1.0_{1:04d}{2:02d}.nc'.format(
-                cb_path, start.year, start.month), drop_variables=to_drop)
-    cb_tower = cb_tower.loc[{'time': slice(start,end)}]
+        cb_tower = xr.open_dataset(
+                '{0}/tower_meteo_lc1/cesar_tower_meteo_lc1_t10_v1.0_{1:04d}{2:02d}.nc'.format(
+                    cb_path, start.year, start.month), drop_variables=to_drop)
+        cb_tower = cb_tower.loc[{'time': slice(start,end)}]
 
+        #
+        # Read MicroHH experiment
+        #
+        mhh_path = '/home/scratch1/meteo_data/LS2D/MicroHH_results/202005_144x144_24h/20180811/'
+        nc = f'{mhh_path}/cabauw.default.0000000.nc'
+        groups = ['', 'default', 'radiation', 'thermo', 'land_surface', 'tend']
+        dss = []
+        for group in groups:
+            dss.append( xr.open_dataset(nc, group=group) )
+        ds = xr.merge(dss)
 
-    #
-    # Read MicroHH experiment
-    #
-    mhh_path = '/home/scratch1/meteo_data/LS2D/MicroHH_results/202005_144x144_24h/20180811/'
-    nc = f'{mhh_path}/cabauw.default.0000000.nc'
-    groups = ['', 'default', 'radiation', 'thermo', 'land_surface', 'tend']
-    dss = []
-    for group in groups:
-        dss.append( xr.open_dataset(nc, group=group) )
-    ds = xr.merge(dss)
-
-    # Read column statistics
-    col_ij = [52,92]
-    cols = []
-    for i in col_ij:
-        for j in col_ij:
-            cols.append(xr.open_dataset('{0}/cabauw_column_{1:05d}_{2:05d}_0000000.nc'.format(mhh_path,i,j)))
+        # Read column statistics
+        col_ij = [52,92]
+        cols1m  = []
+        cols10m = []
+        for i in col_ij:
+            for j in col_ij:
+                cols1m.append(xr.open_dataset('{0}/cabauw_column_{1:05d}_{2:05d}_0000000.nc'.format(mhh_path,i,j)))
+                cols10m.append(cols1m[-1].resample(time='10min').mean())
 
 
     def plot_columns(cols, variable, surface=False):
-        cc = pl.cm.viridis(np.linspace(0,1,len(cols)))
+        cc = pl.cm.RdBu(np.linspace(0,1,len(cols)))
         for i,c in enumerate(cols):
             data = c[variable][:] if surface else c[variable][:,0]
             pl.plot(c['time'], data, color=cc[i], alpha=0.4, linewidth=0.5)
 
     c_mhh = '#19334c'
+    cols = cols1m
+
 
     if True:
         #
@@ -132,6 +137,8 @@ if __name__ == '__main__':
         format_ax(major=3, minor=1)
 
         pl.tight_layout()
+        pl.savefig('radiation.pdf')
+
 
     if True:
         #
@@ -157,91 +164,65 @@ if __name__ == '__main__':
 
         pl.subplot(133)
         plot_columns(cols, 'G', True)
-        pl.plot(ds.time, ds.G/2., color=c_mhh)
+        pl.plot(ds.time, ds.G, color=c_mhh)
         pl.scatter(cb_flux.index, -cb_flux.G0, s=10, marker='o', facecolor='none', alpha=0.5, color='k')
         pl.ylabel(r'$G$ (W m$^{-2}$)')
         pl.xlabel(date_str)
         format_ax(major=6, minor=1)
 
         pl.tight_layout()
+        pl.savefig('surface_flux.pdf')
 
 
-    if False:
-        #
-        # Atmospheric profiles
-        #
-        times = [datetime(2018,8,11,7), datetime(2018,8,11,10), datetime(2018,8,11,13)]
-        cc = ['tab:blue', 'tab:red', 'tab:green']
-
-        def sel_times(t):
-            ds_t = ds.      sel({'time': t}, method='nearest')
-            cb_t = cb_tower.sel({'time': t}, method='nearest')
-            return ds_t, cb_t
-
-        def date_str(date):
-            date = pd.to_datetime(date)
-            return '{0:04d}-{1:02d}-{2:02d} {3:02d}:{4:02d} UTC'.format(
-                    date.year, date.month, date.day, date.hour, date.minute)
-
-        pl.figure(figsize=(8,5))
-        pl.subplot(221)
-        for i,t in enumerate(times):
-            ds_t, cb_t = sel_times(t)
-            pl.plot   (ds_t.thl*exner(ds_t.phydro), ds_t.z, color=cc[i], label=date_str(ds_t.time.values))
-            pl.scatter(cb_t.TA, cb_t.z, s=10, marker='o', facecolor='none', color=cc[i])
-        pl.xlabel(r'$T$ (K)')
-        pl.ylabel(r'$z$ (m)')
-        pl.ylim(0,210)
-        pl.xlim(287,293)
-        pl.legend(fontsize=8)
-
-        pl.subplot(222)
-        for i,t in enumerate(times):
-            ds_t, cb_t = sel_times(t)
-            pl.plot   (ds_t.qt*1000, ds_t.z, color=cc[i])
-            pl.scatter(cb_t.Q, cb_t.z, s=10, marker='o', facecolor='none', color=cc[i])
-        pl.xlabel(r'$q_\mathrm{t}$ (g kg$^{-1}$)')
-        pl.ylim(0,210)
-        pl.xlim(6,8.5)
-
-
-
-    if False:
+    if True:
         #
         # Atmospheric variables
         #
         T  = np.zeros((ds.time.size, cb_tower.z.size))
         qt = np.zeros((ds.time.size, cb_tower.z.size))
+        U  = np.zeros((ds.time.size, cb_tower.z.size))
 
         z_cb = np.array([10,20,40,80,140,200])
 
         for k in range(z_cb.size):
             p       = interp_z(ds.phydro.values, ds.z.values, z_cb[k])
-            print(z_cb[k], p.mean())
             T [:,k] = interp_z(ds.thl.values, ds.z.values, z_cb[k]) * exner(p)
             qt[:,k] = interp_z(ds.qt.values, ds.z.values, z_cb[k])
+            u       = interp_z(ds.u.values, ds.z.values, z_cb[k])
+            v       = interp_z(ds.v.values, ds.z.values, z_cb[k])
+            U[:,k]  = np.sqrt(u**2 + v**2)
 
-        cc = pl.cm.PiYG(np.array([0,0.15,0.30,0.70,0.85,1]))
+        #cc = pl.cm.PiYG(np.array([0,0.15,0.30,0.70,0.85,1]))
+        cc = pl.cm.RdBu(np.array([0,0.15,0.30,0.70,0.85,1]))
 
         pl.figure(figsize=(8,4))
-        pl.subplot(121)
+        pl.subplot(131)
         for k in range(z_cb.size):
             pl.plot(ds.time, T[:,k], color=cc[k], label=r'$z$={}m'.format(z_cb[k]))
             pl.scatter(cb_tower.time, cb_tower.TA[:,k_cb(z_cb[k])], s=10, marker='o', facecolor='none', color=cc[k])
         pl.ylabel(r'$T$ (K)')
         pl.legend()
-        format_ax(major=3, minor=1)
+        format_ax(major=6, minor=1)
         pl.xlabel(date_str)
 
-        pl.subplot(122)
+        pl.subplot(132)
         for k in range(z_cb.size):
             pl.plot(ds.time, qt[:,k]*1000, color=cc[k])
             pl.scatter(cb_tower.time, cb_tower.Q[:,k_cb(z_cb[k])], s=10, marker='o', facecolor='none', color=cc[k])
         pl.ylabel(r'$q$ (g kg$^{-1}$)')
-        format_ax(major=3, minor=1)
+        format_ax(major=6, minor=1)
+        pl.xlabel(date_str)
+
+        pl.subplot(133)
+        for k in range(z_cb.size):
+            pl.plot(ds.time, U[:,k], color=cc[k])
+            pl.scatter(cb_tower.time, cb_tower.F[:,k_cb(z_cb[k])], s=10, marker='o', facecolor='none', color=cc[k])
+        pl.ylabel(r'$|u|$ (m s$^{-1}$)')
+        format_ax(major=6, minor=1)
         pl.xlabel(date_str)
 
         pl.tight_layout()
+        pl.savefig('time_series_atmos.pdf')
 
 
 
