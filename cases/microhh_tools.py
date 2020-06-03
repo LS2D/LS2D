@@ -170,8 +170,15 @@ def write_NetCDF_input(
     """
 
     def add_variable(nc_group, name, dims, data, float_type):
-        var = nc_group.createVariable(name, float_type, dims)
-        var[:] = data[:]
+        """
+        Add variable to NetCDF file (or group), and write data
+        """
+        if dims is None:
+            var = nc_group.createVariable(name, float_type)
+            var[:] = data
+        else:
+            var = nc_group.createVariable(name, float_type, dims)
+            var[:] = data[:]
 
     # Define new NetCDF file
     nc_file = nc4.Dataset('{}_input.nc'.format(case_name), mode='w', datamodel='NETCDF4')
@@ -185,7 +192,9 @@ def write_NetCDF_input(
 
     # Set the initial profiles
     for name, data in init_profiles.items():
-        add_variable(nc_group_init, name, ('z'), data, float_type)
+        # Switch between vector and scalar values
+        dims = None if not isinstance(data, np.ndarray) else 'z'
+        add_variable(nc_group_init, name, dims, data, float_type)
 
     # Create a group called "timedep" for the time dependent input
     if tdep_surface is not None or tdep_ls is not None:
@@ -213,7 +222,12 @@ def write_NetCDF_input(
         nc_group_rad.createDimension("lev", radiation['p_lev'].size)
 
         for name, data in radiation.items():
-            dims = ('lay') if data.size == radiation['p_lay'].size else ('lev')
+            # Switch between vector and scalar values
+            if not isinstance(data, np.ndarray):
+                dims = None
+            else:
+                dims = ('lay') if data.size == radiation['p_lay'].size else ('lev')
+
             add_variable(nc_group_rad, name, dims, data, float_type)
 
     if soil is not None:

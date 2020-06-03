@@ -1,4 +1,3 @@
-import matplotlib.pyplot as pl
 import datetime
 import numpy as np
 import sys
@@ -22,25 +21,30 @@ from grid import Grid_stretched
 def execute(task):
    subprocess.call(task, shell=True, executable='/bin/bash')
 
+float_type  = 'f8'    # MicroHH float type ('f4', 'f8')
+
+# Switch between different systems:
 env_cartesius = {
+        'system': 'cartesius',
         'era5_path': '/archive/bstratum/ERA5/',
         'work_path': '/home/bstratum/scratch/cabauw_aug2016_small24h/',
         'microhh_bin': '/home/bstratum/models/microhh/build_dp_cpumpi/microhh',
-        'rrtmgp_path': '/home/bstratum/models/rte-rrtmgp/'}
+        'rrtmgp_path': '/home/bstratum/models/rte-rrtmgp/',
+        'auto_submit': True,
+        'set_lfs_stripe': True,
+        'link_files': False}
 
 env_arch = {
+        'system': 'arch',
         'era5_path': '/home/scratch1/meteo_data/LS2D/',
         'work_path': '.',
         'microhh_bin': '/home/bart/meteo/models/microhh/build_dp_cpumpi/microhh',
-        'rrtmgp_path': '/home/bart/meteo/models/rte-rrtmgp/'}
+        'rrtmgp_path': '/home/bart/meteo/models/rte-rrtmgp/',
+        'auto_submit': False,
+        'set_lfs_stripe': False,
+        'link_files': True}
 
-# Switch between different systems:
 env = env_arch
-
-float_type  = 'f8'    # MicroHH float type ('f4', 'f8')
-link_files = False    # Switch between linking or copying files
-auto_submit = True    # Submit the case to load balancer
-set_lfs_stripe = True # Set the LFS striping on new directories
 
 # Time of day to simulate
 start_hour = 0
@@ -48,7 +52,12 @@ run_time = 24*3600
 
 # Days in Aug 2016:
 start_day = 4
-end_day = 18
+end_day = 5
+
+# Controls of the nudging to ERA5
+no_nudge_near_surface = True
+z0_nudge = 2000
+z1_nudge = 3000
 
 for day in range(start_day, end_day):
 
@@ -90,7 +99,22 @@ for day in range(start_day, end_day):
 
     # Create nudge factor, controlling where nudging is aplied, and time scale
     tau_nudge = 10800  # Nudge time scale (s)
-    nudge_fac = np.ones(grid.kmax) / tau_nudge
+
+    if no_nudge_near_surface:
+        # Disable nudging in the ~ABL
+        low  = grid.z < z0_nudge
+        high = grid.z > z1_nudge
+        mid  = ~(low+high)
+
+        nudge_fac = np.zeros(grid.kmax)
+        nudge_fac[low ] = 0.
+        nudge_fac[high] = 1.
+        nudge_fac[mid ] = (grid.z[mid]-z0_nudge)/(z1_nudge-z0_nudge)
+
+        nudge_fac /= tau_nudge
+    else:
+        # Constant nudging factor with height
+        nudge_fac = np.ones(grid.kmax) / tau_nudge
 
     # Surface / soil
     z_soil = np.array([-1.945, -0.64, -0.175, -0.035])
@@ -120,20 +144,10 @@ for day in range(start_day, end_day):
     T_lev = e5.Th_mean[0,:]
 
     h2o_rad = e5.qt_mean[0,:]
-    co2_rad = np.ones(e5.nfull) * co2
-    ch4_rad = np.ones(e5.nfull) * ch4
-    n2o_rad = np.ones(e5.nfull) * n2o
-    n2_rad  = np.ones(e5.nfull) * n2
-    o2_rad  = np.ones(e5.nfull) * o2
     o3_rad  = e5.o3_mean[0,:]
 
     # Profiles on LES grid
     h2o_atmo = e5_at_z['qt'][0,:]
-    co2_atmo = np.ones(grid.kmax) * co2
-    ch4_atmo = np.ones(grid.kmax) * ch4
-    n2o_atmo = np.ones(grid.kmax) * n2o
-    n2_atmo  = np.ones(grid.kmax) * n2
-    o2_atmo  = np.ones(grid.kmax) * o2
     o3_atmo  = e5_at_z['o3'][0,:]
 
     #
@@ -176,13 +190,13 @@ for day in range(start_day, end_day):
     init_profiles = {
             'z': grid.z, 'thl': e5_at_z['thl'][0,:], 'qt': e5_at_z['qt'][0,:],
             'u': e5_at_z['u'][0,:], 'v': e5_at_z['v'][0,:], 'nudgefac': nudge_fac,
-            'co2': co2_atmo, 'ch4': ch4_atmo, 'n2o': n2o_atmo, 'n2': n2_atmo,
-            'o2': o2_atmo, 'o3': o3_atmo, 'h2o': h2o_atmo}
+            'co2': co2, 'ch4': ch4, 'n2o': n2o, 'n2': n2,
+            'o2': o2, 'o3': o3_atmo, 'h2o': h2o_atmo}
 
     radiation  = {
             'z_lay': z_lay, 'z_lev': z_lev, 'p_lay': p_lay, 'p_lev': p_lev,
-            't_lay': T_lay, 't_lev': T_lev, 'co2': co2_rad, 'ch4': ch4_rad,
-            'n2o': n2o_rad, 'n2': n2_rad, 'o2': o2_rad, 'o3': o3_rad, 'h2o': h2o_rad}
+            't_lay': T_lay, 't_lev': T_lev, 'co2': co2, 'ch4': ch4,
+            'n2o': n2o, 'n2': n2, 'o2': o2, 'o3': o3_rad, 'h2o': h2o_rad}
 
     tdep_surface = {
             'time_surface': e5.time_sec, 'thl_sbot': e5.wths_mean,
@@ -209,7 +223,7 @@ for day in range(start_day, end_day):
     else:
         os.makedirs(path)
 
-    if set_lfs_stripe:
+    if env['set_lfs_stripe']:
         execute('lfs setstripe -c 50 {}'.format(path))
 
     #
@@ -264,12 +278,12 @@ for day in range(start_day, end_day):
         shutil.move(f, path)
 
     for dst,src in to_link.items():
-        if link_files:
+        if env['link_files']:
             os.symlink(src, '{}/{}'.format(path,dst))
         else:
             shutil.copy(src, '{}/{}'.format(path,dst))
 
-    if auto_submit:
+    if env['auto_submit']:
         execute('sbatch {}/run.slurm'.format(path))
 
     # Restore namelist file

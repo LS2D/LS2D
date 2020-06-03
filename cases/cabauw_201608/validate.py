@@ -204,38 +204,28 @@ if __name__ == '__main__':
     mev = 1
 
 
-
-    #ds_swd = colloc_multi(
-    #        [ds_base.time.values, cb_rad.index.values, era5_sfc_fc_time],
-    #        [ds_rad.sw_flux_dn[:,0].values, cb_rad.SWD.values, ds_era5_sfc_fc['ssrd']/3600.],
-    #        ['mhh', 'cb', 'era'])
-
-    #pl.figure()
-    #pl.subplot(121)
-    #pl.scatter(ds_swd.cb, ds_swd.mhh)
-    #pl.plot([0,900], [0,900], 'k:')
-    #pl.ylim(0,900)
-    #pl.xlim(0,900)
-    #pl.xlabel('obs')
-    #pl.ylabel('mhh')
-
-    #pl.subplot(122)
-    #pl.scatter(ds_swd.cb, ds_swd.era)
-    #pl.plot([0,900], [0,900], 'k:')
-    #pl.ylim(0,900)
-    #pl.xlim(0,900)
-    #pl.xlabel('obs')
-    #pl.ylabel('era5')
-
-
     if True:
+        #
+        # Clouds et al.
+        #
+        pl.figure()
+        pl.subplot(311)
+        pl.pcolormesh(ds_therm.time, ds_therm.z, np.log(ds_therm.ql.T))
+        pl.ylim(0,10000)
+
+        pl.subplot(312)
+        pl.pcolormesh(ds_def.time, ds_def.zh, ds_def.w_2.T, vmin=0, vmax=1)
+        pl.ylim(0,10000)
+
+
+    if False:
         #
         # Radiation
         #
-        ds_swd = colloc(ds_base.time.values, ds_rad.sw_flux_dn[:,0].values,  cb_rad.index.values,  cb_rad.SWD.values)
-        ds_swu = colloc(ds_base.time.values, ds_rad.sw_flux_up[:,0].values,  cb_rad.index.values,  cb_rad.SWU.values)
-        ds_lwd = colloc(ds_base.time.values, ds_rad.lw_flux_dn[:,0].values,  cb_rad.index.values,  cb_rad.LWD.values)
-        ds_lwu = colloc(ds_base.time.values, ds_rad.lw_flux_up[:,0].values,  cb_rad.index.values,  cb_rad.LWU.values)
+        ds_swd = colloc(ds_base.time.values, ds_rad.sw_flux_dn[:,0].values, cb_rad.index.values, cb_rad.SWD.values)
+        ds_swu = colloc(ds_base.time.values, ds_rad.sw_flux_up[:,0].values, cb_rad.index.values, cb_rad.SWU.values)
+        ds_lwd = colloc(ds_base.time.values, ds_rad.lw_flux_dn[:,0].values, cb_rad.index.values, cb_rad.LWD.values)
+        ds_lwu = colloc(ds_base.time.values, ds_rad.lw_flux_up[:,0].values, cb_rad.index.values, cb_rad.LWU.values)
 
         pl.figure(figsize=(8,6.5))
         gs = gridspec.GridSpec(4, 2, width_ratios=[1,0.3])
@@ -249,7 +239,7 @@ if __name__ == '__main__':
         pl.savefig('ts_surface_radiation.pdf')
 
 
-    if True:
+    if False:
         #
         # Surface fluxes
         #
@@ -268,7 +258,7 @@ if __name__ == '__main__':
         pl.savefig('ts_surface_flux.pdf')
 
 
-    if True:
+    if False:
         #
         # Atmospheric variables
         #
