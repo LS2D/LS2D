@@ -52,7 +52,7 @@ run_time = 24*3600
 
 # Days in Aug 2016:
 start_day = 4
-end_day = 5
+end_day = 18
 
 # Controls of the nudging to ERA5
 no_nudge_near_surface = True
