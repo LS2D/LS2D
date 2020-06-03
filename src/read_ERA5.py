@@ -204,6 +204,8 @@ class Read_ERA:
         s3d  = np.s_[t_an,:,:,:]    # Slice for 3D (atmospheric) fields
         s3ds = np.s_[t_an,0,:,:]    # Slice for surface plane of 3D field
 
+        s3d_fc = np.s_[t_fc,:,:,:]    # Slice for 3D (atmospheric) fields
+
         # Model level analysis data:
         self.u  = get_variable(self.fma, 'u',    s3d )  # v-component wind (m s-1)
         self.v  = get_variable(self.fma, 'v',    s3d )  # v-component wind (m s-1)
@@ -218,8 +220,8 @@ class Read_ERA:
         self.ps = get_variable(self.fma, 'lnsp', s3ds, np.exp)  # Surface pressure (Pa)
 
         # Model level forecast data:
-        self.dtT_sw = get_variable(self.fmf, 'mttswr',  s3d)  # Mean temperature tendency SW radiation (K s-1)
-        self.dtT_lw = get_variable(self.fmf, 'mttlwr',  s3d)  # Mean temperature tendency LW radiation (K s-1)
+        self.dtT_sw = get_variable(self.fmf, 'mttswr',  s3d_fc)  # Mean temperature tendency SW radiation (K s-1)
+        self.dtT_lw = get_variable(self.fmf, 'mttlwr',  s3d_fc)  # Mean temperature tendency LW radiation (K s-1)
 
         # Surface variables:
         self.Ts  =  get_variable(self.fsa, 'skt',  s2d)  # Skin temperature (K)
