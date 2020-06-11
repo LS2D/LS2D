@@ -16,7 +16,7 @@ from read_ERA5     import Read_ERA
 from messages      import header, message, error
 
 import microhh_tools as mht
-from grid import Grid_stretched
+from grid import Grid_stretched, Grid_stretched_manual
 
 def execute(task):
    subprocess.call(task, shell=True, executable='/bin/bash')
@@ -51,11 +51,11 @@ start_hour = 0
 run_time = 24*3600
 
 # Days in Aug 2016:
-start_day = 4
-end_day = 18
+start_day = 1
+end_day = 32
 
 # Controls of the nudging to ERA5
-no_nudge_near_surface = True
+no_nudge_near_surface = False
 z0_nudge = 2000
 z1_nudge = 3000
 
@@ -88,7 +88,11 @@ for day in range(start_day, end_day):
     e5.calculate_forcings(n_av=0, method='4th')
 
     # Create stretched vertical grid
-    grid = Grid_stretched(kmax=228, dz0=20, nloc1=100, nbuf1=20, dz1=100, nloc2=210, nbuf2=10, dz2=500)
+    #grid = Grid_stretched(kmax=228, dz0=20, nloc1=100, nbuf1=20, dz1=100, nloc2=210, nbuf2=10, dz2=500)
+
+    stretch_heights = np.array([0, 200, 2000, 5000, 11000, 50000])
+    stretch_factors = np.array([1.025, 1.011, 1.006, 1.02, 1.08])
+    grid = Grid_stretched_manual(240, 10., stretch_heights, stretch_factors)
 
     # Interpolate ERA5 variables and forcings onto LES grid
     variables = [

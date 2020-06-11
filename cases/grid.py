@@ -81,6 +81,24 @@ class Grid_linear_stretched(Grid):
         self.zsize = zh[-1]
 
 
+class Grid_stretched_manual(Grid):
+    def __init__(self, kmax, dz0, heights, factors):
+        Grid.__init__(self, kmax, dz0)
+
+        self.z[0]  = dz0/2.
+        self.dz[0] = dz0
+
+        def index(z, goal):
+            return np.where(z-goal>0)[0][0]-1
+
+        for k in range(1, kmax):
+            self.dz[k] = self.dz[k-1] * factors[index(heights, self.z[k-1])]
+            self.z[k] = self.z[k-1] + self.dz[k]
+
+        self.zsize = self.z[kmax-1] + 0.5*self.dz[kmax-1]
+
+
+
 if __name__ == '__main__':
     """
     Just for testing...
@@ -88,19 +106,25 @@ if __name__ == '__main__':
     import matplotlib.pyplot as pl
     pl.close('all'); pl.ion()
 
-    ktot = 224
-    dz0  = 20
+    if True:
+        ktot = 240
+        dz0  = 20
 
-    equidist   = Grid_equidist(ktot, dz0)
-    linear     = Grid_linear_stretched(ktot, dz0, 0.01)
-    stretched1 = Grid_stretched(ktot, dz0, 90, 20, 150)
-    stretched2 = Grid_stretched(ktot, dz0, 100, 20, 100, 210, 10, 500)
+        heights = np.array([0, 200, 2000, 5000, 11000, 50000])
+        factors = np.array([1.025, 1.011, 1.006, 1.02, 1.08])
 
-    pl.figure()
-    pl.plot(equidist.dz, equidist.z, '-x', label='equidistant')
-    pl.plot(linear.dz, linear.z, '-x', label='linear')
-    pl.plot(stretched1.dz, stretched1.z, '-x', label='stretched-single')
-    pl.plot(stretched2.dz, stretched2.z, '-x', label='stretched-double')
-    pl.legend()
-    pl.xlabel('dz (m)')
-    pl.ylabel('z (m)')
+        equidist   = Grid_equidist(ktot, dz0)
+        linear     = Grid_linear_stretched(ktot, dz0, 0.01)
+        stretched1 = Grid_stretched(ktot, dz0, 90, 20, 150)
+        stretched2 = Grid_stretched(ktot, dz0, 100, 20, 100, 210, 10, 500)
+        stretched3 = Grid_stretched_manual(ktot, 10., heights, factors)
+
+        pl.figure()
+        pl.plot(equidist.dz, equidist.z, '-x', label='equidistant')
+        pl.plot(linear.dz, linear.z, '-x', label='linear')
+        pl.plot(stretched1.dz, stretched1.z, '-x', label='stretched-single')
+        pl.plot(stretched2.dz, stretched2.z, '-x', label='stretched-double')
+        pl.plot(stretched3.dz, stretched3.z, '-x', label='stretched-manual')
+        pl.legend()
+        pl.xlabel('dz (m)')
+        pl.ylabel('z (m)')
