@@ -17,6 +17,7 @@ from messages      import header, message, error
 
 import microhh_tools as mht
 from grid import Grid_stretched, Grid_stretched_manual
+from slurm import submit_case
 
 def execute(task):
    subprocess.call(task, shell=True, executable='/bin/bash')
@@ -37,22 +38,27 @@ env_cartesius = {
 env_arch = {
         'system': 'arch',
         'era5_path': '/home/scratch1/meteo_data/LS2D/',
-        'work_path': '.',
-        'microhh_bin': '/home/bart/meteo/models/microhh/build_dp_cpumpi/microhh',
+        'work_path': '/home/bart/meteo/models/LS2D/cases/cabauw_201608/',
+        'microhh_bin': '/home/bart/meteo/models/microhh/build_dp_cpu/microhh',
         'rrtmgp_path': '/home/bart/meteo/models/rte-rrtmgp/',
-        'auto_submit': False,
+        'auto_submit': True,
         'set_lfs_stripe': False,
         'link_files': True}
 
-env = env_arch
+env = env_cartesius
 
 # Time of day to simulate
 start_hour = 0
 run_time = 24*3600
 
+# Slurm settings
+max_time_per_job = 7200
+wallclocklimit = 3600
+partition = 'short'
+
 # Days in Aug 2016:
 start_day = 1
-end_day = 32
+end_day = 2#32
 
 # Controls of the nudging to ERA5
 no_nudge_near_surface = False
@@ -170,7 +176,7 @@ for day in range(start_day, end_day):
 
     nl['grid']['ktot'] = grid.kmax
     nl['grid']['zsize'] = grid.zsize
-    nl['time']['endtime'] = e5.time_sec.max()
+    nl['time']['endtime'] = run_time
     nl['force']['fc'] = e5.fc
     nl['radiation']['lon'] = settings['central_lon']
     nl['radiation']['lat'] = settings['central_lat']
@@ -230,41 +236,8 @@ for day in range(start_day, end_day):
     if env['set_lfs_stripe']:
         execute('lfs setstripe -c 50 {}'.format(path))
 
-    #
-    # Create slurm runscript
-    #
-    def create_runscript(path, workdir, ntasks, wc_time, job_name):
-        with open(path, 'w') as f:
-            f.write('#!/bin/bash\n')
-            f.write('#SBATCH -p normal\n')
-            f.write('#SBATCH -n {}\n'.format(ntasks))
-            f.write('#SBATCH -t {}\n'.format(wc_time))
-            f.write('#SBATCH --job-name={}\n'.format(job_name))
-            f.write('#SBATCH --output={}/mhh-%j.out\n'.format(workdir))
-            f.write('#SBATCH --error={}/mhh-%j.err\n'.format(workdir))
-            f.write('#SBATCH --constraint=haswell\n\n')
-
-            f.write('module purge\n')
-            f.write('module load surfsara\n')
-            f.write('module load compilerwrappers\n')
-            f.write('module load 2019\n')
-            f.write('module load CMake\n')
-            f.write('module load intel/2018b\n')
-            f.write('module load netCDF/4.6.1-intel-2018b\n')
-            f.write('module load FFTW/3.3.8-intel-2018b\n\n')
-
-            f.write('cd {}\n\n'.format(workdir))
-
-            f.write('srun ./microhh init cabauw\n')
-            f.write('srun ./microhh run cabauw\n')
-
-    create_runscript(
-            'run.slurm', path,
-            nl['master']['npx']*nl['master']['npy'],
-            '24:00:00', 'mhh{0:02d}{1:02d}'.format(start.month, start.day))
-
-    to_copy = ['cabauw.ini', '../van_genuchten_parameters.nc']
-    to_move = ['cabauw_input.nc', 'run.slurm']
+    to_copy = ['cabauw.ini', '../van_genuchten_parameters.nc', '../slurm.py']
+    to_move = ['cabauw_input.nc']
     to_link = {
             'microhh': env['microhh_bin'],
             'coefficients_lw.nc':
@@ -287,8 +260,12 @@ for day in range(start_day, end_day):
         else:
             shutil.copy(src, '{}/{}'.format(path,dst))
 
-    if env['auto_submit']:
-        execute('sbatch {}/run.slurm'.format(path))
+    # Submit case
+    submit_case(
+        settings['case_name'], run_time, max_time_per_job,
+        nl['master']['npx']*nl['master']['npy'], partition,
+        path, 'mhh{0:02d}{1:02d}'.format(start.month, start.day),
+        'run_restart.slurm', env['auto_submit'])
 
     # Restore namelist file
     shutil.copyfile(nl_backup, nl_file)
