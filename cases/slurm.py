@@ -126,8 +126,15 @@ def submit_case(
                 f.write('./microhh run {}\n\n'.format(case))
             else:
                 if is_cold_start:
-                    f.write('srun ./microhh init {}\n'.format(case))
-                f.write('srun ./microhh run {}\n\n'.format(case))
+                    if ntasks == 1:
+                        f.write('./microhh init {}\n'.format(case))
+                    else:
+                        f.write('srun ./microhh init {}\n'.format(case))
+
+                if ntasks == 1:
+                    f.write('./microhh run {}\n\n'.format(case))
+                else:
+                    f.write('srun ./microhh run {}\n\n'.format(case))
 
             # Only re-submit if case exit was normal
             f.write('runjobval=$?\n')
