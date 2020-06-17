@@ -41,15 +41,18 @@ env_arch = {
         'work_path': '/home/bart/meteo/models/LS2D/cases/cabauw_201608/',
         'microhh_bin': '/home/bart/meteo/models/microhh/build_dp_cpu/microhh',
         'rrtmgp_path': '/home/bart/meteo/models/rte-rrtmgp/',
-        'auto_submit': True,
+        'auto_submit': False,
         'set_lfs_stripe': False,
         'link_files': True}
 
-env = env_cartesius
+env = env_arch
 
 # Time of day to simulate
-start_hour = 0
-run_time = 24*3600
+#start_hour = 0
+#run_time = 24*3600
+
+start_hour = 4
+run_time = 15*3600
 
 # Slurm settings
 max_time_per_job = 7200
@@ -57,15 +60,18 @@ wallclocklimit = 3600
 partition = 'short'
 
 # Days in Aug 2016:
-start_day = 1
-end_day = 2#32
+#days = np.arange(1,32)
+days = [1,2,3,4,6,9,10,11,28]
 
 # Controls of the nudging to ERA5
 no_nudge_near_surface = False
 z0_nudge = 2000
 z1_nudge = 3000
 
-for day in range(start_day, end_day):
+sw_interactive = False
+les_case_name = 'cabauw_pr'
+
+for day in days:
 
     start = datetime.datetime(year=2016, month=8, day=day, hour=start_hour)
     end   = start + datetime.timedelta(seconds=run_time)
@@ -168,8 +174,8 @@ for day in range(start_day, end_day):
     #
     # Update namelist variables
     #
-    nl_file = '{}.ini'.format(settings['case_name'])
-    nl_backup = '{}.ini.bak'.format(settings['case_name'])
+    nl_file = '{}.ini'.format(les_case_name)
+    nl_backup = '{}.ini.bak'.format(les_case_name)
 
     shutil.copyfile(nl_file, nl_backup)
     nl = mht.read_namelist(nl_file)
@@ -178,8 +184,10 @@ for day in range(start_day, end_day):
     nl['grid']['zsize'] = grid.zsize
     nl['time']['endtime'] = run_time
     nl['force']['fc'] = e5.fc
-    nl['radiation']['lon'] = settings['central_lon']
-    nl['radiation']['lat'] = settings['central_lat']
+
+    if sw_interactive:
+        nl['radiation']['lon'] = settings['central_lon']
+        nl['radiation']['lat'] = settings['central_lat']
 
     datetime_utc = '{0:04d}-{1:02d}-{2:02d} {3:02d}:{4:02d}:{5:02d}'.format(
             start.year, start.month, start.day, start.hour, start.minute, start.second)
@@ -221,7 +229,7 @@ for day in range(start_day, end_day):
 
     soil = {'z': z_soil, 'theta': e5.theta_soil_mean[0,::-1], 't': e5.T_soil_mean[0,::-1], 'index': soil_index}
 
-    mht.write_NetCDF_input('cabauw', float_type, init_profiles, tdep_surface, tdep_ls, radiation, soil)
+    mht.write_NetCDF_input(les_case_name, float_type, init_profiles, tdep_surface, tdep_ls, radiation, soil)
 
     #
     # Copy/move/link files to working directory.
@@ -236,8 +244,8 @@ for day in range(start_day, end_day):
     if env['set_lfs_stripe']:
         execute('lfs setstripe -c 50 {}'.format(path))
 
-    to_copy = ['cabauw.ini', '../van_genuchten_parameters.nc', '../slurm.py']
-    to_move = ['cabauw_input.nc']
+    to_copy = ['{}.ini'.format(les_case_name), '../van_genuchten_parameters.nc', '../slurm.py']
+    to_move = ['{}_input.nc'.format(les_case_name)]
     to_link = {
             'microhh': env['microhh_bin'],
             'coefficients_lw.nc':
@@ -261,11 +269,12 @@ for day in range(start_day, end_day):
             shutil.copy(src, '{}/{}'.format(path,dst))
 
     # Submit case
+    nproc = nl['master']['npx']*nl['master']['npy']
+    job_name = 'mhh{0:02d}{1:02d}'.format(start.month, start.day)
+
     submit_case(
-        settings['case_name'], run_time, max_time_per_job,
-        nl['master']['npx']*nl['master']['npy'], partition,
-        path, 'mhh{0:02d}{1:02d}'.format(start.month, start.day),
-        'run_restart.slurm', env['auto_submit'])
+        les_case_name, run_time, max_time_per_job, nproc, partition,
+        path, job_name, 'run_restart.slurm', env['auto_submit'])
 
     # Restore namelist file
     shutil.copyfile(nl_backup, nl_file)

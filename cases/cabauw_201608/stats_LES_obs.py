@@ -281,7 +281,7 @@ if __name__ == '__main__':
         #pl.pcolormesh(ds_therm.time, ds_therm.z, np.log(ds_therm.qr.T))
 
 
-    if True:
+    if False:
         #
         # Cloud cover
         # NOTE: Nubiscope low < 2100m, high > 5400, mid = between.
@@ -394,7 +394,7 @@ if __name__ == '__main__':
             pl.savefig('figs/ts_atmosphere_{0:03d}m.pdf'.format(z))
 
 
-    if False:
+    if True:
         #
         # Rain / clouds/ etc.
         #
@@ -487,8 +487,8 @@ if __name__ == '__main__':
 
 
         pl.figure()
-        pl.semilogy(ds_therm.time, ds_therm.rr.values*3600)
-        pl.semilogy(cb_sfc.index, cb_sfc.RAIN/600*3600, '.')
+        #pl.semilogy(ds_therm.time, ds_therm.rr.values*3600)
+        pl.semilogy(cb_sfc.index, cb_sfc.RAIN/600*3600)
 
 
         ds_cover = colocate(ds_therm.time.values, ds_therm.ql_cover.values*100, cb_nubi.time.values, cb_nubi.cldcover_total.values)
