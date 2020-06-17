@@ -45,7 +45,18 @@ env_arch = {
         'set_lfs_stripe': False,
         'link_files': True}
 
-env = env_arch
+env_anunna = {
+        'system': 'anunna',
+        'era5_path': '/home/WUR/strat008/data/LS2D/',
+        'work_path': '/home/bart/meteo/models/LS2D/cases/cabauw_201608/',
+        'work_path': '/home/WUR/strat008/scratch/LS2D/',
+        'microhh_bin': '/home/WUR/strat008/models/microhh/build_dp_gpu/microhh',
+        'rrtmgp_path': '/home/WUR/strat008/models/rte-rrtmgp',
+        'auto_submit': False,
+        'set_lfs_stripe': False,
+        'link_files': True}
+
+env = env_anunna
 
 # Time of day to simulate
 #start_hour = 0
@@ -55,9 +66,13 @@ start_hour = 4
 run_time = 15*3600
 
 # Slurm settings
-max_time_per_job = 7200
-wallclocklimit = 3600
+max_time_per_job = 86400
+wallclocklimit = 86400
 partition = 'short'
+
+#max_time_per_job = 7200
+#wallclocklimit = 3600
+#partition = 'short'
 
 # Days in Aug 2016:
 #days = np.arange(1,32)
