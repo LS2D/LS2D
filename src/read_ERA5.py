@@ -146,10 +146,11 @@ class Read_ERA:
             and/or cast data to requested `dtype`.
             """
             data = flip(nc.variables[var][s])
-            # Cast to requested data type (if provided):
-            data = data.astype(dtype) if dtype is not None else data
             # Apply wrapper function (if provided):
             data = wrap_func(data) if wrap_func is not None else data
+            # Cast to requested data type (if provided):
+            data = data.astype(dtype) if dtype is not None else data
+
             return data
 
 
