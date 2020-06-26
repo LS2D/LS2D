@@ -179,6 +179,10 @@ class Read_ERA:
         self.time     = self.fma.variables['time'][t_an]
         self.time_fc  = self.fmf.variables['time'][t_fc]
 
+        # Shift grid from 0-360 to -180, 180 (if needed)
+        if np.any(self.lons>180):
+            self.lons = -360+self.lons
+
         self.time_sec = (self.time-self.time[0])*3600.
 
         # Time in datetime format

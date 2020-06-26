@@ -126,12 +126,12 @@ def submit_case(
                 f.write('./microhh run {}\n\n'.format(case))
             else:
                 if is_cold_start:
-                    if ntasks == 1:
+                    if n_tasks == 1:
                         f.write('./microhh init {}\n'.format(case))
                     else:
                         f.write('srun ./microhh init {}\n'.format(case))
 
-                if ntasks == 1:
+                if n_tasks == 1:
                     f.write('./microhh run {}\n\n'.format(case))
                 else:
                     f.write('srun ./microhh run {}\n\n'.format(case))
