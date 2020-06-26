@@ -16,7 +16,7 @@ from read_ERA5     import Read_ERA
 from messages      import header, message, error
 
 import microhh_tools as mht
-from grid import Grid_stretched, Grid_stretched_manual
+from grid import Grid_stretched_manual, check_grid_decomposition
 from slurm import submit_case
 
 def execute(task):
@@ -74,6 +74,16 @@ z1_nudge = 3000
 
 les_case_name = 'atto'
 
+# Create stretched vertical grid
+heights = np.array([0, 200, 2000, 5000, 15000, 50000])
+factors = np.array([1.025, 1.011, 1.006, 1.022, 1.07])
+grid = Grid_stretched_manual(252, 10., heights, factors)
+
+# Checks on grid & domain decomposition
+nl = mht.read_namelist('{}.ini'.format(les_case_name))
+check_grid_decomposition(
+        nl['grid']['itot'], nl['grid']['itot'], grid.kmax, nl['master']['npx'], nl['master']['npy'])
+
 start = datetime.datetime(year=2019, month=2, day=16, hour=4)
 end   = datetime.datetime(year=2019, month=2, day=18, hour=4)
 dt    = datetime.timedelta(hours=24)
@@ -103,12 +113,6 @@ while date < end:
     # Read ERA5 data, and calculate LES forcings, using +/-`n_av` grid point averages in ERA5.
     e5 = Read_ERA(settings)
     e5.calculate_forcings(n_av=0, method='4th')
-
-    # Create stretched vertical grid
-    #grid = Grid_stretched(kmax=228, dz0=20, nloc1=100, nbuf1=20, dz1=100, nloc2=210, nbuf2=10, dz2=500)
-    stretch_heights = np.array([0, 200, 2000, 5000, 11000, 50000])
-    stretch_factors = np.array([1.025, 1.011, 1.006, 1.02, 1.08])
-    grid = Grid_stretched_manual(240, 10., stretch_heights, stretch_factors)
 
     # Interpolate ERA5 variables and forcings onto LES grid
     variables = [
@@ -195,6 +199,8 @@ while date < end:
     datetime_utc = '{0:04d}-{1:02d}-{2:02d} {3:02d}:{4:02d}:{5:02d}'.format(
             date.year, date.month, date.day, date.hour, date.minute, date.second)
     nl['time']['datetime_utc'] = datetime_utc
+
+    nl['cross']['xy'] = '0,{0:.1f}'.format(grid.zsize)
 
     # Add column locations
     column_x = np.array([1300,1800,2300])

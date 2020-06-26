@@ -51,9 +51,8 @@ class Grid_stretched(Grid):
 
         if double_stretched:
             dzdn3  = dz2/dn
-
-        if double_stretched:
-            dzdn = dzdn1 + 0.5*(dzdn2-dzdn1)*(1. + np.tanh((n-nloc1)/nbuf1)) + 0.5*(dzdn3-dzdn2)*(1. + np.tanh((n-nloc2)/nbuf2))
+            dzdn = dzdn1 + 0.5*(dzdn2-dzdn1)*(1. + np.tanh((n-nloc1)/nbuf1)) \
+                         + 0.5*(dzdn3-dzdn2)*(1. + np.tanh((n-nloc2)/nbuf2))
         else:
             dzdn = dzdn1 + 0.5*(dzdn2-dzdn1)*(1. + np.tanh((n-nloc1)/nbuf1))
 
@@ -98,6 +97,42 @@ class Grid_stretched_manual(Grid):
         self.zsize = self.z[kmax-1] + 0.5*self.dz[kmax-1]
 
 
+def check_grid_decomposition(itot, jtot, ktot, npx, npy):
+    """
+    Check whether grid / MPI decomposition is valid
+    """
+
+    print('Grid: itot={}, jtot={}, ktot={}, npx={}, npy={}'.format(
+        itot, jtot, ktot, npx, npy))
+
+    err = False
+    if itot%npx != 0:
+        print('itot%npx != 0')
+        err = True
+
+    if itot%npy != 0:
+        print('itot%npy != 0')
+        err = True
+
+    if jtot%npx != 0 and npy > 1:
+        print('jtot%npx != 0')
+        err = True
+
+    if jtot%npy != 0:
+        print('jtot%npy != 0')
+        err = True
+
+    if ktot%npx != 0:
+        print('ktot%npx != 0')
+        err = True
+
+    if err:
+        print('Invalid grid configuration!')
+    else:
+        print('Grid configuration okay!')
+
+
+
 
 if __name__ == '__main__':
     """
@@ -107,11 +142,11 @@ if __name__ == '__main__':
     pl.close('all'); pl.ion()
 
     if True:
-        ktot = 240
+        ktot = 252
         dz0  = 20
 
-        heights = np.array([0, 200, 2000, 5000, 11000, 50000])
-        factors = np.array([1.025, 1.011, 1.006, 1.02, 1.08])
+        heights = np.array([0, 200, 2000, 5000, 15000, 50000])
+        factors = np.array([1.025, 1.011, 1.006, 1.022, 1.07])
 
         equidist   = Grid_equidist(ktot, dz0)
         linear     = Grid_linear_stretched(ktot, dz0, 0.01)
@@ -128,3 +163,7 @@ if __name__ == '__main__':
         pl.legend()
         pl.xlabel('dz (m)')
         pl.ylabel('z (m)')
+
+    if False:
+        check_grid_decomposition(32, 32, 32, 4, 4)
+        check_grid_decomposition(32, 32, 32, 6, 4)
