@@ -308,8 +308,9 @@ while date < end:
     job_name = 'mhh{0:02d}{1:02d}'.format(date.month, date.day)
 
     submit_case(
-        les_case_name, run_time, max_time_per_job, nproc, partition,
-        path, job_name, 'run_restart.slurm', env['auto_submit'])
+        les_case_name, run_time, max_time_per_job, wallclocklimit,
+        nproc, partition, path, job_name,
+        'run_restart.slurm', env['auto_submit'])
 
     # Restore namelist file
     shutil.copyfile(nl_backup, nl_file)

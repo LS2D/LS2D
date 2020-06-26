@@ -65,7 +65,7 @@ def seconds_to_time(seconds):
 
 
 def submit_case(
-        case, total_time, max_time, n_tasks,
+        case, total_time, max_time, wc_time, n_tasks,
         partition, work_dir, job_name, script_name,
         auto_submit):
 
@@ -96,6 +96,7 @@ def submit_case(
 
         # Update namelist
         to_update = {
+                'wallclocklimit': wc_time/3600.,
                 'starttime': restart_time,
                 'endtime': end_time,
                 'savetime': max_time}
@@ -103,7 +104,7 @@ def submit_case(
         update_namelist('{}/{}.ini'.format(work_dir, case), to_update)
 
         # Wall-clock limit in `d-hh-mm-ss` format
-        wc_time = seconds_to_time(int(max_time))
+        wc_time_str = seconds_to_time(int(wc_time))
 
         auto_submit_flag = '--auto_submit' if auto_submit else ''
 
@@ -112,7 +113,7 @@ def submit_case(
             f.write('#!/bin/bash\n')
             f.write('#SBATCH -p {}\n'.format(partition))
             f.write('#SBATCH -n {}\n'.format(n_tasks))
-            f.write('#SBATCH -t {}\n'.format(wc_time))
+            f.write('#SBATCH -t {}\n'.format(wc_time_str))
             f.write('#SBATCH --job-name={}\n'.format(job_name))
             f.write('#SBATCH --output={}/mhh-%j.out\n'.format(work_dir))
             f.write('#SBATCH --error={}/mhh-%j.err\n'.format(work_dir))
@@ -140,8 +141,8 @@ def submit_case(
             f.write('runjobval=$?\n')
             f.write('if [ "${runjobval}" -eq "0" ]; then\n')
             # Re-submit Python script
-            f.write('  python3 {}/slurm.py -c {} -tt {} -mt {} --partition {} -n {} -w {} -j {} -s {} {}\n'.format(
-                work_dir, case, int(total_time), int(max_time), partition,
+            f.write('  python3 {}/slurm.py -c {} -tt {} -mt {} -wc {} -p {} -n {} -w {} -j {} -s {} {}\n'.format(
+                work_dir, case, int(total_time), int(max_time), int(wc_time), partition,
                 int(n_tasks), work_dir, job_name, script_name, auto_submit_flag))
             f.write('fi\n')
 
@@ -172,6 +173,8 @@ if __name__ == '__main__':
             help='MicroHH case name')
     parser.add_argument('-n', '--n_tasks', required=True, type=int,
             help='Total MPI tasks')
+    parser.add_argument('-wc', '--wallclocklimit', required=True, type=int,
+            help='Wall clock limit in seconds')
 
     # Optional arguments:
     parser.add_argument('--auto_submit', dest='auto_submit', action='store_true')
@@ -191,6 +194,13 @@ if __name__ == '__main__':
     # Submit case
     #
     submit_case(
-        args.case, args.total_time, args.max_time, args.n_tasks,
-        args.partition, args.work_dir, args.job_name, args.script_name,
+        args.case,
+        args.total_time,
+        args.max_time,
+        args.wallclocklimit,
+        args.n_tasks,
+        args.partition,
+        args.work_dir,
+        args.job_name,
+        args.script_name,
         args.auto_submit)
