@@ -1,9 +1,9 @@
-import datetime
 import numpy as np
 import sys
 import os
 import shutil
 import subprocess
+from datetime import datetime, timedelta
 
 # Add `src` subdirectory of LS2D to Python path
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -48,7 +48,6 @@ env_arch = {
 env_anunna = {
         'system': 'anunna',
         'era5_path': '/home/WUR/strat008/data/LS2D/',
-        'work_path': '/home/bart/meteo/models/LS2D/cases/atto/',
         'work_path': '/home/WUR/strat008/scratch/LS2D/',
         'microhh_bin': '/home/WUR/strat008/models/microhh/build_dp_gpu/microhh',
         'rrtmgp_path': '/home/WUR/strat008/models/rte-rrtmgp',
@@ -56,14 +55,13 @@ env_anunna = {
         'set_lfs_stripe': False,
         'link_files': True}
 
-env = env_arch
+env = env_cartesius
 
 # Time of day to simulate
-start_hour = 4
-run_time = 24*3600
+run_time = 12*3600
 
 # Slurm settings
-max_time_per_job = 7200
+max_time_per_job = 3600
 wallclocklimit = 3600
 partition = 'short'
 
@@ -84,9 +82,9 @@ nl = mht.read_namelist('{}.ini'.format(les_case_name))
 check_grid_decomposition(
         nl['grid']['itot'], nl['grid']['itot'], grid.kmax, nl['master']['npx'], nl['master']['npy'])
 
-start = datetime.datetime(year=2019, month=2, day=16, hour=4)
-end   = datetime.datetime(year=2019, month=2, day=18, hour=4)
-dt    = datetime.timedelta(hours=24)
+start = datetime(year=2019, month=2, day=16, hour=9)
+end   = datetime(year=2019, month=2, day=18, hour=9)
+dt    = timedelta(hours=24)
 
 date = start
 while date < end:
@@ -99,7 +97,7 @@ while date < end:
         'case_name'   : 'atto',
         'base_path'   : env['era5_path'],
         'start_date'  : date,
-        'end_date'    : date+dt,
+        'end_date'    : date + timedelta(seconds=run_time),
         'write_log'   : False,
         'data_source' : 'MARS',
         'ntasks'      : 1
