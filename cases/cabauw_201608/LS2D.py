@@ -39,7 +39,7 @@ env_arch = {
         'system': 'arch',
         'era5_path': '/home/scratch1/meteo_data/LS2D/',
         'work_path': '/home/bart/meteo/models/LS2D/cases/cabauw_201608/',
-        'microhh_bin': '/home/bart/meteo/models/microhh/build_dp_cpu/microhh',
+        'microhh_bin': '/home/bart/meteo/models/microhh/build_sp_gpu/microhh',
         'rrtmgp_path': '/home/bart/meteo/models/rte-rrtmgp/',
         'auto_submit': False,
         'set_lfs_stripe': False,
@@ -56,7 +56,7 @@ env_anunna = {
         'set_lfs_stripe': False,
         'link_files': True}
 
-env = env_anunna
+env = env_arch
 
 # Time of day to simulate
 #start_hour = 0
@@ -76,7 +76,7 @@ partition = 'short'
 
 # Days in Aug 2016:
 #days = np.arange(1,32)
-days = [1,2,3,4,6,9,10,11,28]
+days = [2,9,11,21]
 
 # Controls of the nudging to ERA5
 no_nudge_near_surface = False
@@ -284,12 +284,13 @@ for day in days:
             shutil.copy(src, '{}/{}'.format(path,dst))
 
     # Submit case
-    nproc = nl['master']['npx']*nl['master']['npy']
-    job_name = 'mhh{0:02d}{1:02d}'.format(start.month, start.day)
+    if env['auto_submit']:
+        nproc = nl['master']['npx']*nl['master']['npy']
+        job_name = 'mhh{0:02d}{1:02d}'.format(start.month, start.day)
 
-    submit_case(
-        les_case_name, run_time, max_time_per_job, nproc, partition,
-        path, job_name, 'run_restart.slurm', env['auto_submit'])
+        submit_case(
+            les_case_name, run_time, max_time_per_job, nproc, partition,
+            path, job_name, 'run_restart.slurm', env['auto_submit'])
 
     # Restore namelist file
     shutil.copyfile(nl_backup, nl_file)
