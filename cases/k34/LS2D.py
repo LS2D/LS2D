@@ -61,7 +61,7 @@ partition = 'short'
 #partition = 'short'
 
 start = datetime.datetime(year=2014, month=8, day=20)
-end   = datetime.datetime(year=2014, month=8, day=21)
+end   = datetime.datetime(year=2014, month=8, day=22)
 
 # Controls of the nudging to ERA5
 no_nudge_near_surface = False
@@ -81,7 +81,7 @@ while date < end:
         'case_name'   : 'k34',
         'base_path'   : env['era5_path'],
         'start_date'  : date,
-        'end_date'    : end+datetime.timedelta(seconds=run_time),
+        'end_date'    : date+datetime.timedelta(seconds=run_time),
         'write_log'   : False,
         'data_source' : 'MARS',
         'ntasks'      : 1
@@ -184,7 +184,7 @@ while date < end:
     nl['radiation']['lat'] = settings['central_lat']
 
     datetime_utc = '{0:04d}-{1:02d}-{2:02d} {3:02d}:{4:02d}:{5:02d}'.format(
-            start.year, start.month, start.day, start.hour, start.minute, start.second)
+            date.year, date.month, date.day, date.hour, date.minute, date.second)
     nl['time']['datetime_utc'] = datetime_utc
 
     # Add column locations
@@ -229,7 +229,7 @@ while date < end:
     # Copy/move/link files to working directory.
     #
     path = '{0}/{1:04d}{2:02d}{3:02d}_t{4:02d}'.format(
-            env['work_path'], start.year, start.month, start.day, start.hour)
+            env['work_path'], date.year, date.month, date.day, date.hour)
     if os.path.exists(path):
         error('Work directory {} already exists!!'.format(path))
     else:
@@ -265,10 +265,10 @@ while date < end:
     # Submit case
     if env['auto_submit']:
         nproc = nl['master']['npx']*nl['master']['npy']
-        job_name = 'mhh{0:02d}{1:02d}'.format(start.month, start.day)
+        job_name = 'mhh{0:02d}{1:02d}'.format(date.month, date.day)
 
         submit_case(
-            les_case_name, run_time, max_time_per_job, nproc, partition,
+            les_case_name, run_time, max_time_per_job, wallclocklimit, nproc, partition,
             path, job_name, 'run_restart.slurm', env['auto_submit'])
 
     # Restore namelist file
