@@ -8,9 +8,9 @@ import shutil
 import subprocess
 
 # Add `src` subdirectory of LS2D to Python path
-abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append('{}/../../src/'.format(abs_path))
-sys.path.append('{}/..'.format(abs_path))
+LS2D_root = '/home/bart/meteo/models/LS2D/'
+sys.path.append(f'{LS2D_root}/src/')
+sys.path.append(f'{LS2D_root}/util/')
 
 # Import the LS2D/MicroHH specific scripts
 from download_ERA5 import download_ERA5
@@ -18,18 +18,12 @@ from read_ERA5     import Read_ERA
 from messages      import header, message, error
 
 import microhh_tools as mht
-from grid import Grid_stretched
+from grid import Grid_stretched, Grid_linear_stretched
 
 pl.close('all'); pl.ion()
 
 def execute(task):
    subprocess.call(task, shell=True, executable='/bin/bash')
-
-env_cartesius = {
-        'era5_path': '/archive/bstratum/ERA5/',
-        'work_path': '/home/bstratum/scratch/cabauw_aug2016_small24h/',
-        'microhh_bin': '/home/bstratum/models/microhh/build_dp_cpumpi/microhh',
-        'rrtmgp_path': '/home/bstratum/models/rte-rrtmgp/'}
 
 env_arch = {
         'era5_path': '/home/scratch1/meteo_data/LS2D/',
@@ -41,13 +35,12 @@ env_arch = {
 env = env_arch
 
 float_type  = 'f8'    # MicroHH float type ('f4', 'f8')
-auto_submit = True    # Submit the case to load balancer
 link_files = False    # Switch between linking or copying files
 auto_submit = False    # Submit the case to load balancer
-set_lfs_stripe = False # Set the LFS striping on new directories
 
-start = datetime.datetime(year=2018, month=8, day=11, hour=5)
-end   = start + datetime.timedelta(hours=13)
+start = datetime.datetime(year=2018, month=8, day=11, hour=6)
+end   = datetime.datetime(year=2018, month=8, day=11, hour=20)
+#end   = start + datetime.timedelta(hours=24)
 
 # Dictionary with settings
 settings = {
@@ -73,7 +66,11 @@ e5 = Read_ERA(settings)
 e5.calculate_forcings(n_av=0, method='4th')
 
 # Read MicroHH namelist and create stretched vertical grid
-grid = Grid_stretched(kmax=228, dz0=20, nloc1=100, nbuf1=20, dz1=100, nloc2=210, nbuf2=10, dz2=500)
+#grid = Grid_linear_stretched(kmax=512, dz0=2, alpha=.01)
+#grid = Grid_linear_stretched(kmax=128, dz0=20, alpha=0.009)
+grid = Grid_linear_stretched(kmax=240, dz0=20, alpha=0.009)
+print(grid.zsize)
+grid.plot()
 
 # Interpolate ERA5 variables and forcings onto LES grid
 variables = [
@@ -89,42 +86,6 @@ nudge_fac = np.ones(grid.z.size) / tau_nudge
 # Surface / soil
 z_soil = np.array([-1.945, -0.64, -0.175, -0.035])
 soil_index = np.ones_like(z_soil)*2
-
-if True:
-    # Debug/fix soil moisture ERA5
-    vg = xr.open_dataset('../van_genuchten_parameters.nc')
-
-    si = 2
-    theta_soil_rel_e5 = (e5.theta_soil_mean[0,:] - vg['theta_wp'][si].values)\
-            / (vg['theta_fc'][si].values - vg['theta_wp'][si].values)
-
-    theta_soil_new = np.array([0.30, 0.30, 0.30, 0.35])
-    theta_soil_rel_e5_new = (theta_soil_new - vg['theta_wp'][si].values)\
-            / (vg['theta_fc'][si].values - vg['theta_wp'][si].values)
-
-    z_cb = np.array([-0.05, -0.19, -0.33, -0.56])
-    theta_soil_cb = np.array([0.21, 0.20, 0.30, 0.48])
-    si0 = 16  # =O12 = fairly heavy clay (top soil)
-    si1 = 35  # =O12 = fairly heavy clay (lower soil)
-    theta_soil_rel_cb = np.zeros_like(theta_soil_cb)
-    theta_soil_rel_cb[0] = (theta_soil_cb[0] - vg['theta_wp'][si0].values)\
-            / (vg['theta_fc'][si0].values - vg['theta_wp'][si0].values)
-    theta_soil_rel_cb[1:] = (theta_soil_cb[1:] - vg['theta_wp'][si1].values)\
-            / (vg['theta_fc'][si1].values - vg['theta_wp'][si1].values)
-
-    pl.figure()
-    pl.subplot(121)
-    pl.plot(e5.theta_soil_mean[0,:], z_soil, '-x', label='ERA5')
-    pl.plot(theta_soil_new, z_soil, '--x', label='ERA5-new')
-    pl.plot(theta_soil_cb, z_cb, '-x', label='Cabauw')
-    pl.legend()
-
-    pl.subplot(122)
-    pl.plot(theta_soil_rel_e5, z_soil, '-x', label='ERA5')
-    pl.plot(theta_soil_rel_e5_new, z_soil, '--x', label='ERA5-new')
-    pl.plot(theta_soil_rel_cb, z_cb, '-x', label='Cabauw')
-    pl.xlim(0,1)
-    pl.grid()
 
 # Radiation profiles for RRTMGP
 co2 = 348.e-6
@@ -208,9 +169,29 @@ radiation  = {
         't_lay': T_lay, 't_lev': T_lev, 'co2': co2_rad, 'ch4': ch4_rad,
         'n2o': n2o_rad, 'n2': n2_rad, 'o2': o2_rad, 'o3': o3_rad, 'h2o': h2o_rad}
 
-tdep_surface = {
-        'time_surface': e5.time_sec, 'thl_sbot': e5.wths_mean,
-        'qt_sbot': e5.wqs_mean, 'p_sbot': e5.ps_mean }
+#
+# HACK: change LE
+#
+if False:
+    time_s = e5.time_sec
+
+    LE = 420*np.sin(2*np.pi*(time_s+1800)/90000)
+    LE = np.maximum(LE, 0)
+
+    H = 170*np.sin(2*np.pi*(time_s-900)/85000)
+    H = np.maximum(H, 0)
+
+    wths = H / 1.19 / 1004.
+    wqs  = LE / 1.19 / 2.45e6
+
+    tdep_surface = {
+            'time_surface': e5.time_sec, 'thl_sbot': wths,
+            'qt_sbot': wqs, 'p_sbot': e5.ps_mean }
+else:
+    tdep_surface = {
+            'time_surface': e5.time_sec, 'thl_sbot': e5.wths_mean,
+            'qt_sbot': e5.wqs_mean, 'p_sbot': e5.ps_mean }
+
 
 tdep_ls = {
         'time_ls': e5.time_sec, 'u_geo': e5_at_z['ug'], 'v_geo': e5_at_z['vg'],
@@ -220,82 +201,7 @@ tdep_ls = {
         'u_nudge': e5_at_z['u'], 'v_nudge': e5_at_z['v']}
 
 theta_soil_fix = np.array([0.35, 0.35, 0.14, 0.14])
-soil = {'z': z_soil, 'theta': theta_soil_fix, 't': e5.T_soil_mean[0,::-1], 'index': soil_index}
-#soil = {'z': z_soil, 'theta': e5.theta_soil_mean[0,::-1], 't': e5.T_soil_mean[0,::-1], 'index': soil_index}
+#soil = {'z': z_soil, 'theta': theta_soil_fix, 't': e5.T_soil_mean[0,::-1], 'index': soil_index}
+soil = {'z': z_soil, 'theta': e5.theta_soil_mean[0,::-1], 't': e5.T_soil_mean[0,::-1], 'index': soil_index}
 
 mht.write_NetCDF_input('cabauw', float_type, init_profiles, tdep_surface, tdep_ls, radiation, soil)
-#
-# Copy/move/link files to working directory.
-#
-path = '{0}/{1:04d}{2:02d}{3:02d}_t{4:02d}'.format(
-        env['work_path'], start.year, start.month, start.day, start.hour)
-if os.path.exists(path):
-    error('Work directory {} already exists!!'.format(path))
-else:
-    os.makedirs(path)
-
-if set_lfs_stripe:
-    execute('lfs setstripe -c 50 {}'.format(path))
-
-#
-# Create slurm runscript
-#
-def create_runscript(path, workdir, ntasks, wc_time, job_name):
-    with open(path, 'w') as f:
-        f.write('#!/bin/bash\n')
-        f.write('#SBATCH -p normal\n')
-        f.write('#SBATCH -n {}\n'.format(ntasks))
-        f.write('#SBATCH -t {}\n'.format(wc_time))
-        f.write('#SBATCH --job-name={}\n'.format(job_name))
-        f.write('#SBATCH --output={}/mhh-%j.out\n'.format(workdir))
-        f.write('#SBATCH --error={}/mhh-%j.err\n'.format(workdir))
-        f.write('#SBATCH --constraint=haswell\n\n')
-
-        f.write('module purge\n')
-        f.write('module load surfsara\n')
-        f.write('module load compilerwrappers\n')
-        f.write('module load 2019\n')
-        f.write('module load CMake\n')
-        f.write('module load intel/2018b\n')
-        f.write('module load netCDF/4.6.1-intel-2018b\n')
-        f.write('module load FFTW/3.3.8-intel-2018b\n\n')
-
-        f.write('cd {}\n\n'.format(workdir))
-
-        f.write('srun ./microhh init cabauw\n')
-        f.write('srun ./microhh run cabauw\n')
-
-create_runscript(
-        'run.slurm', path,
-        nl['master']['npx']*nl['master']['npy'],
-        '24:00:00', 'mhh{0:02d}{1:02d}'.format(start.month, start.day))
-
-to_copy = ['cabauw.ini', '../van_genuchten_parameters.nc']
-to_move = ['cabauw_input.nc', 'run.slurm']
-to_link = {
-        'microhh': env['microhh_bin'],
-        'coefficients_lw.nc':
-            '{}/rrtmgp/data/rrtmgp-data-lw-g256-2018-12-04.nc'.format(env['rrtmgp_path']),
-        'coefficients_sw.nc':
-            '{}/rrtmgp/data/rrtmgp-data-sw-g224-2018-12-04.nc'.format(env['rrtmgp_path']),
-        'cloud_coefficients_lw.nc':
-            '{}/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-lw.nc'.format(env['rrtmgp_path']),
-        'cloud_coefficients_sw.nc':
-        '{}/extensions/cloud_optics/rrtmgp-cloud-optics-coeffs-sw.nc'.format(env['rrtmgp_path'])}
-
-for f in to_copy:
-    shutil.copy(f, path)
-for f in to_move:
-    shutil.move(f, path)
-
-for dst,src in to_link.items():
-    if link_files:
-        os.symlink(src, '{}/{}'.format(path,dst))
-    else:
-        shutil.copy(src, '{}/{}'.format(path,dst))
-
-if auto_submit:
-    execute('sbatch {}/run.slurm'.format(path))
-
-# Restore namelist file
-shutil.copyfile(nl_backup, nl_file)
