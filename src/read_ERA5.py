@@ -229,6 +229,7 @@ class Read_ERA:
         self.dtT_lw = get_variable(self.fmf, 'mttlwr',  s3d_fc)  # Mean temperature tendency LW radiation (K s-1)
 
         # Surface variables:
+        self.sst =  get_variable(self.fsa, 'sst',  s2d)  # Sea surface temperature (K)
         self.Ts  =  get_variable(self.fsa, 'skt',  s2d)  # Skin temperature (K)
         self.H   = -get_variable(self.fsa, 'ishf', s2d)  # Surface sensible heat flux (W m-2)
         self.wqs = -get_variable(self.fsa, 'ie',   s2d)  # Surface kinematic moisture flux (g kg-1)
@@ -359,7 +360,7 @@ class Read_ERA:
 
         # Variables averaged from (time, lon, lat) to (time):
         var_3d_mean = [
-                'ps', 'Ts', 'wths', 'wqs', 'ps', 'cc',
+                'ps', 'Ts', 'sst', 'wths', 'wqs', 'ps', 'cc',
                 'lai_low', 'lai_high', 'z0m', 'z0h']
         for var in var_3d_mean:
             mean = getattr(self, var)[center3d].mean(axis=(1,2))
