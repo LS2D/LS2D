@@ -6,7 +6,8 @@ import subprocess
 from datetime import datetime, timedelta
 
 # Add `src` subdirectory of LS2D to Python path
-LS2D_root = '/home/bart/meteo/models/LS2D/'
+#LS2D_root = '/home/bart/meteo/models/LS2D/'
+LS2D_root = '/home/bstratum/models/LS2D/'
 sys.path.append(f'{LS2D_root}/src/')
 sys.path.append(f'{LS2D_root}/util/')
 
@@ -52,7 +53,7 @@ float_type = 'f8'    # MicroHH float type ('f4', 'f8')
 env_cartesius = {
         'system': 'cartesius',
         'era5_path': '/archive/bstratum/ERA5/',
-        'work_path': '/home/bstratum/scratch/atto/',
+        'work_path': '/home/bstratum/scratch/barbados/',
         'microhh_bin': '/home/bstratum/models/microhh/build_dp_cpumpi/microhh',
         'rrtmgp_path': '/home/bstratum/models/rte-rrtmgp/',
         'auto_submit': True,
@@ -69,11 +70,11 @@ env_arch = {
         'set_lfs_stripe': False,
         'link_files': True}
 
-env = env_arch
+env = env_cartesius
 
 # Start, end, and size of individual runs (dt)
 start = datetime(year=2020, month=2, day=5, hour=10)
-end   = datetime(year=2020, month=2, day=5, hour=18)
+end   = datetime(year=2020, month=2, day=5, hour=22)
 run_time = (end-start).total_seconds()
 
 # Dictionary with settings
@@ -104,6 +105,7 @@ z1_nudge = 3000
 heights = np.array([0, 200, 2000, 5000, 15000, 50000])
 factors = np.array([1.025, 1.011, 1.006, 1.022, 1.07])
 grid = Grid_stretched_manual(252, 10., heights, factors)
+print(grid.zsize)
 grid.plot()
 
 # Checks on grid & domain decomposition
@@ -326,7 +328,7 @@ for dst,src in to_link.items():
 if env['auto_submit']:
     # Submit case
     nproc = nl['master']['npx']*nl['master']['npy']
-    job_name = 'mhh{0:02d}{1:02d}'.format(date.month, date.day)
+    job_name = 'mhh{0:02d}{1:02d}'.format(start.month, start.day)
 
     submit_case(
         settings['case_name'], run_time, max_time_per_job, wallclocklimit,

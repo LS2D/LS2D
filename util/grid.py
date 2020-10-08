@@ -1,5 +1,6 @@
 import matplotlib.pyplot as pl
 import numpy as np
+import sys
 
 #
 # Vertical grids
@@ -128,6 +129,7 @@ def check_grid_decomposition(itot, jtot, ktot, npx, npy):
 
     if err:
         print('Invalid grid configuration!')
+        sys.exit()
     else:
         print('Grid configuration okay!')
 
