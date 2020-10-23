@@ -259,6 +259,10 @@ class Read_ERA:
         self.z_p = get_variable(self.fpa, 'z', s3d) / IFS_tools.grav  # Geopotential height on pressure levels (m)
         self.p_p = get_variable(self.fpa, 'level', s1d) * 100         # Pressure levels (Pa)
 
+        # Convert ozone from mass mixing ratio to volume mixing ratio
+        self.o3 = 28.9644 / 47.9982 * self.o3
+        #print('no fix o3')
+
 
     def calc_derived_data(self):
         """

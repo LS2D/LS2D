@@ -67,10 +67,7 @@ def seconds_to_time(seconds):
 def submit_case(
         case, total_time, max_time, wc_time, n_tasks,
         partition, work_dir, job_name, script_name,
-        auto_submit):
-
-    # Just for testing on local system...:
-    bypass_slurm=False
+        auto_submit, bypass_slurm=False):
 
     # Get time of latest restart file
     restart_time = get_latest_restart_time(work_dir)
