@@ -129,10 +129,10 @@ def check_grid_decomposition(itot, jtot, ktot, npx, npy):
 
     if err:
         print('Invalid grid configuration!')
-        sys.exit()
+        return False
     else:
         print('Grid configuration okay!')
-
+        return True
 
 
 
