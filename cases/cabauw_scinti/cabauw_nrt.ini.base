@@ -1,17 +1,30 @@
 [master]
 npx=12
 npy=16
+
 #npx=24
 #npy=32
 
 [grid]
+# Small, 2m resolution
 itot=384
 jtot=384
+xsize=768
+ysize=768
+
+# Large, 8m resolution
+#itot=384
+#jtot=384
+#xsize=3072
+#ysize=3072
+
+# Large, 2m resolution
 #itot=768
 #jtot=768
+#itot=1536
+#jtot=1536
+
 ktot=288
-xsize=3072
-ysize=3072
 zsize=3003.070837178836
 utrans=0.0
 vtrans=0.0
@@ -138,13 +151,16 @@ sampletime=60
 [cross]
 swcross=1
 sampletime=60
-xy=1,5,9,13,17,21,100,200,400
-crosslist=u,v,w,thl,qt,thlfluxbot,qtfluxbot,thlbot,qtbot,ustar,obuk
+xy=10.5,11.5,20.5,21.5
+crosslist=u,v,w,thl,qt,thlfluxbot,qtfluxbot,thlbot,qtbot,ustar
 
 [column]
 swcolumn=1
 sampletime=60
-coordinates[x]=795.1,529.0,2412.4,1991.0,1813.9,2877.0,752.9,1550.4
-coordinates[y]=1532.8,1600.9,1473.5,909.5,1889.4,2107.3,735.6,2629.3
+# Full domain:
+#coordinates[x]=795.1,529.0,2412.4,1991.0,1813.9,2877.0,752.9,1550.4
+#coordinates[y]=1532.8,1600.9,1473.5,909.5,1889.4,2107.3,735.6,2629.3
 
-
+# Small domain:
+coordinates[x]=383.6,117.5
+coordinates[y]=386.9,455.0

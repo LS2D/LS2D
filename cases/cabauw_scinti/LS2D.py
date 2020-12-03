@@ -106,13 +106,13 @@ if __name__ == '__main__':
     #stretch_heights = np.array([0, 200, 2000, 5000, 11000, 50000])
     #stretch_factors = np.array([1.025, 1.011, 1.006, 1.02, 1.08])
 
-    stretch_heights = np.array([0, 600, 50000])
-    stretch_factors = np.array([1.005, 1.03])
-    grid = Grid_stretched_manual(192, 4., stretch_heights, stretch_factors)
+    #stretch_heights = np.array([0, 600, 50000])
+    #stretch_factors = np.array([1.005, 1.03])
+    #grid = Grid_stretched_manual(192, 4., stretch_heights, stretch_factors)
 
-    #stretch_heights = np.array([0, 600, 500000])
-    #stretch_factors = np.array([1.004, 1.035])
-    #grid = Grid_stretched_manual(288, 2., stretch_heights, stretch_factors)
+    stretch_heights = np.array([0, 600, 500000])
+    stretch_factors = np.array([1.004, 1.035])
+    grid = Grid_stretched_manual(288, 2., stretch_heights, stretch_factors)
 
     grid.plot()
 
