@@ -107,12 +107,20 @@ if __name__ == '__main__':
     #stretch_factors = np.array([1.025, 1.011, 1.006, 1.02, 1.08])
 
     #stretch_heights = np.array([0, 600, 50000])
+    #stretch_factors = np.array([1.03, 1.06])
+    #grid = Grid_stretched_manual(64, 10., stretch_heights, stretch_factors)
+
+    #stretch_heights = np.array([0, 600, 50000])
     #stretch_factors = np.array([1.005, 1.03])
     #grid = Grid_stretched_manual(192, 4., stretch_heights, stretch_factors)
 
+    #stretch_heights = np.array([0, 600, 500000])
+    #stretch_factors = np.array([1.00, 1.05])
+    #grid = Grid_stretched_manual(384, 2., stretch_heights, stretch_factors)
+
     stretch_heights = np.array([0, 600, 500000])
-    stretch_factors = np.array([1.004, 1.035])
-    grid = Grid_stretched_manual(288, 2., stretch_heights, stretch_factors)
+    stretch_factors = np.array([1.00, 1.04])
+    grid = Grid_stretched_manual(288, 3., stretch_heights, stretch_factors)
 
     grid.plot()
 
@@ -273,7 +281,7 @@ if __name__ == '__main__':
             'qt_sbot': e5.wqs_mean, 'p_sbot': e5.ps_mean }
 
     print('NOTE: using tuned wls....')
-    w_ls_fac = 0.5
+    w_ls_fac = 0.4
 
     tdep_ls = {
             'time_ls': e5.time_sec, 'u_geo': e5_at_z['ug'], 'v_geo': e5_at_z['vg'],

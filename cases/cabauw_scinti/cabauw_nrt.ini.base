@@ -1,16 +1,35 @@
 [master]
-npx=12
-npy=16
+#npx=1
+#npy=1
 
-#npx=24
-#npy=32
+# low res, quick test:
+#npx=12
+#npy=16
+
+# Large domain, high res:
+npx=48
+npy=32
+
+wallclocklimit=1
 
 [grid]
 # Small, 2m resolution
-itot=384
-jtot=384
-xsize=768
-ysize=768
+#itot=384
+#jtot=384
+#xsize=768
+#ysize=768
+
+# Large, 2m resolution
+#itot=1536
+#jtot=1536
+#xsize=3072
+#ysize=3072
+
+# Large, 3m resolution
+itot=768
+jtot=768
+xsize=2304
+ysize=2304
 
 # Large, 8m resolution
 #itot=384
@@ -18,11 +37,17 @@ ysize=768
 #xsize=3072
 #ysize=3072
 
-# Large, 2m resolution
-#itot=768
-#jtot=768
-#itot=1536
-#jtot=1536
+# Large, 16m resolution
+#itot=192
+#jtot=192
+#xsize=3072
+#ysize=3072
+
+# DEBUG
+#itot=32
+#jtot=32
+#xsize=3200
+#ysize=3200
 
 ktot=288
 zsize=3003.070837178836
@@ -36,7 +61,8 @@ cflmax=1.2
 
 [diff]
 swdiff=smag2
-dnmax=0.2
+dnmax=0.1
+cs=0.18
 
 [thermo]
 swthermo=moist
@@ -112,9 +138,14 @@ stop[thl]=0
 sbot[qt]=-1
 stop[qt]=0
 swboundary=surface
-sw_constant_z0=true
-z0m=0.075
-z0h=0.003
+
+# For homogeneous run:
+#sw_constant_z0=true
+#z0m=0.075
+#z0h=0.003
+
+# For heterogeneous run:
+sw_constant_z0=false
 
 [fields]
 visc=0
@@ -133,11 +164,11 @@ sigma=0.00223
 beta=2.0
 
 [time]
-endtime=36000.0
+endtime=30600
 dt=6.0
 dtmax=60.0
 savetime=7200
-outputiter=20
+outputiter=30
 adaptivestep=true
 starttime=0
 rkorder=3
@@ -150,17 +181,27 @@ sampletime=60
 
 [cross]
 swcross=1
-sampletime=60
-xy=10.5,11.5,20.5,21.5
+sampletime=1
+# For 2m vertical grid:
+#xy=10.5,11.5,20.5,21.5
+
+# For 3m vertical grid:
+xy=9.5,11.5,18.5,20.5
+xz=1152
 crosslist=u,v,w,thl,qt,thlfluxbot,qtfluxbot,thlbot,qtbot,ustar
 
 [column]
 swcolumn=1
 sampletime=60
-# Full domain:
-#coordinates[x]=795.1,529.0,2412.4,1991.0,1813.9,2877.0,752.9,1550.4
-#coordinates[y]=1532.8,1600.9,1473.5,909.5,1889.4,2107.3,735.6,2629.3
+
+# Full domain, 2m res:
+#coordinates[x]=795.1,529.0,2412.4,1991.0,1813.9,2877.0,752.9,1541.3
+#coordinates[y]=1532.8,1600.9,1473.5,909.5,1889.4,2107.3,735.6,2762.5
+
+# Full domain, 3m res:
+coordinates[x]=411.1,145.0,2028.4,1607.0,1429.9,368.9
+coordinates[y]=1148.8,1216.9,1089.5,525.5,1505.4,351.6
 
 # Small domain:
-coordinates[x]=383.6,117.5
-coordinates[y]=386.9,455.0
+#coordinates[x]=383.6,117.5
+#coordinates[y]=386.9,455.0
