@@ -31,7 +31,7 @@ import time_tools as tt
 from messages import *
 
 
-def retrieve_from_MARS(request, settings, nc_dir, nc_file):
+def retrieve_from_MARS(request, settings, nc_dir, nc_file, qos):
     """
     Retrieve file from MARS
     """
@@ -43,6 +43,9 @@ def retrieve_from_MARS(request, settings, nc_dir, nc_file):
     mars_req   = '{}.mars' .format(clean_name)
     grib_file  = '{}.grib' .format(clean_name)
     slurm_job  = '{}.slurm'.format(clean_name)
+
+    # Wall clock limit
+    wc_lim = '03:00:00' if qos == 'express' else '06:00:00'
 
     # Create MARS request
     f = open(mars_req, 'w')
@@ -59,12 +62,12 @@ def retrieve_from_MARS(request, settings, nc_dir, nc_file):
 
     f = open(slurm_job, 'w')
     f.write('#!/bin/ksh\n')
-    f.write('#SBATCH --qos=express\n')
+    f.write('#SBATCH --qos={}\n'.format(qos))
     f.write('#SBATCH --job-name={}\n'.format(jobname))
     f.write('#SBATCH --output={}.%N.%j.out\n'.format(slurm_job))
     f.write('#SBATCH --error={}.%N.%j.err\n'.format(slurm_job))
     f.write('#SBATCH --workdir={}\n'.format(nc_dir))
-    f.write('#SBATCH --time=03:00:00\n\n')
+    f.write('#SBATCH --time={}\n\n'.format(wc_lim))
 
     f.write('mars {}\n'.format(mars_req))
     f.write('grib_to_netcdf -o {} {}'.format(nc_file, grib_file))
@@ -124,6 +127,7 @@ def download_ERA5_file(settings):
     request = {
         'class'   : 'ea',
         'expver'  : '1',
+        #'expver'  : '5',
         'stream'  : 'oper',
         'date'    : '{0:04d}-{1:02d}-{2:02d}'.format(settings['date'].year, settings['date'].month, settings['date'].day),
         'area'    : '{}/{}/{}/{}'.format(settings['central_lat']+settings['area_size'], settings['central_lon']-settings['area_size'],\
@@ -143,6 +147,7 @@ def download_ERA5_file(settings):
 
     # Update request based on level/analysis/forecast:
     if settings['ftype'] == 'model_an':
+        qos = 'normal'
         request.update({
             'levtype'  : 'ml',
             'type'     : 'an',
@@ -152,6 +157,7 @@ def download_ERA5_file(settings):
         })
 
     elif settings['ftype'] == 'model_fc':
+        qos = 'normal'
         request.update({
             'levtype'  : 'ml',
             'type'     : 'fc',
@@ -162,6 +168,7 @@ def download_ERA5_file(settings):
         })
 
     elif settings['ftype'] == 'pressure_an':
+        qos = 'normal'
         request.update({
             'levtype'  : 'pl',
             'type'     : 'an',
@@ -171,6 +178,7 @@ def download_ERA5_file(settings):
         })
 
     elif settings['ftype'] == 'surface_an':
+        qos = 'normal'
         request.update({
             'levtype'  : 'sfc',
             'type'     : 'an',
@@ -178,10 +186,15 @@ def download_ERA5_file(settings):
             'param'    : '15.128/16.128/17.128/18.128/27.128/28.128/29.128/30.128/34.128/35.128/36.128/37.128/38.128/39.128/40.128/41.128/42.128/43.128/66.128/67.128/74.128/78.128/79.128/89.228/90.228/129.128/134.128/136.128/137.128/139.128/151.128/160.128/161.128/162.128/163.128/164.128/165.128/166.128/167.128/168.128/170.128/172.128/183.128/186.128/187.128/188.128/198.128/229.128/230.128/231.128/232.128/235.128/236.128/243.128/244.128/245.128'
         })
 
-    #            'param'    : '78.128/79.128/89.228/90.228/134.128/136.128/137.128/151.128/159.128/164.128/165.128/166.128/\
-    #167.128/168.128/186.128/187.128/188.128/229.128/230.128/231.128/232.128/235.128/244.128/245.128/\
-    #246.228/247.228/34.128/35.128/36.128/37.128/38.128/39.128/40.128/41.128/42.128/139.128/170.128/\
-    #172.128/183.128/236.128'
+    elif settings['ftype'] == 'surface_fc':
+        qos = 'normal'
+        request.update({
+            'levtype'  : 'sfc',
+            'type'     : 'fc',
+            'step'     : fc_steps,
+            'time'     : fc_times,
+            'param'    : '21.228/22.228/35.235/36.235/37.235/38.235/39.235/40.235/49.235/50.235/51.235/52.235/53.235/58.235/59.235/68.235/69.235/129.228/130.228/169.128/175.128/176.128/177.128/178.128/179.128/208.128/209.128/210.128/211.128'
+        })
 
     # Retrieve NetCDF file from CDS or MARS:
     if settings['data_source'] == 'CDS':
@@ -189,7 +202,7 @@ def download_ERA5_file(settings):
         server = cdsapi.Client()
         server.retrieve('reanalysis-era5-complete', request, nc_file)
     if settings['data_source'] == 'MARS':
-        retrieve_from_MARS(request, settings, nc_dir, nc_file)
+        retrieve_from_MARS(request, settings, nc_dir, nc_file, qos)
 
     # Restore printing to screen
     if settings['write_log']:
@@ -263,7 +276,7 @@ def download_ERA5(settings):
 
     # Forecast files
     for date in fc_dates:
-        for ftype in ['model_fc']:
+        for ftype in ['model_fc', 'surface_fc']:
 
             ERA_dir, ERA_file = ERA5_file_path(date.year, date.month, date.day, settings['base_path'], settings['case_name'], ftype)
 
@@ -291,56 +304,87 @@ def download_ERA5(settings):
 
 if __name__ == "__main__":
     """ Test / example, only executed if script is called directly """
+    #case = 'cabauw'
+    case = 'atto'
+    #case = 'memo'
+    #case = 'barbados'
+    #case = 'k34'
 
-    # Cabauw
-    settings = {
-        'central_lat' : 51.971,
-        'central_lon' : 4.927,
-        'area_size'   : 1,
-        'case_name'   : 'cabauw',
-        #'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',  # KNMI
-        #'base_path'   : '/Users/bart/meteo/data/LS2D/',        # Macbook
-        #'base_path'   : '/home/scratch1/meteo_data/LS2D/',     # Arch
-        'base_path'   : '/scratch/ms/nl/nkbs/LS2D/',            # ECMWF
-        #'start_date'  : datetime.datetime(year=2018, month=8, day=11, hour=0),
-        #'end_date'    : datetime.datetime(year=2018, month=8, day=12, hour=0),
-        'start_date'  : datetime.datetime(year=2016, month=8, day=4, hour=0),
-        'end_date'    : datetime.datetime(year=2016, month=8, day=18, hour=0),
-        'write_log'   : False,
-        'data_source' : 'MARS',
-        'ntasks'      : 1
-        }
+    if case == 'atto':
+        # ATTO
+        settings = {
+            'central_lat' : -2.1457,
+            'central_lon' : -59.0048,
+            'area_size'   : 2,
+            'case_name'   : 'atto',
+            'base_path'   : '/scratch/ms/nl/nkbs/LS2D/',            # ECMWF
+            'start_date'  : datetime.datetime(year=2019, month=9,  day=1, hour=0),
+            'end_date'    : datetime.datetime(year=2019, month=10, day=1, hour=0),
+            'write_log'   : False,
+            'data_source' : 'MARS',
+            'ntasks'      : 1
+            }
 
-    # Amazon
-    #settings = {
-    #    'central_lat' : -2.6091,
-    #    'central_lon' : -60.2093,
-    #    'area_size'   : 1,
-    #    'case_name'   : 'amazon',
-    #    #'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',  # KNMI
-    #    #'base_path'   : '/Users/bart/meteo/data/LS2D/',        # Macbook
-    #    #'base_path'   : '/home/scratch1/meteo_data/LS2D/',     # Arch
-    #    'base_path'   : '/scratch/ms/nl/nkbs/LS2D/',            # ECMWF
-    #    'start_date'  : datetime.datetime(year=2014, month=9,  day=7,  hour=0),
-    #    'end_date'    : datetime.datetime(year=2014, month=10, day=17, hour=0),
-    #    'write_log'   : False,
-    #    'data_source' : 'MARS',
-    #    'ntasks'      : 1
-    #    }
+    if case == 'k34':
+        # K34 tower
+        settings = {
+            'central_lat' : -2.609097222,
+            'central_lon' : -60.20929722,
+            'area_size'   : 2,
+            'case_name'   : 'k34',
+            'base_path'   : '/scratch/ms/nl/nkbs/LS2D/',            # ECMWF
+            'start_date'  : datetime.datetime(year=2014, month=8, day=20, hour=0),
+            'end_date'    : datetime.datetime(year=2014, month=9, day=21, hour=0),
+            'write_log'   : False,
+            'data_source' : 'MARS',
+            'ntasks'      : 1
+            }
 
-    # NEMO field experiment
-    #settings = {
-    #    'central_lat' : 44.9579,
-    #    'central_lon' : 25.7794,
-    #    'area_size'   : 1,
-    #    'case_name'   : 'romania',
-    #    'base_path'   : '/scratch/ms/nl/nkbs/LS2D/',            # ECMWF
-    #    'start_date'  : datetime.datetime(year=2019, month=10, day=17, hour=0),
-    #    'end_date'    : datetime.datetime(year=2019, month=10, day=19, hour=0),
-    #    'write_log'   : False,
-    #    'data_source' : 'MARS',
-    #    'ntasks'      : 1
-    #    }
+    elif case == 'cabauw':
+        # Cabauw
+        settings = {
+            'central_lat' : 51.971,
+            'central_lon' : 4.927,
+            'area_size'   : 1.5,
+            'case_name'   : 'cabauw',
+            'base_path'   : '/scratch/ms/nl/nkbs/LS2D/',            # ECMWF
+            'start_date'  : datetime.datetime(year=2017, month=8, day=19, hour=0),
+            'end_date'    : datetime.datetime(year=2017, month=8, day=20, hour=0),
+            'write_log'   : False,
+            'data_source' : 'MARS',
+            'ntasks'      : 1
+            }
+
+    elif case == 'memo':
+        # NEMO field experiment
+        settings = {
+            'central_lat' : 44.9579,
+            'central_lon' : 25.7794,
+            'area_size'   : 1,
+            'case_name'   : 'romania',
+            'base_path'   : '/scratch/ms/nl/nkbs/LS2D/',            # ECMWF
+            'start_date'  : datetime.datetime(year=2019, month=10, day=17, hour=0),
+            'end_date'    : datetime.datetime(year=2019, month=10, day=19, hour=0),
+            'write_log'   : False,
+            'data_source' : 'MARS',
+            'ntasks'      : 1
+            }
+
+    elif case == 'barbados':
+        # Barbados
+        settings = {
+            'central_lat' : 13.3,
+            'central_lon' : -57.6,
+            'area_size'   : 4,
+            'case_name'   : 'barbados',
+            'base_path'   : '/scratch/ms/nl/nkbs/LS2D/',            # ECMWF
+            'start_date'  : datetime.datetime(year=2020, month=1, day=19, hour=0),
+            'end_date'    : datetime.datetime(year=2020, month=2, day=21, hour=0),
+            'write_log'   : False,
+            'data_source' : 'MARS',
+            'ntasks'      : 1
+            }
+
 
     # Download the ERA5 data (or check whether it is available local)
     download_ERA5(settings)
