@@ -504,10 +504,50 @@ class Read_ERA:
             ug_p_mean = -IFS_tools.grav / self.fc * (
                 self.z_p[north].mean(axis=(2,3)) - self.z_p[south].mean(axis=(2,3))) / distance_NS
 
+        elif (method == 'np.grad'):
+            """
+            Test with np.gradient method
+            """
+
+            r_earth = 6.37e6
+
+            lat_rad = np.deg2rad(self.lats)
+            lon_rad = np.deg2rad(self.lons)
+            cos_lat = np.cos(lat_rad)
+
+            dxdi = np.zeros((self.nlat, self.nlon))
+            dydj = np.zeros((self.nlat, self.nlon))
+
+            dxdi[:,:] = r_earth * cos_lat[:,None]*np.gradient(lon_rad[None, :], axis=1)
+            dydj[:,:] = r_earth * np.gradient(lat_rad[:, None], axis=0)
+
+            def advec(var):
+                dvardx = np.gradient(var, axis=3) / dxdi[None, None, :, :]
+                dvardy = np.gradient(var, axis=2) / dydj[None, None, :, :]
+                dtvar  = -self.u * dvardx - self.v * dvardy
+                return dtvar[center4d].mean(axis=(2,3))
+
+            # Calculate advective tendencies:
+            self.dtthl_advec_mean = advec(self.thl)
+            self.dtqt_advec_mean  = advec(self.qt)
+            self.dtu_advec_mean   = advec(self.u)
+            self.dtv_advec_mean   = advec(self.v)
+
+            # Geostrophic wind:
+            dzdx = np.gradient(self.z_p, axis=3) / dxdi[None, None, :, :]
+            dzdy = np.gradient(self.z_p, axis=2) / dydj[None, None, :, :]
+
+            ug = -IFS_tools.grav / self.fc * dzdy
+            vg =  IFS_tools.grav / self.fc * dzdx
+
+            ug_p_mean = ug[center4d].mean(axis=(2,3))
+            vg_p_mean = vg[center4d].mean(axis=(2,3))
+
         # Interpolate geostrophic wind onto model grid. Use Scipy's interpolation,
         # as it can extrapolate (in case ps > 1000 hPa)
         self.ug_mean = np.zeros_like(self.p_mean)
         self.vg_mean = np.zeros_like(self.p_mean)
+
         for t in range(self.ntime):
             self.ug_mean[t,:] = interpolate.interp1d(
                     self.p_p, ug_p_mean[t,:], fill_value='extrapolate')(self.p_mean[t,:])
@@ -612,23 +652,46 @@ if __name__ == '__main__':
     import matplotlib.pyplot as pl
     pl.close('all'); pl.ion()
 
+    #settings = {
+    #    'central_lat' : 51.971,
+    #    'central_lon' : 4.927,
+    #    'area_size'   : 1,
+    #    'case_name'   : 'cabauw',
+    #    'base_path'   : '/home/scratch1/meteo_data/LS2D/',      # Arch
+    #    'start_date'  : datetime.datetime(year=2016, month=8, day=7, hour=0),
+    #    'end_date'    : datetime.datetime(year=2016, month=8, day=15, hour=0),
+    #    'write_log'   : True
+    #    }
+
     settings = {
-        'central_lat' : 51.971,
-        'central_lon' : 4.927,
-        'area_size'   : 1,
-        'case_name'   : 'cabauw',
-        #'base_path'   : '/nobackup/users/stratum/ERA5/LS2D/',  # KNMI
-        #'base_path'   : '/Users/bart/meteo/data/LS2D/',   # Macbook
+        'central_lat' : -2.609097222,
+        'central_lon' : -60.20929722,
+        'area_size'   : 2,
+        'case_name'   : 'k34',
         'base_path'   : '/home/scratch1/meteo_data/LS2D/',      # Arch
-        #'start_date'  : datetime.datetime(year=2016, month=9, day=5, hour=0),
-        #'end_date'    : datetime.datetime(year=2016, month=9, day=6, hour=0),
-        'start_date'  : datetime.datetime(year=2016, month=5, day=3, hour=0),
-        'end_date'    : datetime.datetime(year=2016, month=5, day=4, hour=0),
-        'write_log'   : True
+        'start_date'  : datetime.datetime(year=2014, month=9, day=1, hour=0),
+        'end_date'    : datetime.datetime(year=2014, month=9, day=8, hour=0),
+        'write_log'   : False,
+        'data_source' : 'MARS',
+        'ntasks'      : 1
         }
 
 
-    if True:
+    if False:
+        e5 = Read_ERA(settings)
+        e5.calculate_forcings(n_av=0, method='4th')
+
+        pl.figure()
+        pl.subplot(121)
+        for t in range(e5.ntime):
+            pl.plot(e5.ug_mean[t,:], e5.z_mean[t,:])
+
+        pl.subplot(122)
+        for t in range(e5.ntime):
+            pl.plot(e5.vg_mean[t,:], e5.z_mean[t,:])
+
+
+    if False:
         e5 = Read_ERA(settings)
         e5.calculate_forcings(n_av=0, method='4th')
 
@@ -650,63 +713,63 @@ if __name__ == '__main__':
         e5.save_forcings(name)
 
 
-    if False:
+    if True:
         e5_box = Read_ERA(settings)
         e5_2nd = Read_ERA(settings)
         e5_4th = Read_ERA(settings)
+        e5_gra = Read_ERA(settings)
 
-        e5_box.calculate_forcings(n_av=1, method='box')
-        e5_2nd.calculate_forcings(n_av=1, method='2nd')
-        e5_4th.calculate_forcings(n_av=1, method='4th')
+        n = 1
+
+        e5_box.calculate_forcings(n_av=n, method='box')
+        e5_2nd.calculate_forcings(n_av=n, method='2nd')
+        e5_4th.calculate_forcings(n_av=n, method='4th')
+        e5_gra.calculate_forcings(n_av=n, method='np.grad')
 
         k = 8
 
         pl.figure(figsize=(10,7))
-        pl.subplot(331)
+        pl.subplot(321)
         pl.plot(e5_box.datetime, e5_box.dtthl_advec_mean[:,k]*3600., label='box')
         pl.plot(e5_2nd.datetime, e5_2nd.dtthl_advec_mean[:,k]*3600., label='2nd')
         pl.plot(e5_4th.datetime, e5_4th.dtthl_advec_mean[:,k]*3600., label='4th')
+        pl.plot(e5_gra.datetime, e5_gra.dtthl_advec_mean[:,k]*3600., label='np.grad')
         pl.legend()
         pl.ylabel('dtthl_advec (K h-1)')
 
-        pl.subplot(332)
-        pl.plot(e5_box.datetime, e5_box.dtthl_sw_mean[:,k]*3600., label='SW')
-        pl.plot(e5_box.datetime, e5_box.dtthl_lw_mean[:,k]*3600., label='LW')
-        pl.legend()
-        pl.ylabel('dtthl_rad (K h-1)')
-
-        pl.subplot(333)
+        pl.subplot(322)
         pl.plot(e5_box.datetime, e5_box.dtqt_advec_mean[:,k]*3600000.)
         pl.plot(e5_2nd.datetime, e5_2nd.dtqt_advec_mean[:,k]*3600000.)
         pl.plot(e5_4th.datetime, e5_4th.dtqt_advec_mean[:,k]*3600000.)
+        pl.plot(e5_gra.datetime, e5_gra.dtqt_advec_mean[:,k]*3600000.)
         pl.ylabel('dtqt_advec (g kg-1 h-1)')
 
-        pl.subplot(334)
+        pl.subplot(323)
         pl.plot(e5_box.datetime, e5_box.dtu_total_mean[:,k]*3600.)
         pl.plot(e5_2nd.datetime, e5_2nd.dtu_total_mean[:,k]*3600.)
         pl.plot(e5_4th.datetime, e5_4th.dtu_total_mean[:,k]*3600.)
+        pl.plot(e5_gra.datetime, e5_gra.dtu_total_mean[:,k]*3600.)
         pl.ylabel('dtu_advec (m s-1 h-1)')
 
-        pl.subplot(335)
+        pl.subplot(324)
         pl.plot(e5_box.datetime, e5_box.dtv_total_mean[:,k]*3600.)
         pl.plot(e5_2nd.datetime, e5_2nd.dtv_total_mean[:,k]*3600.)
         pl.plot(e5_4th.datetime, e5_4th.dtv_total_mean[:,k]*3600.)
+        pl.plot(e5_gra.datetime, e5_gra.dtv_total_mean[:,k]*3600.)
         pl.ylabel('dtv_advec (m s-1 h-1)')
 
-        pl.subplot(336)
+        pl.subplot(325)
         pl.plot(e5_box.datetime, e5_box.ug_mean[:,k])
         pl.plot(e5_2nd.datetime, e5_2nd.ug_mean[:,k])
         pl.plot(e5_4th.datetime, e5_4th.ug_mean[:,k])
+        pl.plot(e5_gra.datetime, e5_gra.ug_mean[:,k])
         pl.ylabel('ug (m s-1)')
 
-        pl.subplot(337)
+        pl.subplot(326)
         pl.plot(e5_box.datetime, e5_box.vg_mean[:,k])
         pl.plot(e5_2nd.datetime, e5_2nd.vg_mean[:,k])
         pl.plot(e5_4th.datetime, e5_4th.vg_mean[:,k])
+        pl.plot(e5_gra.datetime, e5_gra.vg_mean[:,k])
         pl.ylabel('vg (m s-1)')
-
-        pl.subplot(338)
-        pl.plot(e5_box.datetime, e5_box.wls_mean[:,k])
-        pl.ylabel('wls (m s-1)')
 
         pl.tight_layout()
