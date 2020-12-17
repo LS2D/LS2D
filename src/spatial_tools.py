@@ -32,7 +32,7 @@ def haversine(lon1, lat1, lon2, lat2):
 def distance(lat1, lon1, lat2, lon2):
     dist_we = dlon(lon1, lon2, lat1)
     dist_ns = dlat(lat1, lat2)
-    return (dist_we**2 + dist_ns**2)**0.5    
+    return (dist_we**2 + dist_ns**2)**0.5
 
 def dlon(lonW, lonE, lat):
     """ Distance between longitudes in spherical coordinates """
@@ -40,7 +40,7 @@ def dlon(lonW, lonE, lat):
 
 def ddlon(valW, valE, lonW, lonE, lat):
     """ Gradient between longitudes in spherical coordinates """
-    return (valE - valW) / dlon(lonW, lonE, lat) 
+    return (valE - valW) / dlon(lonW, lonE, lat)
 
 def dlat(latS, latN):
     """ Distance between latitudes in spherical coordinates """
