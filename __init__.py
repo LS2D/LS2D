@@ -19,3 +19,4 @@
 #
 
 from .ecmwf import download_era5, Read_era5
+from .util import grid

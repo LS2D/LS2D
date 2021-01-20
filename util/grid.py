@@ -5,7 +5,7 @@ import sys
 #
 # Vertical grids
 #
-class Grid:
+class _Grid:
     def __init__(self, kmax, dz0):
         self.kmax = kmax
         self.dz0  = dz0
@@ -22,7 +22,7 @@ class Grid:
         pl.ylabel(r'$z$ (m)')
 
 
-class Grid_equidist(Grid):
+class Grid_equidist(_Grid):
     def __init__(self, kmax, dz0):
         Grid.__init__(self, kmax, dz0)
 
@@ -31,7 +31,7 @@ class Grid_equidist(Grid):
         self.dz[:] = dz0
 
 
-class Grid_stretched(Grid):
+class Grid_stretched(_Grid):
     def __init__(self, kmax, dz0, nloc1, nbuf1, dz1, nloc2=None, nbuf2=None, dz2=None):
         Grid.__init__(self, kmax, dz0)
 
@@ -70,7 +70,7 @@ class Grid_stretched(Grid):
         self.zsize = self.z[kmax-1] + 0.5*self.dz[kmax-1]
 
 
-class Grid_linear_stretched(Grid):
+class Grid_linear_stretched(_Grid):
     def __init__(self, kmax, dz0, alpha):
         Grid.__init__(self, kmax, dz0)
 
@@ -81,7 +81,7 @@ class Grid_linear_stretched(Grid):
         self.zsize = zh[-1]
 
 
-class Grid_stretched_manual(Grid):
+class Grid_stretched_manual(_Grid):
     def __init__(self, kmax, dz0, heights, factors):
         Grid.__init__(self, kmax, dz0)
 
@@ -133,39 +133,3 @@ def check_grid_decomposition(itot, jtot, ktot, npx, npy):
     else:
         print('Grid configuration okay!')
         return True
-
-
-
-if __name__ == '__main__':
-    """
-    Just for testing...
-    """
-    import matplotlib.pyplot as pl
-    pl.close('all'); pl.ion()
-
-    if True:
-        ktot = 252
-        dz0  = 20
-
-        heights = np.array([0, 200, 2000, 5000, 15000, 50000])
-        factors = np.array([1.025, 1.011, 1.006, 1.022, 1.07])
-
-        equidist   = Grid_equidist(ktot, dz0)
-        linear     = Grid_linear_stretched(ktot, dz0, 0.01)
-        stretched1 = Grid_stretched(ktot, dz0, 90, 20, 150)
-        stretched2 = Grid_stretched(ktot, dz0, 100, 20, 100, 210, 10, 500)
-        stretched3 = Grid_stretched_manual(ktot, 10., heights, factors)
-
-        pl.figure()
-        pl.plot(equidist.dz, equidist.z, '-x', label='equidistant')
-        pl.plot(linear.dz, linear.z, '-x', label='linear')
-        pl.plot(stretched1.dz, stretched1.z, '-x', label='stretched-single')
-        pl.plot(stretched2.dz, stretched2.z, '-x', label='stretched-double')
-        pl.plot(stretched3.dz, stretched3.z, '-x', label='stretched-manual')
-        pl.legend()
-        pl.xlabel('dz (m)')
-        pl.ylabel('z (m)')
-
-    if False:
-        check_grid_decomposition(32, 32, 32, 4, 4)
-        check_grid_decomposition(32, 32, 32, 6, 4)
