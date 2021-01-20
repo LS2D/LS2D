@@ -171,7 +171,8 @@ def _download_era5_file(settings):
                         'soil_temperature_level_3', 'soil_temperature_level_4', 'soil_type',
                         'surface_pressure', 'instantaneous_surface_sensible_heat_flux', 'type_of_high_vegetation',
                         'type_of_low_vegetation', 'volumetric_soil_water_layer_1', 'volumetric_soil_water_layer_2',
-                        'volumetric_soil_water_layer_3', 'volumetric_soil_water_layer_4']})
+                        'volumetric_soil_water_layer_3', 'volumetric_soil_water_layer_4',
+                        'forecast_logarithm_of_surface_roughness_for_heat', 'forecast_surface_roughness']})
 
                 server.retrieve('reanalysis-era5-single-levels', request, nc_file)
 

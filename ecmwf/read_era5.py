@@ -17,22 +17,22 @@
 # along with LS2D.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-# Standard Python packages
+# Python modules
+import datetime
+import sys, os
+
+# Third party modules
 import numpy as np
 import netCDF4 as nc4
 from scipy import interpolate
-import os
-import sys
-import datetime
 
-# Custom tools (in src subdirectory)
-import spatial_tools as st
-import time_tools as tt
-import finite_difference as fd
+# LS2D modules
+import src.spatial_tools as spatial
+import src.finite_difference as fd
+from src.messages import *
 
-from IFS_tools import IFS_tools
-from download_ERA5 import ERA5_file_path
-from messages import *
+import ecmwf.era_tools as era_tools
+from ecmwf.IFS_tools import IFS_tools
 
 class Slice:
     def __init__(self, istart, iend, jstart, jend):
@@ -45,7 +45,7 @@ class Slice:
         return np.s_[:,:,self.jstart+dj:self.jend+dj,\
                          self.istart+di:self.iend+di]
 
-class Read_ERA:
+class Read_era5:
     """
     Read the ERA5 model/pressure/surface level data,
     and optionally calculate the LES/SCM forcings
@@ -74,23 +74,23 @@ class Read_ERA:
         header('Reading ERA5 from {} to {}'.format(self.start, self.end))
 
         # Get list of required forecast and analysis times
-        an_dates = tt.get_required_analysis(self.start, self.end)
-        fc_dates = tt.get_required_forecast(self.start, self.end)
+        an_dates = era_tools.get_required_analysis(self.start, self.end)
+        fc_dates = era_tools.get_required_forecast(self.start, self.end)
 
         # Check if output directory ends with '/'
-        if self.settings['base_path'][-1] != '/':
-            self.settings['base_path'] += '/'
+        if self.settings['era5_path'][-1] != '/':
+            self.settings['era5_path'] += '/'
 
         # Create lists with required files
-        path = self.settings['base_path']
+        path = self.settings['era5_path']
         case = self.settings['case_name']
-        an_sfc_files   = [ERA5_file_path(
+        an_sfc_files   = [era_tools.era5_file_path(
             d.year, d.month, d.day, path, case, 'surface_an',  False) for d in an_dates]
-        an_model_files = [ERA5_file_path(
+        an_model_files = [era_tools.era5_file_path(
             d.year, d.month, d.day, path, case, 'model_an',    False) for d in an_dates]
-        an_pres_files  = [ERA5_file_path(
+        an_pres_files  = [era_tools.era5_file_path(
             d.year, d.month, d.day, path, case, 'pressure_an', False) for d in an_dates]
-        fc_model_files = [ERA5_file_path(
+        fc_model_files = [era_tools.era5_file_path(
             d.year, d.month, d.day, path, case, 'model_fc',    False) for d in fc_dates]
 
         # Check if all files exist, and exit if not..
@@ -224,16 +224,11 @@ class Read_ERA:
         self.o3 = get_variable(self.fma, 'o3',   s3d )  # Ozone (kg kg-1)
         self.ps = get_variable(self.fma, 'lnsp', s3ds, np.exp)  # Surface pressure (Pa)
 
-        # Model level forecast data:
-        self.dtT_sw = get_variable(self.fmf, 'mttswr',  s3d_fc)  # Mean temperature tendency SW radiation (K s-1)
-        self.dtT_lw = get_variable(self.fmf, 'mttlwr',  s3d_fc)  # Mean temperature tendency LW radiation (K s-1)
-
         # Surface variables:
         self.sst =  get_variable(self.fsa, 'sst',  s2d)  # Sea surface temperature (K)
         self.Ts  =  get_variable(self.fsa, 'skt',  s2d)  # Skin temperature (K)
         self.H   = -get_variable(self.fsa, 'ishf', s2d)  # Surface sensible heat flux (W m-2)
         self.wqs = -get_variable(self.fsa, 'ie',   s2d)  # Surface kinematic moisture flux (g kg-1)
-        self.cc  =  get_variable(self.fsa, 'tcc',  s2d)  # Total cloud cover (-)
         self.z0m =  get_variable(self.fsa, 'fsr',  s2d)  # Surface roughness length (m)
         self.z0h =  get_variable(self.fsa, 'flsr', s2d, np.exp)  # Surface roughness length heat (m)
 
@@ -305,10 +300,6 @@ class Read_ERA:
 
         self.fc  = 2 * 7.2921e-5 * np.sin(np.deg2rad(self.settings['central_lat']))  # Coriolis parameter
 
-        # Convert forecasted radiative temperature tendencies from T to thl
-        self.dtthl_sw = self.dtT_sw / self.exn   # Mean potential temperature tendency SW radiation (K s-1)
-        self.dtthl_lw = self.dtT_lw / self.exn   # Mean potential temperature tendency LW radiation (K s-1)
-
         # Store soil temperature, and moisture content, in 3D array
         self.T_soil = np.zeros((self.ntime, 4, self.nlat, self.nlon))
         self.theta_soil = np.zeros((self.ntime, 4, self.nlat, self.nlon))
@@ -335,7 +326,7 @@ class Read_ERA:
         self.j = np.abs(self.lats - self.settings['central_lat']).argmin()
 
         # Some debugging output
-        distance = st.haversine(
+        distance = spatial.haversine(
                 self.lons[self.i], self.lats[self.j],
                 self.settings['central_lon'], self.settings['central_lat'])
 
@@ -356,15 +347,15 @@ class Read_ERA:
         # Variables averaged from (time, height, lon, lat) to (time, height):
         var_4d_mean = [
                 'z', 'zh', 'p', 'ph', 'T', 'thl', 'qt', 'qc', 'qi',
-                'u', 'v', 'U', 'wls', 'rho', 'o3', 'dtthl_sw',
-                'dtthl_lw', 'T_soil', 'theta_soil']
+                'u', 'v', 'U', 'wls', 'rho', 'o3',
+                'T_soil', 'theta_soil']
         for var in var_4d_mean:
             mean = getattr(self, var)[center4d].mean(axis=(2,3))
             setattr(self, '{}_mean'.format(var), mean)
 
         # Variables averaged from (time, lon, lat) to (time):
         var_3d_mean = [
-                'ps', 'Ts', 'sst', 'wths', 'wqs', 'ps', 'cc',
+                'ps', 'Ts', 'sst', 'wths', 'wqs', 'ps',
                 'lai_low', 'lai_high', 'z0m', 'z0h']
         for var in var_3d_mean:
             mean = getattr(self, var)[center3d].mean(axis=(1,2))
@@ -387,35 +378,71 @@ class Read_ERA:
         self.Th_mean[:,-1] = self.T_mean[:,-1] + dTdz * (self.zh_mean[:,-1] - self.z_mean[:,-1])
 
         # Estimate horizontal grid spacing (assumed constant in averaging domain)\
-        dx = st.dlon(self.lons[self.i-1], self.lons[self.i+1], self.lats[self.j]) / 2.
-        dy = st.dlat(self.lats[self.j-1], self.lats[self.j+1]) / 2.
+        dx = spatial.dlon(self.lons[self.i-1], self.lons[self.i+1], self.lats[self.j]) / 2.
+        dy = spatial.dlat(self.lats[self.j-1], self.lats[self.j+1]) / 2.
 
         if (method == '2nd'):
 
-            s = Slice(istart, iend, jstart, jend)
+            r_earth = 6.37e6
 
-            # Calculate advective tendencies
-            self.dtthl_advec_mean = (
-                -self.u[s(0,0)] * fd.grad2c( self.thl[s(0,-1)], self.thl[s(0,+1)], dx) \
-                -self.v[s(0,0)] * fd.grad2c( self.thl[s(-1,0)], self.thl[s(+1,0)], dy) ).mean(axis=(2,3))
+            lat_rad = np.deg2rad(self.lats)
+            lon_rad = np.deg2rad(self.lons)
+            cos_lat = np.cos(lat_rad)
 
-            self.dtqt_advec_mean = (
-                -self.u[s(0,0)] * fd.grad2c( self.qt[s(0,-1)], self.qt[s(0,+1)], dx) \
-                -self.v[s(0,0)] * fd.grad2c( self.qt[s(-1,0)], self.qt[s(+1,0)], dy) ).mean(axis=(2,3))
+            dxdi = np.zeros((self.nlat, self.nlon))
+            dydj = np.zeros((self.nlat, self.nlon))
 
-            self.dtu_advec_mean = (
-                -self.u[s(0,0)] * fd.grad2c( self.u[s(0,-1)], self.u[s(0,+1)], dx) \
-                -self.v[s(0,0)] * fd.grad2c( self.u[s(-1,0)], self.u[s(+1,0)], dy) ).mean(axis=(2,3))
+            dxdi[:,:] = r_earth * cos_lat[:,None]*np.gradient(lon_rad[None, :], axis=1)
+            dydj[:,:] = r_earth * np.gradient(lat_rad[:, None], axis=0)
 
-            self.dtv_advec_mean = (
-                -self.u[s(0,0)] * fd.grad2c( self.v[s(0,-1)], self.v[s(0,+1)], dx) \
-                -self.v[s(0,0)] * fd.grad2c( self.v[s(-1,0)], self.v[s(+1,0)], dy) ).mean(axis=(2,3))
+            def advec(var):
+                dvardx = np.gradient(var, axis=3) / dxdi[None, None, :, :]
+                dvardy = np.gradient(var, axis=2) / dydj[None, None, :, :]
+                dtvar  = -self.u * dvardx - self.v * dvardy
+                return dtvar[center4d].mean(axis=(2,3))
 
-            # Geostrophic wind (gradient geopotential height on constant pressure levels)
-            vg_p_mean = (  IFS_tools.grav / self.fc * fd.grad2c(
-                self.z_p[s(0,-1)], self.z_p[s(0,+1)], dx) ).mean(axis=(2,3))
-            ug_p_mean = ( -IFS_tools.grav / self.fc * fd.grad2c(
-                self.z_p[s(-1,0)], self.z_p[s(+1,0)], dy) ).mean(axis=(2,3))
+            # Calculate advective tendencies:
+            self.dtthl_advec_mean = advec(self.thl)
+            self.dtqt_advec_mean  = advec(self.qt)
+            self.dtu_advec_mean   = advec(self.u)
+            self.dtv_advec_mean   = advec(self.v)
+
+            # Geostrophic wind:
+            dzdx = np.gradient(self.z_p, axis=3) / dxdi[None, None, :, :]
+            dzdy = np.gradient(self.z_p, axis=2) / dydj[None, None, :, :]
+
+            ug = -IFS_tools.grav / self.fc * dzdy
+            vg =  IFS_tools.grav / self.fc * dzdx
+
+            ug_p_mean = ug[center4d].mean(axis=(2,3))
+            vg_p_mean = vg[center4d].mean(axis=(2,3))
+
+        #if (method == '2nd'):
+
+        #    s = Slice(istart, iend, jstart, jend)
+
+        #    # Calculate advective tendencies
+        #    self.dtthl_advec_mean = (
+        #        -self.u[s(0,0)] * fd.grad2c( self.thl[s(0,-1)], self.thl[s(0,+1)], dx) \
+        #        -self.v[s(0,0)] * fd.grad2c( self.thl[s(-1,0)], self.thl[s(+1,0)], dy) ).mean(axis=(2,3))
+
+        #    self.dtqt_advec_mean = (
+        #        -self.u[s(0,0)] * fd.grad2c( self.qt[s(0,-1)], self.qt[s(0,+1)], dx) \
+        #        -self.v[s(0,0)] * fd.grad2c( self.qt[s(-1,0)], self.qt[s(+1,0)], dy) ).mean(axis=(2,3))
+
+        #    self.dtu_advec_mean = (
+        #        -self.u[s(0,0)] * fd.grad2c( self.u[s(0,-1)], self.u[s(0,+1)], dx) \
+        #        -self.v[s(0,0)] * fd.grad2c( self.u[s(-1,0)], self.u[s(+1,0)], dy) ).mean(axis=(2,3))
+
+        #    self.dtv_advec_mean = (
+        #        -self.u[s(0,0)] * fd.grad2c( self.v[s(0,-1)], self.v[s(0,+1)], dx) \
+        #        -self.v[s(0,0)] * fd.grad2c( self.v[s(-1,0)], self.v[s(+1,0)], dy) ).mean(axis=(2,3))
+
+        #    # Geostrophic wind (gradient geopotential height on constant pressure levels)
+        #    vg_p_mean = (  IFS_tools.grav / self.fc * fd.grad2c(
+        #        self.z_p[s(0,-1)], self.z_p[s(0,+1)], dx) ).mean(axis=(2,3))
+        #    ug_p_mean = ( -IFS_tools.grav / self.fc * fd.grad2c(
+        #        self.z_p[s(-1,0)], self.z_p[s(+1,0)], dy) ).mean(axis=(2,3))
 
         elif (method == '4th'):
 
@@ -460,89 +487,6 @@ class Read_ERA:
                     self.z_p[s(-2,0)], self.z_p[s(-1,0)], self.z_p[s(+1,0)], self.z_p[s(+2,0)], dy)
                         ).mean(axis=(2,3))
 
-        elif (method == 'box'):
-
-            # Numpy slicing tupples of boxes east, west, north and south of main domain
-            box_size = 2*n_av+1
-            east  = np.s_[:, :, jstart:jend, self.i+1:self.i+box_size+1]
-            west  = np.s_[:, :, jstart:jend, self.i-box_size:self.i    ]
-            north = np.s_[:, :, self.j+1:self.j+box_size+1, istart:iend]
-            south = np.s_[:, :, self.j-box_size:self.j,     istart:iend]
-
-            # Distance east-west and north_south of boxes
-            distance_WE = st.dlon(self.lons[self.i-n_av-1], self.lons[self.i+n_av+1], self.lats[self.j])
-            distance_NS = st.dlat(self.lats[self.j-n_av-1], self.lats[self.j+n_av+1])
-
-            # Calculate advective tendencies
-            self.dtthl_advec_mean = \
-                -self.u_mean * (
-                    self.thl[east] .mean(axis=(2,3)) - self.thl[west ].mean(axis=(2,3))) / distance_WE \
-                -self.v_mean * (
-                    self.thl[north].mean(axis=(2,3)) - self.thl[south].mean(axis=(2,3))) / distance_NS
-
-            self.dtqt_advec_mean = \
-                -self.u_mean * (
-                    self.qt[east] .mean(axis=(2,3)) - self.qt[west ].mean(axis=(2,3))) / distance_WE \
-                -self.v_mean * (
-                    self.qt[north].mean(axis=(2,3)) - self.qt[south].mean(axis=(2,3))) / distance_NS
-
-            self.dtu_advec_mean = \
-                -self.u_mean * (
-                    self.u[east] .mean(axis=(2,3)) - self.u[west ].mean(axis=(2,3))) / distance_WE \
-                -self.v_mean * (
-                    self.u[north].mean(axis=(2,3)) - self.u[south].mean(axis=(2,3))) / distance_NS
-
-            self.dtv_advec_mean = \
-                -self.u_mean * (
-                    self.v[east] .mean(axis=(2,3)) - self.v[west ].mean(axis=(2,3))) / distance_WE \
-                -self.v_mean * (
-                    self.v[north].mean(axis=(2,3)) - self.v[south].mean(axis=(2,3))) / distance_NS
-
-            # Geostrophic wind (gradient geopotential height on constant pressure levels)
-            vg_p_mean =  IFS_tools.grav / self.fc * (
-                self.z_p[east ].mean(axis=(2,3)) - self.z_p[west ].mean(axis=(2,3))) / distance_WE
-            ug_p_mean = -IFS_tools.grav / self.fc * (
-                self.z_p[north].mean(axis=(2,3)) - self.z_p[south].mean(axis=(2,3))) / distance_NS
-
-        elif (method == 'np.grad'):
-            """
-            Test with np.gradient method
-            """
-
-            r_earth = 6.37e6
-
-            lat_rad = np.deg2rad(self.lats)
-            lon_rad = np.deg2rad(self.lons)
-            cos_lat = np.cos(lat_rad)
-
-            dxdi = np.zeros((self.nlat, self.nlon))
-            dydj = np.zeros((self.nlat, self.nlon))
-
-            dxdi[:,:] = r_earth * cos_lat[:,None]*np.gradient(lon_rad[None, :], axis=1)
-            dydj[:,:] = r_earth * np.gradient(lat_rad[:, None], axis=0)
-
-            def advec(var):
-                dvardx = np.gradient(var, axis=3) / dxdi[None, None, :, :]
-                dvardy = np.gradient(var, axis=2) / dydj[None, None, :, :]
-                dtvar  = -self.u * dvardx - self.v * dvardy
-                return dtvar[center4d].mean(axis=(2,3))
-
-            # Calculate advective tendencies:
-            self.dtthl_advec_mean = advec(self.thl)
-            self.dtqt_advec_mean  = advec(self.qt)
-            self.dtu_advec_mean   = advec(self.u)
-            self.dtv_advec_mean   = advec(self.v)
-
-            # Geostrophic wind:
-            dzdx = np.gradient(self.z_p, axis=3) / dxdi[None, None, :, :]
-            dzdy = np.gradient(self.z_p, axis=2) / dydj[None, None, :, :]
-
-            ug = -IFS_tools.grav / self.fc * dzdy
-            vg =  IFS_tools.grav / self.fc * dzdx
-
-            ug_p_mean = ug[center4d].mean(axis=(2,3))
-            vg_p_mean = vg[center4d].mean(axis=(2,3))
-
         # Interpolate geostrophic wind onto model grid. Use Scipy's interpolation,
         # as it can extrapolate (in case ps > 1000 hPa)
         self.ug_mean = np.zeros_like(self.p_mean)
@@ -563,10 +507,14 @@ class Read_ERA:
         self.dtv_total_mean = self.dtv_advec_mean + self.dtv_coriolis_mean
 
 
-    def interpolate_to_fixed_height(self, variables, z):
+    def interpolate_to_fixed_height(self, z):
         """
         Interpolate list of `variables` to a requested (fixed in time) height `z`.
         """
+
+        variables = ['thl', 'qt', 'u', 'v', 'wls', 'p',
+            'dtthl_advec', 'dtqt_advec', 'dtu_advec', 'dtv_advec',
+            'ug' ,'vg' ,'o3', 'z']
 
         def interp_z(array, z):
             out = np.empty((self.ntime, z.size))
@@ -644,132 +592,3 @@ class Read_ERA:
                 'Longwave radiative tendency liquid water potential temperature', self.dtthl_lw_mean)
 
         nc.close()
-
-
-if __name__ == '__main__':
-    """ Test / example, only executed if script is called directly """
-
-    import matplotlib.pyplot as pl
-    pl.close('all'); pl.ion()
-
-    #settings = {
-    #    'central_lat' : 51.971,
-    #    'central_lon' : 4.927,
-    #    'area_size'   : 1,
-    #    'case_name'   : 'cabauw',
-    #    'base_path'   : '/home/scratch1/meteo_data/LS2D/',      # Arch
-    #    'start_date'  : datetime.datetime(year=2016, month=8, day=7, hour=0),
-    #    'end_date'    : datetime.datetime(year=2016, month=8, day=15, hour=0),
-    #    'write_log'   : True
-    #    }
-
-    settings = {
-        'central_lat' : -2.609097222,
-        'central_lon' : -60.20929722,
-        'area_size'   : 2,
-        'case_name'   : 'k34',
-        'base_path'   : '/home/scratch1/meteo_data/LS2D/',      # Arch
-        'start_date'  : datetime.datetime(year=2014, month=9, day=1, hour=0),
-        'end_date'    : datetime.datetime(year=2014, month=9, day=8, hour=0),
-        'write_log'   : False,
-        'data_source' : 'MARS',
-        'ntasks'      : 1
-        }
-
-
-    if False:
-        e5 = Read_ERA(settings)
-        e5.calculate_forcings(n_av=0, method='4th')
-
-        pl.figure()
-        pl.subplot(121)
-        for t in range(e5.ntime):
-            pl.plot(e5.ug_mean[t,:], e5.z_mean[t,:])
-
-        pl.subplot(122)
-        for t in range(e5.ntime):
-            pl.plot(e5.vg_mean[t,:], e5.z_mean[t,:])
-
-
-    if False:
-        e5 = Read_ERA(settings)
-        e5.calculate_forcings(n_av=0, method='4th')
-
-        variables = [
-                'thl', 'qt', 'u', 'v', 'wls', 'p',
-                'dtthl_advec', 'dtqt_advec', 'dtu_advec', 'dtv_advec',
-                'ug' ,'vg' ,'o3', 'z']
-
-        z = np.arange(10,1000.01,10)
-        les_data = e5.interpolate_to_fixed_height(variables, z)
-
-
-    if False:
-        e5 = Read_ERA(settings)
-        e5.calculate_forcings(n_av=0, method='4th')
-
-        date = settings['start_date']
-        name = 'ERA5_forcings_{0:04d}{1:02d}{2:02d}.nc'.format(date.year, date.month, date.day)
-        e5.save_forcings(name)
-
-
-    if True:
-        e5_box = Read_ERA(settings)
-        e5_2nd = Read_ERA(settings)
-        e5_4th = Read_ERA(settings)
-        e5_gra = Read_ERA(settings)
-
-        n = 1
-
-        e5_box.calculate_forcings(n_av=n, method='box')
-        e5_2nd.calculate_forcings(n_av=n, method='2nd')
-        e5_4th.calculate_forcings(n_av=n, method='4th')
-        e5_gra.calculate_forcings(n_av=n, method='np.grad')
-
-        k = 8
-
-        pl.figure(figsize=(10,7))
-        pl.subplot(321)
-        pl.plot(e5_box.datetime, e5_box.dtthl_advec_mean[:,k]*3600., label='box')
-        pl.plot(e5_2nd.datetime, e5_2nd.dtthl_advec_mean[:,k]*3600., label='2nd')
-        pl.plot(e5_4th.datetime, e5_4th.dtthl_advec_mean[:,k]*3600., label='4th')
-        pl.plot(e5_gra.datetime, e5_gra.dtthl_advec_mean[:,k]*3600., label='np.grad')
-        pl.legend()
-        pl.ylabel('dtthl_advec (K h-1)')
-
-        pl.subplot(322)
-        pl.plot(e5_box.datetime, e5_box.dtqt_advec_mean[:,k]*3600000.)
-        pl.plot(e5_2nd.datetime, e5_2nd.dtqt_advec_mean[:,k]*3600000.)
-        pl.plot(e5_4th.datetime, e5_4th.dtqt_advec_mean[:,k]*3600000.)
-        pl.plot(e5_gra.datetime, e5_gra.dtqt_advec_mean[:,k]*3600000.)
-        pl.ylabel('dtqt_advec (g kg-1 h-1)')
-
-        pl.subplot(323)
-        pl.plot(e5_box.datetime, e5_box.dtu_total_mean[:,k]*3600.)
-        pl.plot(e5_2nd.datetime, e5_2nd.dtu_total_mean[:,k]*3600.)
-        pl.plot(e5_4th.datetime, e5_4th.dtu_total_mean[:,k]*3600.)
-        pl.plot(e5_gra.datetime, e5_gra.dtu_total_mean[:,k]*3600.)
-        pl.ylabel('dtu_advec (m s-1 h-1)')
-
-        pl.subplot(324)
-        pl.plot(e5_box.datetime, e5_box.dtv_total_mean[:,k]*3600.)
-        pl.plot(e5_2nd.datetime, e5_2nd.dtv_total_mean[:,k]*3600.)
-        pl.plot(e5_4th.datetime, e5_4th.dtv_total_mean[:,k]*3600.)
-        pl.plot(e5_gra.datetime, e5_gra.dtv_total_mean[:,k]*3600.)
-        pl.ylabel('dtv_advec (m s-1 h-1)')
-
-        pl.subplot(325)
-        pl.plot(e5_box.datetime, e5_box.ug_mean[:,k])
-        pl.plot(e5_2nd.datetime, e5_2nd.ug_mean[:,k])
-        pl.plot(e5_4th.datetime, e5_4th.ug_mean[:,k])
-        pl.plot(e5_gra.datetime, e5_gra.ug_mean[:,k])
-        pl.ylabel('ug (m s-1)')
-
-        pl.subplot(326)
-        pl.plot(e5_box.datetime, e5_box.vg_mean[:,k])
-        pl.plot(e5_2nd.datetime, e5_2nd.vg_mean[:,k])
-        pl.plot(e5_4th.datetime, e5_4th.vg_mean[:,k])
-        pl.plot(e5_gra.datetime, e5_gra.vg_mean[:,k])
-        pl.ylabel('vg (m s-1)')
-
-        pl.tight_layout()
