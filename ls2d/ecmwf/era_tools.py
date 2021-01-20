@@ -24,7 +24,7 @@ import datetime
 # Third party modules
 
 # LS2D modules
-from src.messages import *
+from ls2d.src.messages import *
 
 
 def era5_file_path(year, month, day, path, case, ftype, return_dir=True):

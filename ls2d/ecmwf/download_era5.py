@@ -28,8 +28,8 @@ import sys,os
 import numpy as np
 
 # LS2D modules
-import ecmwf.era_tools as era_tools
-from src.messages import *
+import ls2d.ecmwf.era_tools as era_tools
+from ls2d.src.messages import *
 
 # Yikes, but necessary (?) if you want to use
 # MARS downloads without the Python CDS api installed?

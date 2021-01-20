@@ -12,27 +12,27 @@ pl.close('all'); pl.ion()
 
 # LS2D modules
 sys.path.append('/home/bart/meteo/models/LS2D')
-import LS2D
+import ls2d
 
 settings = {
     'central_lat' : 51.971,
     'central_lon' : 4.927,
     'area_size'   : 1,
-    'case_name'   : 'cabauw',
+    'case_name'   : 'test',
     'era5_path'   : '/home/scratch1/meteo_data/LS2D/',
     'era5_expver' : 1,   # 1=normal ERA5, 5=ERA5 near-realtime 
-    'start_date'  : datetime(year=2016, month=8, day=15, hour=6),
-    'end_date'    : datetime(year=2016, month=8, day=15, hour=18),
+    'start_date'  : datetime(year=2014, month=8, day=15, hour=6),
+    'end_date'    : datetime(year=2014, month=8, day=15, hour=18),
     'write_log'   : False,
     'data_source' : 'CDS',
-    'ntasks'      : 2
+    'ntasks'      : 3
     }
 
 # Download required ERA5 files:
-LS2D.download_era5(settings)
+ls2d.download_era5(settings)
 
 # Read ERA5 data, and calculate derived properties (thl, etc.):
-era = LS2D.Read_era5(settings)
+era = ls2d.Read_era5(settings)
 
 # Calculate large-scale forcings:
 # `n_av` is the number of ERA5 gridpoints (+/-) over which

@@ -18,8 +18,12 @@
 # along with LS2D.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import numpy as np
+# Python modules
+import pkg_resources
 import os
+
+# Third party modules
+import numpy as np
 
 class _IFS_tools:
     """
@@ -39,7 +43,7 @@ class _IFS_tools:
 
         # Read the table with the vertical grid properties/parameters
         # From: https://www.ecmwf.int/en/forecasts/documentation-and-support/137-model-levels
-        path = '{}/../data/L137_grid.txt'.format(os.path.dirname(os.path.abspath(__file__)))
+        path = pkg_resources.resource_filename(__name__, 'L137_grid.txt')
         f = np.loadtxt(path)
 
         # Half and full level number

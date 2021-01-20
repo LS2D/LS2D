@@ -28,12 +28,12 @@ import netCDF4 as nc4
 from scipy import interpolate
 
 # LS2D modules
-import src.spatial_tools as spatial
-import src.finite_difference as fd
-from src.messages import *
+import ls2d.src.spatial_tools as spatial
+import ls2d.src.finite_difference as fd
+from ls2d.src.messages import *
 
-import ecmwf.era_tools as era_tools
-from ecmwf.IFS_tools import IFS_tools
+import ls2d.ecmwf.era_tools as era_tools
+from ls2d.ecmwf.IFS_tools import IFS_tools
 
 class Slice:
     def __init__(self, istart, iend, jstart, jend):

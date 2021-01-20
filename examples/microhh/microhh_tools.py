@@ -1,14 +1,34 @@
+#
+# This file is part of LS2D.
+#
+# Copyright (c) 2017-2021 Wageningen University & Research
+# Author: Bart van Stratum (WUR)
+#
+# LS2D is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# LS2D is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with LS2D.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# Python modules
+from collections import OrderedDict
+import struct as st
+import re
+
+# Third party modules
 import netCDF4 as nc4
 import numpy   as np
-import struct  as st
-import glob
-import re
-from collections import OrderedDict
 
-# -------------------------
+
 # General help functions
-# -------------------------
-
 def _int_or_float_or_str(value):
     """ Helper function: convert a string to int/float/str """
     try:
@@ -29,28 +49,7 @@ def _convert_value(value):
         return _int_or_float_or_str(value)
 
 
-def _find_namelist_file():
-    """ Helper function: automatically find the .ini file in the current directory """
-    namelist_file = glob.glob('*.ini')
-    if len(namelist_file) == 0:
-        raise RuntimeError('Can\'t find any .ini files in the current directory!')
-    if len(namelist_file) > 1:
-        raise RuntimeError('There are multiple .ini files: {}'.format(namelist_file))
-    else:
-        return namelist_file[0]
-
-
-def _process_endian(endian):
-    if endian not in ['little', 'big']:
-        raise ValueError('endian has to be \"little\" or \"big\"!')
-    endian = '<' if endian == 'little' else '>'
-    return endian
-
-
-# -------------------------
-# Classes and functions to read and write MicroHH things
-# -------------------------
-def read_namelist(namelist_file=None):
+def read_namelist(namelist_file):
     """
     Read a .ini namelist into a nested dictionary (dict[group][variable])
     """
@@ -85,83 +84,6 @@ def write_namelist(namelist_file, namelist_dict):
             f.write('\n')
 
 
-class Read_grid:
-    """ Read the grid file from MicroHH.
-        If no file name is provided, grid.0000000 from the current directory is read """
-    def __init__(self, itot, jtot, ktot, zsize, filename=None, endian='little'):
-        self.en  = _process_endian(endian)
-        filename = 'grid.0000000' if filename is None else filename
-
-        self.fin = open(filename, 'rb')
-        self.x  = self.read(itot)
-        self.xh = self.read(itot)
-        self.y  = self.read(jtot)
-        self.yh = self.read(jtot)
-        self.z  = self.read(ktot)
-        self.zh = self.read(ktot)
-        self.fin.close()
-        del self.fin
-
-        self.itot = self.x.size
-        self.jtot = self.y.size
-        self.ktot = self.z.size
-
-        self.dx = self.x[1]-self.x[0] if itot > 1 else self.xh[1]
-        self.dy = self.y[1]-self.y[0] if jtot > 1 else self.yh[1]
-
-        self.xsize = self.itot * self.dx
-        self.ysize = self.jtot * self.dy
-        self.zsize = zsize
-
-    def read(self, n):
-        return np.array(st.unpack('{0}{1}d'.format(self.en, n), self.fin.read(n*8)))
-
-
-def read_restart_file(path, itot, jtot, ktot, endian='little'):
-    """ Read a MicroHH restart file into a 3D (or 2D if ktot=1) numpy array
-        The returned array has the dimensions ordered as [z,y,x] """
-
-    en = _process_endian(endian)
-
-    f  = open(path, 'rb')
-    if (ktot > 1):
-        field = np.zeros((ktot, jtot, itot))
-        for k in range(ktot):
-            raw = f.read(itot*jtot*8)
-            tmp = np.array(st.unpack('{0}{1}d'.format(en, itot*jtot), raw))
-            field[k,:,:] = tmp.reshape((jtot, itot))[:,:]
-        f.close()
-    else:
-        raw = f.read(itot*jtot*8)
-        tmp = np.array(st.unpack('{0}{1}d'.format(en, itot*jtot), raw))
-        field = tmp.reshape((jtot, itot))
-
-    return field
-
-
-def write_restart_file(data, itot, jtot, ktot, path, per_slice=True, endian='little'):
-    """ Write a restart file in the format requires by MicroHH.
-        The input array should be indexed as [z,y,x] """
-
-    en = _process_endian(endian)
-
-    if(per_slice):
-        # Write level by level (less memory hungry.....)
-        fout  = open(path, "wb")
-        for k in range(ktot):
-            tmp  = data[k,:,:].reshape(itot*jtot)
-            tmp2 = st.pack('{0}{1}d'.format(en, tmp.size), *tmp)
-            fout.write(tmp2)
-        fout.close()
-    else:
-        # Write entire field at once (memory hungry....)
-        tmp  = data.reshape(data.size)
-        tmp2 = st.pack('{0}{1}d'.format(en, tmp.size), *tmp)
-        fout = open(path, "wb")
-        fout.write(tmp2)
-        fout.close()
-
-
 def write_NetCDF_input(
         case_name, float_type, init_profiles, tdep_surface=None,
         tdep_ls=None, radiation=None, soil=None):
@@ -173,6 +95,7 @@ def write_NetCDF_input(
         """
         Add variable to NetCDF file (or group), and write data
         """
+        print(name, dims)
         if dims is None:
             var = nc_group.createVariable(name, float_type)
             var[:] = data

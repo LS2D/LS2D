@@ -18,5 +18,9 @@
 # along with LS2D.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from .ecmwf import download_era5, Read_era5
-from .util import grid
+# Make packages directly available as e.g.:
+# ls2d.download_era5() instead of ls2d.ecmwf.download_era5()
+from ls2d.ecmwf import download_era5
+from ls2d.ecmwf import Read_era5
+
+from ls2d.util import grid

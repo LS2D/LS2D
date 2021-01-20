@@ -1,3 +1,23 @@
+#
+# This file is part of LS2D.
+#
+# Copyright (c) 2017-2021 Wageningen University & Research
+# Author: Bart van Stratum (WUR)
+#
+# LS2D is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# LS2D is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with LS2D.  If not, see <http://www.gnu.org/licenses/>.
+#
+
 import matplotlib.pyplot as pl
 import numpy as np
 import sys
@@ -24,7 +44,7 @@ class _Grid:
 
 class Grid_equidist(_Grid):
     def __init__(self, kmax, dz0):
-        Grid.__init__(self, kmax, dz0)
+        _Grid.__init__(self, kmax, dz0)
 
         self.zsize = kmax * dz0
         self.z[:]  = np.arange(dz0/2, self.zsize, dz0)
@@ -33,7 +53,7 @@ class Grid_equidist(_Grid):
 
 class Grid_stretched(_Grid):
     def __init__(self, kmax, dz0, nloc1, nbuf1, dz1, nloc2=None, nbuf2=None, dz2=None):
-        Grid.__init__(self, kmax, dz0)
+        _Grid.__init__(self, kmax, dz0)
 
         double_stretched = nloc2 is not None and nbuf2 is not None and dz2 is not None
 
@@ -72,7 +92,7 @@ class Grid_stretched(_Grid):
 
 class Grid_linear_stretched(_Grid):
     def __init__(self, kmax, dz0, alpha):
-        Grid.__init__(self, kmax, dz0)
+        _Grid.__init__(self, kmax, dz0)
 
         self.dz[:] = dz0 * (1 + alpha)**np.arange(kmax)
         zh         = np.zeros(kmax+1)
@@ -83,7 +103,7 @@ class Grid_linear_stretched(_Grid):
 
 class Grid_stretched_manual(_Grid):
     def __init__(self, kmax, dz0, heights, factors):
-        Grid.__init__(self, kmax, dz0)
+        _Grid.__init__(self, kmax, dz0)
 
         self.z[0]  = dz0/2.
         self.dz[0] = dz0
