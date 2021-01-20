@@ -30,8 +30,8 @@ An example script is provided in `examples/example_1.py`, which downloads the ER
 
 All settings for LS2D are wrapped in a dictionary:
 
-- `central-lat`: central latitude of LES/SCM domain
-- `central-lon`: central longitude of LES/SCM domain
+- `central_lat`: central latitude of LES/SCM domain
+- `central_lon`: central longitude of LES/SCM domain
 - `area_size`: spatial size of ERA5 download (central lat/lon +/- `area_size` degrees)
 - `era5_path`: storage location of ERA5 downloads/data
 - `era5_expver`: ERA5 experiment version number (`1`=normal ERA5, `5`=near realtime). With CDS, only `1` works.
