@@ -17,14 +17,33 @@
 # along with LS2D.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+# Python modules
 import datetime
 
-from messages import *
+# Third party modules
 
-# One day datetime offset
-one_day = datetime.timedelta(days=1)
+# LS2D modules
+from src.messages import *
+
+
+def era5_file_path(year, month, day, path, case, ftype, return_dir=True):
+    """
+    Return saving path of files in format `path/yyyy/mm/dd/type.nc`
+    """
+
+    era_dir = "{0}/{1}/{2:04d}/{3:02d}/{4:02d}".format(path, case, year, month, day)
+    era_file = "{0}/{1}.nc".format(era_dir, ftype)
+
+    if return_dir:
+        return era_dir, era_file
+    else:
+        return era_file
+
 
 def get_required_analysis(start, end):
+
+    # One day datetime offset
+    one_day = datetime.timedelta(days=1)
 
     # Analysis start at 00 UTC, so first analysis = start day
     first_analysis = datetime.datetime(start.year, start.month, start.day)
@@ -42,6 +61,9 @@ def get_required_analysis(start, end):
 
 
 def get_required_forecast(start, end):
+
+    # One day datetime offset
+    one_day = datetime.timedelta(days=1)
 
     # Forecast runs through midnight, so last analysis = last day
     last_forecast = datetime.datetime(end.year, end.month, end.day)
@@ -61,5 +83,5 @@ def get_required_forecast(start, end):
 def lower_to_hour(time):
     time_out = datetime.datetime(time.year, time.month, time.day, time.hour)
     if time.minute != 0 or time.second != 0:
-        warning('changed date/time from {} to {}'.format(time, time_out))
+        warning('Changed date/time from {} to {}'.format(time, time_out))
     return time_out
