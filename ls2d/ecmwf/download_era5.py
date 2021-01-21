@@ -200,6 +200,7 @@ def _download_era5_file(settings):
 
             server.retrieve('reanalysis-era5-complete', request, nc_file)
 
+
     elif settings['data_source'] == 'MARS':
 
         # Shared set of CDS Python API settings for all download types:

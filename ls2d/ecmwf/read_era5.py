@@ -85,14 +85,13 @@ class Read_era5:
         # Create lists with required files
         path = self.settings['era5_path']
         case = self.settings['case_name']
+
         an_sfc_files   = [era_tools.era5_file_path(
             d.year, d.month, d.day, path, case, 'surface_an',  False) for d in an_dates]
         an_model_files = [era_tools.era5_file_path(
             d.year, d.month, d.day, path, case, 'model_an',    False) for d in an_dates]
         an_pres_files  = [era_tools.era5_file_path(
             d.year, d.month, d.day, path, case, 'pressure_an', False) for d in an_dates]
-        fc_model_files = [era_tools.era5_file_path(
-            d.year, d.month, d.day, path, case, 'model_fc',    False) for d in fc_dates]
 
         # Check if all files exist, and exit if not..
         def check_files(files):
@@ -107,7 +106,6 @@ class Read_era5:
         files_missing += check_files(an_sfc_files  )
         files_missing += check_files(an_model_files)
         files_missing += check_files(an_pres_files )
-        files_missing += check_files(fc_model_files)
         if files_missing:
             error('One or more required ERA5 files are missing..')
 
@@ -115,7 +113,6 @@ class Read_era5:
         self.fsa = nc4.MFDataset(an_sfc_files,   aggdim='time')
         self.fma = nc4.MFDataset(an_model_files, aggdim='time')
         self.fpa = nc4.MFDataset(an_pres_files,  aggdim='time')
-        self.fmf = nc4.MFDataset(fc_model_files, aggdim='time')
 
 
     def read_data(self):
@@ -140,13 +137,13 @@ class Read_era5:
                 return np.flip(array, axis=0)
 
 
-        def get_variable(nc, var, s, wrap_func=None, dtype=None):
+        def get_variable(nc, var, dslice, wrap_func=None, dtype=None):
             """
             Read NetCDF variable, and flip height and latitude dimensions.
             Optionally, apply the `wrap_func` function on the data,
             and/or cast data to requested `dtype`.
             """
-            data = flip(nc.variables[var][s])
+            data = flip(nc.variables[var][dslice])
             # Apply wrapper function (if provided):
             data = wrap_func(data) if wrap_func is not None else data
             # Cast to requested data type (if provided):
@@ -157,7 +154,6 @@ class Read_era5:
 
         # Full time records in analysis and forecast files
         an_time_tmp = self.fsa.variables['time'][:]
-        fc_time_tmp = self.fmf.variables['time'][:]
 
         # Find start and end time indices
         # ERA5 time is in hours since 1900-01-01; convert `start` and `end` to same units
@@ -168,18 +164,13 @@ class Read_era5:
         t0_an = np.abs(an_time_tmp - start_h_since).argmin()
         t1_an = np.abs(an_time_tmp - end_h_since  ).argmin()
 
-        t0_fc = np.abs(fc_time_tmp - start_h_since).argmin()
-        t1_fc = np.abs(fc_time_tmp - end_h_since  ).argmin()
-
         # Time slices
         t_an = np.s_[t0_an:t1_an+1]
-        t_fc = np.s_[t0_fc:t1_fc+1]
 
         # Read spatial and time variables
-        self.lats     = self.fma.variables['latitude'][::-1]
-        self.lons     = self.fma.variables['longitude'][:]
-        self.time     = self.fma.variables['time'][t_an]
-        self.time_fc  = self.fmf.variables['time'][t_fc]
+        self.lats = self.fma.variables['latitude'][::-1]
+        self.lons = self.fma.variables['longitude'][:]
+        self.time = self.fma.variables['time'][t_an]
 
         # Shift grid from 0-360 to -180, 180 (if needed)
         if np.any(self.lons>180):
@@ -189,12 +180,6 @@ class Read_era5:
 
         # Time in datetime format
         self.datetime = [datetime.datetime(1900, 1, 1) + datetime.timedelta(hours=int(h)) for h in self.time]
-
-        # Check if times are really synced, if not; quit, as things will go very wrong
-        if self.time.size != self.time_fc.size:
-            error('ERA5 analysis and forecast times are not synced (different size)')
-        if not np.all(self.time == self.time_fc):
-            error('ERA5 analysis and forecast times are not synced (different times)')
 
         # Grid and time dimensions
         self.nfull = self.fma.dimensions['level'].size
@@ -210,20 +195,17 @@ class Read_era5:
         s3d  = np.s_[t_an,:,:,:]    # Slice for 3D (atmospheric) fields
         s3ds = np.s_[t_an,0,:,:]    # Slice for surface plane of 3D field
 
-        s3d_fc = np.s_[t_fc,:,:,:]    # Slice for 3D (atmospheric) fields
-
         # Model level analysis data:
-        self.u  = get_variable(self.fma, 'u',    s3d )  # v-component wind (m s-1)
-        self.v  = get_variable(self.fma, 'v',    s3d )  # v-component wind (m s-1)
-        self.w  = get_variable(self.fma, 'w',    s3d )  # Vertical velocity (Pa s-1)
-        self.T  = get_variable(self.fma, 't',    s3d )  # Absolute temperature (K)
-        self.q  = get_variable(self.fma, 'q',    s3d )  # Specific humidity (kg kg-1)
-        self.qc = get_variable(self.fma, 'clwc', s3d )  # Specific cloud liquid water content (kg kg-1)
-        self.qi = get_variable(self.fma, 'ciwc', s3d )  # Specific cloud ice content (kg kg-1)
-        self.qr = get_variable(self.fma, 'crwc', s3d )  # Specific rain water content (kg kg-1)
-        self.qs = get_variable(self.fma, 'cswc', s3d )  # Specific snow content (kg kg-1)
-        self.o3 = get_variable(self.fma, 'o3',   s3d )  # Ozone (kg kg-1)
-        self.ps = get_variable(self.fma, 'lnsp', s3ds, np.exp)  # Surface pressure (Pa)
+        self.u  = get_variable(self.fma, 'u',    s3d)  # v-component wind (m s-1)
+        self.v  = get_variable(self.fma, 'v',    s3d)  # v-component wind (m s-1)
+        self.w  = get_variable(self.fma, 'w',    s3d)  # Vertical velocity (Pa s-1)
+        self.T  = get_variable(self.fma, 't',    s3d)  # Absolute temperature (K)
+        self.q  = get_variable(self.fma, 'q',    s3d)  # Specific humidity (kg kg-1)
+        self.qc = get_variable(self.fma, 'clwc', s3d)  # Specific cloud liquid water content (kg kg-1)
+        self.qi = get_variable(self.fma, 'ciwc', s3d)  # Specific cloud ice content (kg kg-1)
+        self.qr = get_variable(self.fma, 'crwc', s3d)  # Specific rain water content (kg kg-1)
+        self.qs = get_variable(self.fma, 'cswc', s3d)  # Specific snow content (kg kg-1)
+        self.o3 = get_variable(self.fma, 'o3',   s3d)  # Ozone (kg kg-1)
 
         # Surface variables:
         self.sst =  get_variable(self.fsa, 'sst',  s2d)  # Sea surface temperature (K)
@@ -232,6 +214,7 @@ class Read_era5:
         self.wqs = -get_variable(self.fsa, 'ie',   s2d)  # Surface kinematic moisture flux (g kg-1)
         self.z0m =  get_variable(self.fsa, 'fsr',  s2d)  # Surface roughness length (m)
         self.z0h =  get_variable(self.fsa, 'flsr', s2d, np.exp)  # Surface roughness length heat (m)
+        self.ps  =  get_variable(self.fsa, 'sp',   s2d)  # Surface pressure (Pa)
 
         self.soil_type     = get_variable(self.fsa, 'slt', s2d, np.round, np.int)  # Soil type (-)
         self.veg_type_low  = get_variable(self.fsa, 'tvl', s2d, np.round, np.int)  # Low vegetation type (-)

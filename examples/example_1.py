@@ -1,3 +1,23 @@
+#
+# This file is part of LS2D.
+#
+# Copyright (c) 2017-2021 Wageningen University & Research
+# Author: Bart van Stratum (WUR)
+#
+# LS2D is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# LS2D is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with LS2D.  If not, see <http://www.gnu.org/licenses/>.
+#
+
 # Python modules
 from datetime import datetime
 import subprocess
@@ -18,11 +38,11 @@ settings = {
     'central_lat' : 51.971,
     'central_lon' : 4.927,
     'area_size'   : 1,
-    'case_name'   : 'test',
+    'case_name'   : 'cabauw',
     'era5_path'   : '/home/scratch1/meteo_data/LS2D/',
-    'era5_expver' : 1,   # 1=normal ERA5, 5=ERA5 near-realtime 
-    'start_date'  : datetime(year=2014, month=8, day=15, hour=6),
-    'end_date'    : datetime(year=2014, month=8, day=15, hour=18),
+    'era5_expver' : 1,   # 1=normal ERA5, 5=ERA5 near-realtime
+    'start_date'  : datetime(year=2016, month=8, day=15, hour=6),
+    'end_date'    : datetime(year=2016, month=8, day=15, hour=18),
     'write_log'   : False,
     'data_source' : 'CDS',
     'ntasks'      : 3
@@ -40,7 +60,7 @@ era = ls2d.Read_era5(settings)
 era.calculate_forcings(n_av=0, method='2nd')
 
 # Interpolate ERA5 to fixed height grid:
-z = np.arange(10, 3000, 50)
+z = np.arange(10, 3000, 20)
 les_input = era.interpolate_to_fixed_height(z)
 
 # Plot variables as example:
