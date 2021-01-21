@@ -160,3 +160,64 @@ def write_NetCDF_input(
             add_variable(nc_group_soil, name, 'z', data, float_type)
 
     nc_file.close()
+
+
+def calc_root_frac(z, a_r, b_r):
+    """
+    Calculate root fraction from `a_r` and `b_r` coeffients.
+    See IFS documentation..
+    """
+
+    # Calculate half level soil depths
+    zh = np.zeros(z.size+1)
+    for k in range(zh.size-2, -1, -1):
+        zh[k] = zh[k+1] - 2*(zh[k+1] - z[k])
+
+    # Calculate root fraction
+    root_frac = np.zeros_like(z)
+    for k in range(1, root_frac.size):
+        root_frac[k] = 0.5 * (np.exp(a_r * zh[k+1]) + \
+                              np.exp(b_r * zh[k+1]) - \
+                              np.exp(a_r * zh[k  ]) - \
+                              np.exp(b_r * zh[k  ]));
+
+    root_frac[0] = 1.-root_frac.sum()
+
+    return root_frac
+
+
+def check_grid_decomposition(itot, jtot, ktot, npx, npy):
+    """
+    Check whether grid / MPI decomposition is valid
+    """
+
+    print('Grid: itot={}, jtot={}, ktot={}, npx={}, npy={}'.format(
+        itot, jtot, ktot, npx, npy))
+
+    err = False
+    if itot%npx != 0:
+        print('itot%npx != 0')
+        err = True
+
+    if itot%npy != 0:
+        print('itot%npy != 0')
+        err = True
+
+    if jtot%npx != 0 and npy > 1:
+        print('jtot%npx != 0')
+        err = True
+
+    if jtot%npy != 0:
+        print('jtot%npy != 0')
+        err = True
+
+    if ktot%npx != 0:
+        print('ktot%npx != 0')
+        err = True
+
+    if err:
+        print('Invalid grid configuration!')
+        return False
+    else:
+        print('Grid configuration okay!')
+        return True

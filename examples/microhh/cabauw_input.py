@@ -73,6 +73,19 @@ les_input = era.interpolate_to_fixed_height(grid.z)
 #
 # MicroHH specific initialisation
 #
+# Settings:
+# ------------------
+# Root fraction coefficients (see IFS documentation):
+a_r = 10.739
+b_r = 2.608
+
+# Soil index in `van_genuchten_parameters.nc`:
+soil_index = 2
+
+# Nudging time scale atmosphere
+tau_nudge = 10800
+# ------------------
+
 # 1. RRTMGP input: ERA5 at model levels, averaged
 #    in time of the entire simulation period:
 z_lay = era.z_mean .mean(axis=0)
@@ -104,10 +117,10 @@ h2o_les = qt_les / (ep - ep*qt_les)
 
 # 2. Soil
 z_soil     = np.array([-1.945, -0.64, -0.175, -0.035])
-soil_index = np.ones_like(z_soil)*2
+soil_index = np.ones_like(z_soil)*soil_index
+root_frac  = mht.calc_root_frac(z_soil, a_r, b_r)
 
 # 3. Nudge factor
-tau_nudge = 10800        # Nudge time scale (s)
 nudge_fac = np.ones(grid.z.size) / tau_nudge
 
 #
@@ -163,9 +176,10 @@ timedep_ls = {
 
 soil = {
         'z': z_soil,
-        'theta': era.theta_soil_mean[0,::-1],
-        't': era.T_soil_mean[0,::-1],
-        'index': soil_index}
+        'theta_soil': era.theta_soil_mean[0,::-1],
+        't_soil': era.T_soil_mean[0,::-1],
+        'index_soil': soil_index,
+        'root_frac': root_frac}
 
 mht.write_NetCDF_input(
         'cabauw', 'f8', init_profiles,
