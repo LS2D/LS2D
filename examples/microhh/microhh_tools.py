@@ -95,7 +95,6 @@ def write_NetCDF_input(
         """
         Add variable to NetCDF file (or group), and write data
         """
-        print(name, dims)
         if dims is None:
             var = nc_group.createVariable(name, float_type)
             var[:] = data
