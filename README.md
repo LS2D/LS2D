@@ -5,6 +5,7 @@ Python package to download ERA5 (using CDS or MARS), and calculate the initial c
 
 ### Required Python modules
 - numpy
+- scipy
 - matplotlib
 - netCDF4
 - cdsapi (*)
