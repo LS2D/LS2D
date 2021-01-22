@@ -20,6 +20,7 @@
 
 # Python modules
 import multiprocessing as mp
+from multiprocessing import set_start_method
 import subprocess as sp
 import datetime
 import sys,os
@@ -38,6 +39,7 @@ try:
 except ImportError:
     cdsapi = None
 
+set_start_method('fork')
 
 def _retrieve_from_MARS(request, settings, nc_dir, nc_file, qos):
     """
