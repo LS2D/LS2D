@@ -568,6 +568,9 @@ class Read_era5:
         #
         # Add other input variables, which don't require interpolation
         #
+        # Time:
+        add_ds_var(ds, 'time_sec', self.time_sec, ('time'), 'seconds since start of experiment', 's')
+
         # Radiation background profiles
         add_ds_var(ds, 'z_lay', self.z_mean, ('time', 'lay'), 'Full level heights radiation', 'm')
         add_ds_var(ds, 'z_lev', self.zh_mean, ('time', 'lev'), 'Half level heights radiation', 'm')
@@ -604,64 +607,3 @@ class Read_era5:
         ds.attrs['fc'] = self.fc
 
         return ds
-
-
-    def save_forcings(self, file_name):
-        """
-        Write the large-scale forcings to a NetCDF file
-        """
-
-        def add_variable(nc, name, dims, dtype, units, long_name, data):
-            var = nc.createVariable(name, dtype, dims)
-            var[:] = data
-            var.units = units
-            var.long_name = long_name
-
-        # Define new NetCDF file
-        nc = nc4.Dataset(file_name, 'w')
-        nc.createDimension('time', self.ntime)
-        nc.createDimension('level', self.nfull)
-
-        # Add variables
-        add_variable(nc, 'time', ('time'), int,
-                'hours since 1900-01-01 00:00:00.0', 'time', self.time)
-
-        # Mean profiles
-        add_variable(nc, 'p', ('time','level'), float, 'pa',
-                'Pressure', self.p_mean)
-        add_variable(nc, 'z', ('time','level'), float, 'm',
-                'Height above ground level', self.z_mean)
-        add_variable(nc, 'thl', ('time','level'), float, 'K',
-                'Liquid water potential temperature', self.thl_mean)
-        add_variable(nc, 'qt', ('time','level'), float, 'kg kg-1',
-                'Total specific humidity', self.qt_mean)
-        add_variable(nc, 'u', ('time','level'), float, 'm s-1',
-                'Zonal wind component', self.u_mean)
-        add_variable(nc, 'v', ('time','level'), float, 'm s-1',
-                'Meridional wind component', self.v_mean)
-        add_variable(nc, 'wls', ('time','level'), float, 'm s-1',
-                'Vertical wind component', self.wls_mean)
-
-        # Geostrophic wind
-        add_variable(nc, 'ug', ('time','level'), float, 'm s-1',
-                'Zonal component geostrophic wind', self.ug_mean)
-        add_variable(nc, 'vg', ('time','level'), float, 'm s-1',
-                'Meridional component geostrophic wind', self.vg_mean)
-
-        # Advective tendencies
-        add_variable(nc, 'dtthl_advec', ('time','level'), float, 'K s-1',
-                'Advective tendency liquid water potential temperature', self.dtthl_advec_mean)
-        add_variable(nc, 'dtqt_advec', ('time','level'), float, 'kg kg-1 s-1',
-                'Advective tendency total specific humidity', self.dtqt_advec_mean)
-        add_variable(nc, 'dtu_advec', ('time','level'), float, 'm s-2',
-                'Advective tendency zonal wind component', self.dtu_advec_mean)
-        add_variable(nc, 'dtv_advec', ('time','level'), float, 'm s-2',
-                'Advective tendency meridional wind component', self.dtv_advec_mean)
-
-        # Radiative tendencies
-        add_variable(nc, 'dtthl_sw', ('time','level'), float, 'K s-1',
-                'Shortwave radiative tendency liquid water potential temperature', self.dtthl_sw_mean)
-        add_variable(nc, 'dtthl_lw', ('time','level'), float, 'K s-1',
-                'Longwave radiative tendency liquid water potential temperature', self.dtthl_lw_mean)
-
-        nc.close()

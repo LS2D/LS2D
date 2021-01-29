@@ -67,8 +67,9 @@ era.calculate_forcings(n_av=0, method='4th')
 grid = ls2d.grid.Grid_linear_stretched(kmax=176, dz0=20, alpha=0.009)
 #grid.plot()
 
-# Interpolate ERA5 variables and forcings onto LES grid:
-les_input = era.interpolate_to_fixed_height(grid.z)
+# Interpolate ERA5 variables and forcings onto LES grid.
+# In addition, `get_les_input` returns additional variables needed to init LES.
+les_input = era.get_les_input(grid.z)
 
 #
 # MicroHH specific initialisation
@@ -79,49 +80,32 @@ les_input = era.interpolate_to_fixed_height(grid.z)
 a_r = 10.739
 b_r = 2.608
 
-# Soil index in `van_genuchten_parameters.nc`:
-soil_index = 2
-
 # Nudging time scale atmosphere
 tau_nudge = 10800
 # ------------------
 
-# 1. RRTMGP input: ERA5 at model levels, averaged
-#    in time of the entire simulation period:
-z_lay = era.z_mean .mean(axis=0)
-z_lev = era.zh_mean.mean(axis=0)
-
-p_lay = era.p_mean .mean(axis=0)
-p_lev = era.ph_mean.mean(axis=0)
-
-T_lay = era.T_mean .mean(axis=0)
-T_lev = era.Th_mean.mean(axis=0)
-
-qt_rad = era.qt_mean.mean(axis=0)
-o3_rad = era.o3_mean.mean(axis=0)
-
-# Fixed concentrations:
+# Fixed background concentrations RRTMGP:
 co2 = 348.e-6
 ch4 = 1650.e-9
 n2o = 306.e-9
 n2  = 0.7808
 o2  = 0.2095
 
-# Profiles on LES grid:
+# Mean radiation profiles on LES grid:
 qt_les = les_input['qt'].mean(axis=0)
 o3_les = les_input['o3'].mean(axis=0)
 
 # Conversion moisture from mass to volume mixing ratio
-h2o_rad = qt_rad / (ep - ep*qt_rad)
 h2o_les = qt_les / (ep - ep*qt_les)
 
-# 2. Soil
-z_soil     = np.array([-1.945, -0.64, -0.175, -0.035])
+## Soil
+z_soil     = les_input['zs'][::-1].values
+soil_index = les_input['type_soil'].values[0]-1
 soil_index = np.ones_like(z_soil)*soil_index
 root_frac  = mht.calc_root_frac(z_soil, a_r, b_r)
 
-# 3. Nudge factor
-nudge_fac = np.ones(grid.z.size) / tau_nudge
+# Nudge factor
+nudge_fac = np.ones(grid.kmax) / tau_nudge
 
 #
 # Write NetCDF input file for MicroHH
@@ -142,26 +126,26 @@ init_profiles = {
         'h2o': h2o_les}
 
 radiation  = {
-        'z_lay': z_lay,
-        'z_lev': z_lev,
-        'p_lay': p_lay,
-        'p_lev': p_lev,
-        't_lay': T_lay,
-        't_lev': T_lev,
+        'z_lay': les_input['z_lay'].mean(axis=0),
+        'z_lev': les_input['z_lev'].mean(axis=0),
+        'p_lay': les_input['p_lay'].mean(axis=0),
+        'p_lev': les_input['p_lev'].mean(axis=0),
+        't_lay': les_input['t_lay'].mean(axis=0),
+        't_lev': les_input['t_lev'].mean(axis=0),
+        'o3': les_input['o3_lay'].mean(axis=0),
+        'h2o': les_input['h2o_lay'].mean(axis=0),
         'co2': co2,
         'ch4': ch4,
         'n2o': n2o,
         'n2': n2,
-        'o2': o2,
-        'o3': o3_rad,
-        'h2o': h2o_rad}
+        'o2': o2}
 
 timedep_surface = {
-        'time_surface': era.time_sec,
-        'p_sbot': era.ps_mean }
+        'time_surface': les_input['time_sec'],
+        'p_sbot': les_input['ps'] }
 
 timedep_ls = {
-        'time_ls': era.time_sec,
+        'time_ls': les_input['time_sec'],
         'u_geo': les_input['ug'],
         'v_geo': les_input['vg'],
         'w_ls': les_input['wls'],
@@ -176,12 +160,12 @@ timedep_ls = {
 
 soil = {
         'z': z_soil,
-        'theta_soil': era.theta_soil_mean[0,::-1],
-        't_soil': era.T_soil_mean[0,::-1],
+        'theta_soil': les_input['theta_soil'][0,::-1],
+        't_soil': les_input['t_soil'][0,::-1],
         'index_soil': soil_index,
         'root_frac': root_frac}
 
-mht.write_NetCDF_input(
+mht.write_netcdf_input(
         'cabauw', 'f8', init_profiles,
         timedep_surface, timedep_ls, radiation, soil)
 
@@ -192,8 +176,8 @@ nl = mht.read_namelist('cabauw.ini.base')
 
 nl['grid']['ktot'] = grid.kmax
 nl['grid']['zsize'] = grid.zsize
-nl['time']['endtime'] = era.time_sec.max()
-nl['force']['fc'] = era.fc
+nl['time']['endtime'] = les_input['time_sec'][-1]
+nl['force']['fc'] = les_input.attrs['fc']
 nl['radiation']['lon'] = settings['central_lon']
 nl['radiation']['lat'] = settings['central_lat']
 

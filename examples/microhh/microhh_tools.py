@@ -25,7 +25,8 @@ import re
 
 # Third party modules
 import netCDF4 as nc4
-import numpy   as np
+import xarray as xr
+import numpy as np
 
 
 # General help functions
@@ -84,7 +85,7 @@ def write_namelist(namelist_file, namelist_dict):
             f.write('\n')
 
 
-def write_NetCDF_input(
+def write_netcdf_input(
         case_name, float_type, init_profiles, tdep_surface=None,
         tdep_ls=None, radiation=None, soil=None):
     """
@@ -102,6 +103,14 @@ def write_NetCDF_input(
             var = nc_group.createVariable(name, float_type, dims)
             var[:] = data[:]
 
+    def is_array(data):
+        """
+        Check if value if array or scalar
+        """
+        if isinstance(data, np.ndarray) or isinstance(data, xr.DataArray):
+            return True
+        return False
+
     # Define new NetCDF file
     nc_file = nc4.Dataset('{}_input.nc'.format(case_name), mode='w', datamodel='NETCDF4')
 
@@ -115,7 +124,7 @@ def write_NetCDF_input(
     # Set the initial profiles
     for name, data in init_profiles.items():
         # Switch between vector and scalar values
-        dims = None if not isinstance(data, np.ndarray) else 'z'
+        dims = 'z' if is_array(data) else None
         add_variable(nc_group_init, name, dims, data, float_type)
 
     # Create a group called "timedep" for the time dependent input
@@ -145,7 +154,7 @@ def write_NetCDF_input(
 
         for name, data in radiation.items():
             # Switch between vector and scalar values
-            if not isinstance(data, np.ndarray):
+            if not is_array(data):
                 dims = None
             else:
                 dims = ('lay') if data.size == radiation['p_lay'].size else ('lev')
