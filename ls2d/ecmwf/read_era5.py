@@ -23,8 +23,9 @@ import datetime
 import sys, os
 
 # Third party modules
-import numpy as np
 import netCDF4 as nc4
+import xarray as xr
+import numpy as np
 from scipy import interpolate
 
 # LS2D modules
@@ -34,6 +35,11 @@ from ls2d.src.messages import *
 
 import ls2d.ecmwf.era_tools as era_tools
 from ls2d.ecmwf.IFS_tools import IFS_tools
+
+# Constants
+Rd = 287.04
+Rv = 461.5
+ep = Rd/Rv
 
 class Slice:
     def __init__(self, istart, iend, jstart, jend):
@@ -223,6 +229,9 @@ class Read_era5:
         self.lai_low  = get_variable(self.fsa, 'lai_lv', s2d)  # LAI low veg (-)
         self.lai_high = get_variable(self.fsa, 'lai_hv', s2d)  # LAI high veg (-)
 
+        self.cveg_low  = get_variable(self.fsa, 'cvl', s2d)  # Low vegetation cover (-)
+        self.cveg_high = get_variable(self.fsa, 'cvh', s2d)  # High vegetation cover (-)
+
         # Soil variables:
         self.T_soil1 = get_variable(self.fsa, 'stl1', s2d)  # Top soil layer temperature (K)
         self.T_soil2 = get_variable(self.fsa, 'stl2', s2d)  # 2nd soil layer temperature (K)
@@ -239,7 +248,7 @@ class Read_era5:
         self.p_p = get_variable(self.fpa, 'level', s1d) * 100         # Pressure levels (Pa)
 
         # Convert ozone from mass mixing ratio to volume mixing ratio
-        self.o3 = 28.9644 / 47.9982 * self.o3
+        self.o3 = 28.9644 / 47.9982 * self.o3 * 1e6
         #print('no fix o3')
 
 
@@ -340,7 +349,7 @@ class Read_era5:
         # Variables averaged from (time, lon, lat) to (time):
         var_3d_mean = [
                 'ps', 'Ts', 'sst', 'wths', 'wqs', 'ps',
-                'lai_low', 'lai_high', 'z0m', 'z0h']
+                'lai_low', 'lai_high', 'z0m', 'z0h', 'cveg_low', 'cveg_high']
         for var in var_3d_mean:
             mean = getattr(self, var)[center3d].mean(axis=(1,2))
             setattr(self, '{}_mean'.format(var), mean)
@@ -491,14 +500,11 @@ class Read_era5:
         self.dtv_total_mean = self.dtv_advec_mean + self.dtv_coriolis_mean
 
 
-    def interpolate_to_fixed_height(self, z):
+    def get_les_input(self, z):
         """
-        Interpolate list of `variables` to a requested (fixed in time) height `z`.
+        Interpolate variables required for LES onto model grid,
+        and return xarray.Dataset with all possible LES input
         """
-
-        variables = ['thl', 'qt', 'u', 'v', 'wls', 'p',
-            'dtthl_advec', 'dtqt_advec', 'dtu_advec', 'dtv_advec',
-            'ug' ,'vg' ,'o3', 'z']
 
         def interp_z(array, z):
             out = np.empty((self.ntime, z.size))
@@ -506,15 +512,98 @@ class Read_era5:
                 out[t,:] = np.interp(z, self.z_mean[t,:], array[t,:])
             return out
 
-        output = {}
-        for var in variables:
+        def add_ds_var(ds, name, data, dims, long_name, units):
+            ds[name] = (dims, data)
+            ds[name].attrs['long_name'] = long_name
+            ds[name].attrs['units'] = units
+
+        #
+        # Create xarray Dataset
+        #
+        z_soil = np.array([-1.945, -0.64, -0.175, -0.035])[::-1]
+
+        ds = xr.Dataset(
+                coords = {
+                    'time': self.datetime,
+                    'z': z,
+                    'zs': z_soil,
+                    'lev': np.arange(self.nhalf),
+                    'lay': np.arange(self.nfull)
+                })
+
+        ds['z'].attrs['long_name'] = 'full level height LES'
+        ds['z'].attrs['units'] = 'm'
+
+        ds['zs'].attrs['long_name'] = 'full level depth soil'
+        ds['zs'].attrs['units'] = 'm'
+
+        variables = {
+                'thl': ('liquid water potential temperature', 'K'),
+                'qt': ('total specific humidity', 'kg kg-1'),
+                'u': ('zonal wind component', 'm s-1'),
+                'v': ('meridional wind component', 'm s-1'),
+                'wls': ('vertical wind component', 'm s-1'),
+                'p': ('air pressure', 'Pa'),
+                'dtthl_advec': ('advective tendency liquid water potential temperature', 'K s-1'),
+                'dtqt_advec': ('advective tendency total specific humidity', 'kg kg-1 s-1'),
+                'dtu_advec': ('advective tendency zonal wind', 'm s-2'),
+                'dtv_advec': ('advective tendency meridional wind', 'm s-2'),
+                'ug': ('geostrophic wind component zonal wind', 'm s-1'),
+                'vg': ('geostrophic wind component meridional wind', 'm s-1'),
+                'o3': ('ozone volume mixing ratio', 'ppmv'),
+                }
+
+        #
+        # Interpolate LES input to LES grid, and add to dataset
+        #
+        for var in variables.keys():
             var_era5 = '{}_mean'.format(var)
             if hasattr(self, var_era5):
-                output[var] = interp_z(getattr(self, var_era5), z)
+                data  = interp_z(getattr(self, var_era5), z)
+                attrs = variables[var]
+                add_ds_var(ds, var, data, ('time', 'z'), attrs[0], attrs[1])
             else:
                 error('Can\'t interpolate variable \"{}\"...'.format(var))
 
-        return output
+        #
+        # Add other input variables, which don't require interpolation
+        #
+        # Radiation background profiles
+        add_ds_var(ds, 'z_lay', self.z_mean, ('time', 'lay'), 'Full level heights radiation', 'm')
+        add_ds_var(ds, 'z_lev', self.zh_mean, ('time', 'lev'), 'Half level heights radiation', 'm')
+
+        add_ds_var(ds, 'p_lay', self.p_mean, ('time', 'lay'), 'full level pressure radiation', 'Pa')
+        add_ds_var(ds, 'p_lev', self.ph_mean, ('time', 'lev'), 'half level pressure radiation', 'Pa')
+
+        add_ds_var(ds, 't_lay', self.T_mean, ('time', 'lay'), 'full level temperature radiation', 'K')
+        add_ds_var(ds, 't_lev', self.Th_mean, ('time', 'lev'), 'half level temperature radiation', 'K')
+
+        h2o_lay = self.qt_mean / (ep - ep*self.qt_mean)
+        add_ds_var(ds, 'h2o_lay', h2o_lay, ('time', 'lay'), 'moisture volume mixing ratio', '')
+        add_ds_var(ds, 'o3_lay', self.o3_mean, ('time', 'lay'), 'ozone volume mixing ratio radiation', 'ppmv')
+
+        # Soil variables
+        add_ds_var(ds, 't_soil', self.T_soil_mean, ('time', 'zs'), 'soil temperature', 'K')
+        add_ds_var(ds, 'theta_soil', self.theta_soil_mean, ('time', 'zs'), 'soil moisture content', 'm3 m-3')
+        add_ds_var(ds, 'type_soil', self.soil_type_nn, ('time'), 'soil type', '-')
+
+        # Surface/vegetation:
+        add_ds_var(ds, 'type_low_veg',  self.veg_type_low_nn,  ('time'), 'low vegetation type', '-')
+        add_ds_var(ds, 'type_high_veg', self.veg_type_high_nn, ('time'), 'high vegetation type', '-')
+        add_ds_var(ds, 'lai_low_veg',  self.lai_low_mean,  ('time'), 'LAI low vegetation', '-')
+        add_ds_var(ds, 'lai_high_veg', self.lai_high_mean, ('time'), 'LAI high vegetation', '-')
+        add_ds_var(ds, 'c_low_veg',  self.cveg_low_mean,  ('time'), 'fraction low vegetation', '-')
+        add_ds_var(ds, 'c_high_veg', self.cveg_high_mean, ('time'), 'fraction high vegetation', '-')
+        add_ds_var(ds, 'z0m', self.z0m_mean, ('time'), 'roughness length momentum', 'm')
+        add_ds_var(ds, 'z0h', self.z0h_mean, ('time'), 'roughness length scalars', 'm')
+
+        # Time varying surface properties:
+        add_ds_var(ds, 'ps', self.ps_mean, ('time'), 'surface pressure', 'Pa')
+
+        # Misc
+        ds.attrs['fc'] = self.fc
+
+        return ds
 
 
     def save_forcings(self, file_name):

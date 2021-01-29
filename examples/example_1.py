@@ -60,15 +60,56 @@ era = ls2d.Read_era5(settings)
 era.calculate_forcings(n_av=0, method='2nd')
 
 # Interpolate ERA5 to fixed height grid:
-z = np.arange(10, 3000, 20)
-les_input = era.interpolate_to_fixed_height(z)
+z = np.arange(10, 4000, 20).astype(float)
+les_input = era.get_les_input(z)
+
+# `les_input` is an xarray.Dataset, which can easily be save to NetCDF:
+les_input.to_netcdf('example_1.nc')
 
 # Plot variables as example:
-pl.figure(figsize=(8,8))
+nrow = 5
+ncol = 2
 sp = 1
-for var, data in les_input.items():
-    pl.subplot(4,4,sp); sp+=1
-    pl.plot(data.T, les_input['z'].T)
-    pl.xlabel(var)
-    pl.ylabel('z (m)')
+
+pl.figure(figsize=(8,8))
+pl.subplot(nrow, ncol, sp); sp+=1
+pl.plot(les_input['thl'].T, les_input['z'])
+pl.xlabel(r'$\theta_l$ (K)')
+
+pl.subplot(nrow, ncol, sp); sp+=1
+pl.plot(les_input['dtthl_advec'].T*3600, les_input['z'])
+pl.xlabel(r'$\partial \theta_l/\partial t$ advec (K h$^{-1}$)')
+
+pl.subplot(nrow, ncol, sp); sp+=1
+pl.plot(les_input['qt'].T*1e3, les_input['z'])
+pl.xlabel(r'$q_t$ (g kg$^{-1}$)')
+
+pl.subplot(nrow, ncol, sp); sp+=1
+pl.plot(les_input['dtqt_advec'].T*3600000, les_input['z'])
+pl.xlabel(r'$\partial q_t/\partial t$ advec (g kg$^{-1}$ h$^{-1}$)')
+
+pl.subplot(nrow, ncol, sp); sp+=1
+pl.plot(les_input['u'].T, les_input['z'])
+pl.xlabel(r'$u$ (m s$^{-1}$)')
+
+pl.subplot(nrow, ncol, sp); sp+=1
+pl.plot(les_input['dtu_advec'].T*3600, les_input['z'])
+pl.xlabel(r'$\partial u/\partial t$ advec (m s$^{-1}$ h$^{-1}$)')
+
+pl.subplot(nrow, ncol, sp); sp+=1
+pl.plot(les_input['v'].T, les_input['z'])
+pl.xlabel(r'$v$ (m s$^{-1}$)')
+
+pl.subplot(nrow, ncol, sp); sp+=1
+pl.plot(les_input['dtv_advec'].T*3600, les_input['z'])
+pl.xlabel(r'$\partial v/\partial t$ advec (m s$^{-1}$ h$^{-1}$)')
+
+pl.subplot(nrow, ncol, sp); sp+=1
+pl.plot(les_input['ug'].T, les_input['z'])
+pl.xlabel(r'$u_g$ (m s$^{-1}$)')
+
+pl.subplot(nrow, ncol, sp); sp+=1
+pl.plot(les_input['vg'].T, les_input['z'])
+pl.xlabel(r'$v_g$ (m s$^{-1}$)')
+
 pl.tight_layout()
