@@ -176,7 +176,7 @@ nl = mht.read_namelist('cabauw.ini.base')
 
 nl['grid']['ktot'] = grid.kmax
 nl['grid']['zsize'] = grid.zsize
-nl['time']['endtime'] = les_input['time_sec'][-1]
+nl['time']['endtime'] = float(les_input['time_sec'][-1])
 nl['force']['fc'] = les_input.attrs['fc']
 nl['radiation']['lon'] = settings['central_lon']
 nl['radiation']['lat'] = settings['central_lat']
