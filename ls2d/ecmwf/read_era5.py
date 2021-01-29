@@ -249,7 +249,6 @@ class Read_era5:
 
         # Convert ozone from mass mixing ratio to volume mixing ratio
         self.o3 = 28.9644 / 47.9982 * self.o3 * 1e6
-        #print('no fix o3')
 
 
     def calc_derived_data(self):

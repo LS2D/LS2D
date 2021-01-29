@@ -122,7 +122,7 @@ init_profiles = {
         'n2o': n2o,
         'n2': n2,
         'o2': o2,
-        'o3': o3_les,
+        'o3': o3_les*1e-6,
         'h2o': h2o_les}
 
 radiation  = {
@@ -132,7 +132,7 @@ radiation  = {
         'p_lev': les_input['p_lev'].mean(axis=0),
         't_lay': les_input['t_lay'].mean(axis=0),
         't_lev': les_input['t_lev'].mean(axis=0),
-        'o3': les_input['o3_lay'].mean(axis=0),
+        'o3': les_input['o3_lay'].mean(axis=0)*1e-6,
         'h2o': les_input['h2o_lay'].mean(axis=0),
         'co2': co2,
         'ch4': ch4,
