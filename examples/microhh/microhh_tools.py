@@ -230,3 +230,5 @@ def check_grid_decomposition(itot, jtot, ktot, npx, npy):
     else:
         print('Grid configuration okay!')
         return True
+
+check_grid_decomposition(768, 384, 192, 12, 8)

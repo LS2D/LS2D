@@ -20,12 +20,9 @@
 
 # Python modules
 from datetime import datetime
-import sys, os
-import subprocess
-import shutil
+import sys
 
 # Third party modules
-import xarray as xr
 import numpy as np
 
 # LS2D & custom modules

@@ -601,6 +601,10 @@ class Read_era5:
 
         # Time varying surface properties:
         add_ds_var(ds, 'ps', self.ps_mean, ('time'), 'surface pressure', 'Pa')
+        add_ds_var(ds, 'sst', self.sst_mean, ('time'), 'sea surface temperature', 'K')
+        add_ds_var(ds, 'ts', self.Ts_mean, ('time'), 'surface (skin) temperature', 'K')
+        add_ds_var(ds, 'wth', self.wths_mean, ('time'), 'surface sensible heat flux', 'K m s-1')
+        add_ds_var(ds, 'wq', self.wqs_mean, ('time'), 'surface latent heat flux', 'kg kg-1 m s-1')
 
         # Misc
         ds.attrs['fc'] = self.fc

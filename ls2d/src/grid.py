@@ -34,12 +34,18 @@ class _Grid:
         self.dz = np.zeros(kmax)
         self.zsize = None
 
-    def plot(self):
+    def plot(self, logx=False, logy=False):
         pl.figure()
+        ax=pl.subplot()
         pl.title(r'$z_\mathrm{{size}}$ = {0:.1f} m'.format(self.zsize), loc='left')
         pl.plot(self.dz, self.z, '-x')
         pl.xlabel(r'$\Delta z$ (m)')
         pl.ylabel(r'$z$ (m)')
+
+        if logx:
+            ax.set_xscale('log')
+        if logy:
+            ax.set_yscale('log')
 
 
 class Grid_equidist(_Grid):
