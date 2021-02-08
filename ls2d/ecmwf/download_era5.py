@@ -131,9 +131,6 @@ def _download_era5_file(settings):
     # Switch between CDS and MARS downloads
     if settings['data_source'] == 'CDS':
 
-        if cdsapi is None:
-            error('Can not import Python CDS API!')
-
         # Create instance of CDS API
         server = cdsapi.Client()
 
@@ -296,6 +293,9 @@ def download_era5(settings):
         error('Output directory \"{}\" does not exist!'.format(settings['era5_path']))
     if settings['era5_path'][-1] != '/':
         settings['era5_path'] += '/'
+
+    if cdsapi is None:
+        error('CDS API is not installed. See: https://cds.climate.copernicus.eu/api-how-to')
 
     # Round date/time to full hours
     start = era_tools.lower_to_hour(settings['start_date'])
