@@ -68,6 +68,10 @@ grid = ls2d.grid.Grid_linear_stretched(kmax=176, dz0=20, alpha=0.009)
 # In addition, `get_les_input` returns additional variables needed to init LES.
 les_input = era.get_les_input(grid.z)
 
+# Remove top ERA5 level, to ensure that pressure stays
+# above the minimum reference pressure in RRTMGP
+les_input = les_input.sel(lay=slice(0,135), lev=slice(0,136))
+
 #
 # MicroHH specific initialisation
 #
