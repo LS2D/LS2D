@@ -17,17 +17,17 @@ Python package to download ERA5 (using CDS or MARS), and calculate the initial c
 In the future, LS2D will be uploaded to PyPI (allowing for a simple `pip install ls2d`). For now, download the LS2D source code, e.g. with `git`:
 
     git clone https://github.com/LS2D/LS2D.git
-    
+
 In each script where you want to use LS2D, add the LS2D root directory to the Python path:
 
     import sys
     sys.path.append('/path/to/LS2D')
-    
+
 ### Usage
 
 An example script is provided in `examples/example_1.py`, which downloads the ERA5 data, calculates the initial conditions and large scale forcings, and creates an example plot.
 
-The examples directory also contains an example case for MicroHH (https://github.com/microhh/microhh). 
+The examples directory also contains an example case for MicroHH (https://github.com/microhh/microhh).
 
 ### The `settings` dictionary
 
