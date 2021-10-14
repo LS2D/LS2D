@@ -293,6 +293,7 @@ class Read_era5:
         self.fc  = 2 * 7.2921e-5 * np.sin(np.deg2rad(self.settings['central_lat']))  # Coriolis parameter
 
         # Store soil temperature, and moisture content, in 3D array
+        self.z_soil = np.array([-0.035, -0.175, -0.64, -1.945])
         self.T_soil = np.zeros((self.ntime, 4, self.nlat, self.nlon))
         self.theta_soil = np.zeros((self.ntime, 4, self.nlat, self.nlon))
 
@@ -357,7 +358,7 @@ class Read_era5:
         var_nn = ['soil_type', 'veg_type_low', 'veg_type_high']
         for var in var_nn:
             data = getattr(self, var)
-            setattr(self, '{}_nn'.format(var), data[:, self.j, self.i])
+            setattr(self, '{}_nn'.format(var), data[0, self.j, self.i])
 
         # Half level values temperature for radiation
         self.Th_mean = np.zeros_like(self.zh_mean)
@@ -498,6 +499,33 @@ class Read_era5:
         self.dtu_total_mean = self.dtu_advec_mean + self.dtu_coriolis_mean
         self.dtv_total_mean = self.dtv_advec_mean + self.dtv_coriolis_mean
 
+        # Calculate root fraction for low and high vegetation
+        # Root-fraction coefficients from ECMWF documentation:
+        ar = np.array([ 5.558, 10.739,  6.706,  7.066,  5.99 ,  7.344,  8.235,  4.372,
+                        8.992,  5.558,  4.372, -1.   ,  7.344, -1.   , -1.   ,  6.326,
+                        6.326,  4.453,  4.453, -1.   ])
+        br = np.array([ 2.614,  2.608,  2.175,  1.953,  1.955,  1.303,  1.627,  0.978,
+                        8.992,  2.614,  0.978, -1.   ,  1.303, -1.   , -1.   ,  1.567,
+                        1.567,  1.631,  1.631, -1.   ])
+
+        # Calculate half level soil depths
+        zh = np.zeros(self.z_soil.size+1)
+        for k in range(zh.size-2, -1, -1):
+            zh[k] = zh[k+1] - 2*(zh[k+1] - self.z_soil[::-1][k])
+
+        def calc_root_fraction(index):
+            rf = np.zeros_like(self.z_soil)
+            for k in range(1, rf.size):
+                rf[k] = 0.5 * (np.exp(ar[index] * zh[k+1]) + \
+                               np.exp(br[index] * zh[k+1]) - \
+                               np.exp(ar[index] * zh[k  ]) - \
+                               np.exp(br[index] * zh[k  ]));
+            rf[0] = 1.-rf.sum()
+            return rf[::-1]
+
+        self.root_frac_low_nn  = calc_root_fraction(self.veg_type_low_nn-1)
+        self.root_frac_high_nn = calc_root_fraction(self.veg_type_high_nn-1)
+
 
     def get_les_input(self, z):
         """
@@ -512,20 +540,22 @@ class Read_era5:
             return out
 
         def add_ds_var(ds, name, data, dims, long_name, units):
-            ds[name] = (dims, data)
+            if dims is not None:
+                ds[name] = (dims, data)
+            else:
+                ds[name] = data
             ds[name].attrs['long_name'] = long_name
             ds[name].attrs['units'] = units
 
         #
         # Create xarray Dataset
         #
-        z_soil = np.array([-1.945, -0.64, -0.175, -0.035])[::-1]
 
         ds = xr.Dataset(
                 coords = {
                     'time': self.datetime,
                     'z': z,
-                    'zs': z_soil,
+                    'zs': self.z_soil,
                     'lev': np.arange(self.nhalf),
                     'lay': np.arange(self.nfull)
                 })
@@ -587,15 +617,21 @@ class Read_era5:
         # Soil variables
         add_ds_var(ds, 't_soil', self.T_soil_mean, ('time', 'zs'), 'soil temperature', 'K')
         add_ds_var(ds, 'theta_soil', self.theta_soil_mean, ('time', 'zs'), 'soil moisture content', 'm3 m-3')
-        add_ds_var(ds, 'type_soil', self.soil_type_nn, ('time'), 'soil type', '-')
+        add_ds_var(ds, 'type_soil', self.soil_type_nn, None, 'soil type', '-')
 
         # Surface/vegetation:
-        add_ds_var(ds, 'type_low_veg',  self.veg_type_low_nn,  ('time'), 'low vegetation type', '-')
-        add_ds_var(ds, 'type_high_veg', self.veg_type_high_nn, ('time'), 'high vegetation type', '-')
+        add_ds_var(ds, 'type_low_veg',  self.veg_type_low_nn,  None, 'low vegetation type', '-')
+        add_ds_var(ds, 'type_high_veg', self.veg_type_high_nn, None, 'high vegetation type', '-')
+
+        add_ds_var(ds, 'root_frac_low_veg',  self.root_frac_low_nn,  ('zs'), 'root fraction low vegetation', '-')
+        add_ds_var(ds, 'root_frac_high_veg', self.root_frac_high_nn, ('zs'), 'root fraction high vegetation', '-')
+
         add_ds_var(ds, 'lai_low_veg',  self.lai_low_mean,  ('time'), 'LAI low vegetation', '-')
         add_ds_var(ds, 'lai_high_veg', self.lai_high_mean, ('time'), 'LAI high vegetation', '-')
+
         add_ds_var(ds, 'c_low_veg',  self.cveg_low_mean,  ('time'), 'fraction low vegetation', '-')
         add_ds_var(ds, 'c_high_veg', self.cveg_high_mean, ('time'), 'fraction high vegetation', '-')
+
         add_ds_var(ds, 'z0m', self.z0m_mean, ('time'), 'roughness length momentum', 'm')
         add_ds_var(ds, 'z0h', self.z0h_mean, ('time'), 'roughness length scalars', 'm')
 
