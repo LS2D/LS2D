@@ -1,5 +1,5 @@
 # LS2D
-(LS)^2D: LES and SCM - Large Scale Dynamics
+(LS)<sup>2</sup>D: LES and SCM - Large Scale Dynamics
 
 Python package to download ERA5 (using CDS or MARS), and calculate the initial conditions and large scale forcings, for large eddy simulation (LES) or single column model (SCM) experiments.
 
@@ -14,11 +14,11 @@ Python package to download ERA5 (using CDS or MARS), and calculate the initial c
 
 ### Setup
 
-In the future, LS2D will be uploaded to PyPI (allowing for a simple `pip install ls2d`). For now, download the LS2D source code, e.g. with `git`:
+In the future, (LS)<sup>2</sup>D will be uploaded to PyPI (allowing for a simple `pip install ls2d`). For now, download the LS2D source code, e.g. with `git`:
 
     git clone https://github.com/LS2D/LS2D.git
 
-In each script where you want to use LS2D, add the LS2D root directory to the Python path:
+In each script where you want to use (LS)<sup>2</sup>D, add the (LS)<sup>2</sup>D root directory to the Python path:
 
     import sys
     sys.path.append('/path/to/LS2D')
@@ -31,7 +31,7 @@ The examples directory also contains an example case for MicroHH (https://github
 
 ### The `settings` dictionary
 
-All settings for LS2D are wrapped in a dictionary:
+All settings for (LS)<sup>2</sup>D are wrapped in a dictionary:
 
 - `central_lat`: central latitude of LES/SCM domain
 - `central_lon`: central longitude of LES/SCM domain
