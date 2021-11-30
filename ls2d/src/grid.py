@@ -35,17 +35,29 @@ class _Grid:
         self.zsize = None
 
     def plot(self, logx=False, logy=False):
-        pl.figure()
-        ax=pl.subplot()
+
+        fig=pl.figure()
+        ax=pl.subplot(121)
         pl.title(r'$z_\mathrm{{size}}$ = {0:.1f} m'.format(self.zsize), loc='left')
-        pl.plot(self.dz, self.z, '-x')
+        pl.plot(self.dz, self.z, 'k-x')
         pl.xlabel(r'$\Delta z$ (m)')
         pl.ylabel(r'$z$ (m)')
+        pl.grid()
+
+        ax=pl.subplot(122)
+        pl.plot(np.arange(self.kmax)+1, self.z, 'k-x')
+        pl.xlabel(r'Level (-)')
+        pl.ylabel(r'$z$ (m)')
+        pl.grid()
 
         if logx:
-            ax.set_xscale('log')
+            for ax in fig.axes:
+                ax.set_xscale('log')
         if logy:
-            ax.set_yscale('log')
+            for ax in fig.axes:
+                ax.set_yscale('log')
+
+        pl.tight_layout()
 
 
 class Grid_equidist(_Grid):
