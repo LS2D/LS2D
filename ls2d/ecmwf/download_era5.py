@@ -19,11 +19,10 @@
 #
 
 # Python modules
-import multiprocessing as mp
-from multiprocessing import set_start_method
 import subprocess as sp
 import datetime
 import sys,os
+import pickle
 
 # Third party modules
 import numpy as np
@@ -39,7 +38,6 @@ try:
 except ImportError:
     cdsapi = None
 
-set_start_method('fork')
 
 def _retrieve_from_MARS(request, settings, nc_dir, nc_file, qos):
     """
@@ -103,7 +101,10 @@ def _download_era5_file(settings):
                 ftype : level/forecast/analysis switch (in: [model_an, model_fc, pressure_an, surface_an])
     """
 
-    message('Downloading: {} - {}'.format(settings['date'], settings['ftype']))
+    header('Downloading: {} - {}'.format(settings['date'], settings['ftype']))
+
+    # Keep track of CDS downloads which are finished:
+    finished = False
 
     # Output file name
     nc_dir, nc_file = era_tools.era5_file_path(
@@ -112,8 +113,8 @@ def _download_era5_file(settings):
 
     # Write CDS API prints to log file (NetCDF file path/name appended with .out/.err)
     if settings['write_log']:
-        out_file   = '{}.out'.format(nc_file)
-        err_file   = '{}.err'.format(nc_file)
+        out_file   = '{}.out'.format(nc_file[:-3])
+        err_file   = '{}.err'.format(nc_file[:-3])
         old_stdout = sys.stdout
         old_stderr = sys.stderr
         sys.stdout = open(out_file, 'w')
@@ -131,73 +132,105 @@ def _download_era5_file(settings):
     # Switch between CDS and MARS downloads
     if settings['data_source'] == 'CDS':
 
-        # Create instance of CDS API
-        server = cdsapi.Client()
+        # Check if pickle with previous request is available.
+        # If so, try to download NetCDF file, if not, submit new request
+        pickle_file = '{}.pickle'.format(nc_file[:-3])
 
-        # Surface and pressure level analysis, stored on HDs, so downloads are fast :-)
-        if settings['ftype'] == 'pressure_an' or settings['ftype'] == 'surface_an':
+        if os.path.isfile(pickle_file):
+            message('Found previous CDS request!')
 
-            analysis_times = ['{0:02d}:00'.format(i) for i in range(24)]
-            area = [lat_n, lon_w, lat_s, lon_e]
+            with open(pickle_file, 'rb') as f:
+                cds_request = pickle.load(f)
+                cds_request.update()
+                state = cds_request.reply['state']
 
-            request = {
-                'product_type': 'reanalysis',
-                'format': 'netcdf',
-                'year': '{0:04d}'.format(settings['date'].year),
-                'month': '{0:02d}'.format(settings['date'].month),
-                'day': '{0:02d}'.format(settings['date'].day),
-                'time': analysis_times,
-                'area': area,
-            }
+                if state == 'completed':
+                    message('Request finished, downloading NetCDF file')
+                    cds_request.download(nc_file)
+                    finished = True
 
-            if settings['ftype'] == 'pressure_an':
-                pressure_levels = [
-                    '1', '2', '3', '5', '7', '10', '20', '30', '50', '70', '100', '125', '150', '175', '200',
-                    '225', '250', '300', '350', '400', '450', '500', '550', '600', '650', '700', '750',
-                    '775', '800', '825', '850', '875', '900', '925', '950', '975', '1000']
+                elif state in ('queued', 'running'):
+                    message('Request not finished, current status = \"{}\"'.format(state))
 
-                request.update({
-                    'pressure_level': pressure_levels,
-                    'variable': 'geopotential'})
+                else:
+                    error('Request failed, status = \"{}\"'.format(state), exit=False)
+                    message('Error message = {}'.format(cds_request.reply['error'].get('message')))
+                    message('Error reason = {}'.format(cds_request.reply['error'].get('reason')))
 
-                server.retrieve('reanalysis-era5-pressure-levels', request, nc_file)
+        else:
+            message('No previous CDS request, submitting new one')
 
-            elif settings['ftype'] == 'surface_an':
-                request.update({
-                    'variable': [
-                        'instantaneous_moisture_flux', 'high_vegetation_cover', 'leaf_area_index_high_vegetation',
-                        'leaf_area_index_low_vegetation', 'low_vegetation_cover', 'sea_surface_temperature',
-                        'skin_temperature', 'soil_temperature_level_1', 'soil_temperature_level_2',
-                        'soil_temperature_level_3', 'soil_temperature_level_4', 'soil_type',
-                        'surface_pressure', 'instantaneous_surface_sensible_heat_flux', 'type_of_high_vegetation',
-                        'type_of_low_vegetation', 'volumetric_soil_water_layer_1', 'volumetric_soil_water_layer_2',
-                        'volumetric_soil_water_layer_3', 'volumetric_soil_water_layer_4',
-                        'forecast_logarithm_of_surface_roughness_for_heat', 'forecast_surface_roughness']})
+            # Create instance of CDS API
+            server = cdsapi.Client(wait_until_complete=False, delete=False)
 
-                server.retrieve('reanalysis-era5-single-levels', request, nc_file)
+            # Surface and pressure level analysis, stored on HDs, so downloads are fast :-)
+            if settings['ftype'] == 'pressure_an' or settings['ftype'] == 'surface_an':
 
-        # Model level analysis, stored in tape archive, so downloads are VERY slow :-(
-        elif settings['ftype'] == 'model_an':
+                analysis_times = ['{0:02d}:00'.format(i) for i in range(24)]
+                area = [lat_n, lon_w, lat_s, lon_e]
 
-            model_levels = '/'.join(list(np.arange(1,138).astype(str)))
-            analysis_times = '/'.join(['{0:02d}:00:00'.format(i) for i in range(24)])
+                request = {
+                    'product_type': 'reanalysis',
+                    'format': 'netcdf',
+                    'year': '{0:04d}'.format(settings['date'].year),
+                    'month': '{0:02d}'.format(settings['date'].month),
+                    'day': '{0:02d}'.format(settings['date'].day),
+                    'time': analysis_times,
+                    'area': area,
+                }
 
-            request = {
-                'class': 'ea',
-                'date': '{0:04d}-{1:02d}-{2:02d}'.format(
-                    settings['date'].year, settings['date'].month, settings['date'].day),
-                'expver': '1',
-                'levelist': model_levels,
-                'levtype': 'ml',
-                'param': '75/76/130/131/132/133/135/203/246/247',
-                'stream': 'oper',
-                'time': analysis_times,
-                'type': 'an',
-                'area': '{}/{}/{}/{}'.format(lat_n, lon_w, lat_s, lon_e),
-                'grid': '0.25/0.25',
-                'format': 'netcdf'}
+                if settings['ftype'] == 'pressure_an':
+                    pressure_levels = [
+                        '1', '2', '3', '5', '7', '10', '20', '30', '50', '70', '100', '125', '150', '175', '200',
+                        '225', '250', '300', '350', '400', '450', '500', '550', '600', '650', '700', '750',
+                        '775', '800', '825', '850', '875', '900', '925', '950', '975', '1000']
 
-            server.retrieve('reanalysis-era5-complete', request, nc_file)
+                    request.update({
+                        'pressure_level': pressure_levels,
+                        'variable': 'geopotential'})
+
+                    cds_request = server.retrieve('reanalysis-era5-pressure-levels', request)
+
+                elif settings['ftype'] == 'surface_an':
+                    request.update({
+                        'variable': [
+                            'instantaneous_moisture_flux', 'high_vegetation_cover', 'leaf_area_index_high_vegetation',
+                            'leaf_area_index_low_vegetation', 'low_vegetation_cover', 'sea_surface_temperature',
+                            'skin_temperature', 'soil_temperature_level_1', 'soil_temperature_level_2',
+                            'soil_temperature_level_3', 'soil_temperature_level_4', 'soil_type',
+                            'surface_pressure', 'instantaneous_surface_sensible_heat_flux', 'type_of_high_vegetation',
+                            'type_of_low_vegetation', 'volumetric_soil_water_layer_1', 'volumetric_soil_water_layer_2',
+                            'volumetric_soil_water_layer_3', 'volumetric_soil_water_layer_4',
+                            'forecast_logarithm_of_surface_roughness_for_heat', 'forecast_surface_roughness']})
+
+                    cds_request = server.retrieve('reanalysis-era5-single-levels', request)
+
+            # Model level analysis, stored in tape archive, so downloads are VERY slow :-(
+            elif settings['ftype'] == 'model_an':
+
+                model_levels = '/'.join(list(np.arange(1,138).astype(str)))
+                analysis_times = '/'.join(['{0:02d}:00:00'.format(i) for i in range(24)])
+
+                request = {
+                    'class': 'ea',
+                    'date': '{0:04d}-{1:02d}-{2:02d}'.format(
+                        settings['date'].year, settings['date'].month, settings['date'].day),
+                    'expver': '1',
+                    'levelist': model_levels,
+                    'levtype': 'ml',
+                    'param': '75/76/130/131/132/133/135/203/246/247',
+                    'stream': 'oper',
+                    'time': analysis_times,
+                    'type': 'an',
+                    'area': '{}/{}/{}/{}'.format(lat_n, lon_w, lat_s, lon_e),
+                    'grid': '0.25/0.25',
+                    'format': 'netcdf'}
+
+                cds_request = server.retrieve('reanalysis-era5-complete', request)
+
+            # Save pickle for later processing/download
+            with open(pickle_file, 'wb') as f:
+                pickle.dump(cds_request, f)
 
 
     elif settings['data_source'] == 'MARS':
@@ -259,7 +292,7 @@ def _download_era5_file(settings):
         sys.stdout = old_stdout
         sys.stderr = old_stderr
 
-    message('Finished: {} - {} in {}'.format(settings['date'], settings['ftype'], datetime.datetime.now()-start))
+    return finished
 
 
 def download_era5(settings):
@@ -329,11 +362,25 @@ def download_era5(settings):
                 settings_tmp.update({'date': date, 'ftype':ftype})
                 download_queue.append(settings_tmp)
 
-    if settings['data_source'] == 'CDS' and settings['ntasks'] > 1:
-        # Create download Pool:
-        pool = mp.Pool(processes=settings['ntasks'])
-        pool.map(_download_era5_file, download_queue)
-    else:
-        # Simple serial retrieve:
-        for req in download_queue:
-            _download_era5_file(req)
+    finished = True
+    for req in download_queue:
+        if not _download_era5_file(req):
+            finished = False
+
+    if not finished:
+        if settings['data_source'] == 'CDS':
+            print(' -----------------------------------------------------------')
+            print(' | One or more requests are not finished.                  |')
+            print(' | For CDS request, you can monitor the progress at:       |')
+            print(' | https://cds.climate.copernicus.eu/cdsapp#!/yourrequests |')
+            print(' | This script will stop now, you can restart it           |')
+            print(' | at any time to retry, or download the results.          |')
+            print(' -----------------------------------------------------------')
+        else:
+            print(' -------------------------------------------------')
+            print(' | MARS requests are submitted.                  |')
+            print(' | This script will stop now, you can restart it |')
+            print(' | at any time to retry.                         |')
+            print(' -------------------------------------------------')
+
+        sys.exit(1)
