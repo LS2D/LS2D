@@ -23,6 +23,7 @@ import subprocess as sp
 import datetime
 import sys,os
 import pickle
+import requests
 
 # Third party modules
 import numpy as np
@@ -141,7 +142,13 @@ def _download_era5_file(settings):
 
             with open(pickle_file, 'rb') as f:
                 cds_request = pickle.load(f)
-                cds_request.update()
+
+                try:
+                    cds_request.update()
+                except requests.exceptions.HTTPError:
+                    error('CDS request is no longer available online!', exit=False)
+                    error('To continue, delete the previous request: {}'.format(pickle_file))
+
                 state = cds_request.reply['state']
 
                 if state == 'completed':
