@@ -22,6 +22,7 @@
 from collections import OrderedDict
 import struct as st
 import re
+import sys
 
 # Third party modules
 import netCDF4 as nc4
@@ -81,6 +82,8 @@ def write_namelist(namelist_file, namelist_dict):
             for variable,value in items.items():
                 if isinstance(value, list):
                     value = ','.join([str(elem) for elem in value])
+                elif isinstance(value, bool):
+                    value = 1 if value==True else 0
                 f.write('{}={}\n'.format(variable, value))
             f.write('\n')
 
@@ -200,35 +203,31 @@ def check_grid_decomposition(itot, jtot, ktot, npx, npy):
     Check whether grid / MPI decomposition is valid
     """
 
-    print('Grid: itot={}, jtot={}, ktot={}, npx={}, npy={}'.format(
+    print('Checking grid: itot={}, jtot={}, ktot={}, npx={}, npy={}'.format(
         itot, jtot, ktot, npx, npy))
 
     err = False
     if itot%npx != 0:
-        print('itot%npx != 0')
+        print('ERROR: itot%npx != 0')
         err = True
 
     if itot%npy != 0:
-        print('itot%npy != 0')
+        print('ERROR: itot%npy != 0')
         err = True
 
     if jtot%npx != 0 and npy > 1:
-        print('jtot%npx != 0')
+        print('ERROR: jtot%npx != 0')
         err = True
 
     if jtot%npy != 0:
-        print('jtot%npy != 0')
+        print('ERROR: jtot%npy != 0')
         err = True
 
     if ktot%npx != 0:
-        print('ktot%npx != 0')
+        print('ERROR: ktot%npx != 0')
         err = True
 
     if err:
-        print('Invalid grid configuration!')
-        return False
+        sys.exit('Invalid grid configuration!')
     else:
-        print('Grid configuration okay!')
-        return True
-
-check_grid_decomposition(768, 384, 192, 12, 8)
+        print('Grid okay!')

@@ -28,7 +28,7 @@ import numpy as np
 # LS2D & custom modules
 sys.path.append('/home/bart/meteo/models/LS2D')
 import ls2d
-import microhh_tools as mht
+import microhh_ls2d_tools as mlt
 
 # Constants
 Rd = 287.04
@@ -101,9 +101,9 @@ h2o_les = qt_les / (ep - ep*qt_les)
 
 ## Soil
 z_soil     = les_input['zs'][::-1].values
-soil_index = les_input['type_soil'].values[0]-1
+soil_index = les_input['type_soil'].values-1
 soil_index = np.ones_like(z_soil)*soil_index
-root_frac  = mht.calc_root_frac(z_soil, a_r, b_r)
+root_frac  = mlt.calc_root_frac(z_soil, a_r, b_r)
 
 # Nudge factor
 nudge_fac = np.ones(grid.kmax) / tau_nudge
@@ -166,14 +166,14 @@ soil = {
         'index_soil': soil_index,
         'root_frac': root_frac}
 
-mht.write_netcdf_input(
+mlt.write_netcdf_input(
         'cabauw', 'f8', init_profiles,
         timedep_surface, timedep_ls, radiation, soil)
 
 #
 # Update namelist
 #
-nl = mht.read_namelist('cabauw.ini.base')
+nl = mlt.read_namelist('cabauw.ini.base')
 
 nl['grid']['ktot'] = grid.kmax
 nl['grid']['zsize'] = grid.zsize
@@ -194,4 +194,4 @@ x,y = np.meshgrid(column_x, column_y)
 nl['column']['coordinates[x]'] = list(x.flatten())
 nl['column']['coordinates[y]'] = list(y.flatten())
 
-mht.write_namelist('cabauw.ini', nl)
+mlt.write_namelist('cabauw.ini', nl)
