@@ -348,7 +348,7 @@ class Read_era5:
 
         # Variables averaged from (time, lon, lat) to (time):
         var_3d_mean = [
-                'ps', 'Ts', 'sst', 'wths', 'wqs', 'ps',
+                'ps', 'Ts', 'sst', 'wths', 'wqs', 'ps', 'rhos',
                 'lai_low', 'lai_high', 'z0m', 'z0h', 'cveg_low', 'cveg_high']
         for var in var_3d_mean:
             mean = getattr(self, var)[center3d].mean(axis=(1,2))
