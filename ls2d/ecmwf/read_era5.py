@@ -176,7 +176,15 @@ class Read_era5:
         # Read spatial and time variables
         self.lats = self.fma.variables['latitude'][::-1]
         self.lons = self.fma.variables['longitude'][:]
+
+        # Read time, and check if all files are synced.
         self.time = self.fma.variables['time'][t_an]
+        time_check = self.fsa.variables['time'][t_an]
+
+        if not np.all(self.time == time_check):
+            warning('Model level times: {}'.format(self.time))
+            warning('Surface times:     {}'.format(time_check))
+            error('Model level and surface times are not synced!')
 
         # Shift grid from 0-360 to -180, 180 (if needed)
         if np.any(self.lons>180):
