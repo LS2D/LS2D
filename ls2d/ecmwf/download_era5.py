@@ -350,24 +350,30 @@ def download_era5(settings):
     download_settings = settings.copy()
     download_queue = []
 
+    # Option to exclude download types.
+    if 'blacklist_download' in settings:
+        blacklist = settings['blacklist_download']
+    else:
+        blacklist = []
+
     # Loop over all required files, check if there is a local version, if not add to download queue
     # Analysis files:
     for date in an_dates:
         for ftype in ['model_an', 'pressure_an', 'surface_an']:
+            if ftype not in blacklist:
+                era_dir, era_file = era_tools.era5_file_path(
+                        date.year, date.month, date.day, settings['era5_path'], settings['case_name'], ftype)
 
-            era_dir, era_file = era_tools.era5_file_path(
-                    date.year, date.month, date.day, settings['era5_path'], settings['case_name'], ftype)
+                if not os.path.exists(era_dir):
+                    message('Creating output directory {}'.format(era_dir))
+                    os.makedirs(era_dir)
 
-            if not os.path.exists(era_dir):
-                message('Creating output directory {}'.format(era_dir))
-                os.makedirs(era_dir)
-
-            if os.path.isfile(era_file):
-                message('Found {} - {} local'.format(date, ftype))
-            else:
-                settings_tmp = download_settings.copy()
-                settings_tmp.update({'date': date, 'ftype':ftype})
-                download_queue.append(settings_tmp)
+                if os.path.isfile(era_file):
+                    message('Found {} - {} local'.format(date, ftype))
+                else:
+                    settings_tmp = download_settings.copy()
+                    settings_tmp.update({'date': date, 'ftype':ftype})
+                    download_queue.append(settings_tmp)
 
     finished = True
     for req in download_queue:
