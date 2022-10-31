@@ -41,6 +41,7 @@ Rd = 287.04
 Rv = 461.5
 ep = Rd/Rv
 
+
 class Slice:
     def __init__(self, istart, iend, jstart, jend):
         self.istart = istart
@@ -368,6 +369,17 @@ class Read_era5:
             data = getattr(self, var)
             setattr(self, '{}_nn'.format(var), data[0, self.j, self.i])
 
+        if self.veg_type_low_nn == 0 or self.veg_type_high_nn == 0 or self.soil_type_nn == 0:
+            warning('Selected grid point is water/sea! Setting vegetation/soil indexes to 1e9')
+
+            self.soil_type_nn = int(1e9)
+            self.veg_type_low_nn = int(1e9)
+            self.veg_type_high_nn = int(1e9)
+
+            gridpoint_is_land = False
+        else:
+            gridpoint_is_land = True
+
         # Half level values temperature for radiation
         self.Th_mean = np.zeros_like(self.zh_mean)
         self.Th_mean[:,1:-1] = 0.5 * (self.T_mean[:,1:] + self.T_mean[:,:-1])
@@ -531,9 +543,13 @@ class Read_era5:
             rf[0] = 1.-rf.sum()
             return rf[::-1]
 
-        self.root_frac_low_nn  = calc_root_fraction(self.veg_type_low_nn-1)
-        self.root_frac_high_nn = calc_root_fraction(self.veg_type_high_nn-1)
 
+        if gridpoint_is_land:
+            self.root_frac_low_nn  = calc_root_fraction(self.veg_type_low_nn-1)
+            self.root_frac_high_nn = calc_root_fraction(self.veg_type_high_nn-1)
+        else:
+            self.root_frac_low_nn = np.zeros(4)-1
+            self.root_frac_high_nn = np.zeros(4)-1
 
     def get_les_input(self, z):
         """
@@ -625,11 +641,11 @@ class Read_era5:
         # Soil variables
         add_ds_var(ds, 't_soil', self.T_soil_mean, ('time', 'zs'), 'soil temperature', 'K')
         add_ds_var(ds, 'theta_soil', self.theta_soil_mean, ('time', 'zs'), 'soil moisture content', 'm3 m-3')
-        add_ds_var(ds, 'type_soil', self.soil_type_nn, None, 'soil type', '-')
+        add_ds_var(ds, 'type_soil', self.soil_type_nn, None, 'ECMWF soil type (Fortran indexing!)', '-')
 
         # Surface/vegetation:
-        add_ds_var(ds, 'type_low_veg',  self.veg_type_low_nn,  None, 'low vegetation type', '-')
-        add_ds_var(ds, 'type_high_veg', self.veg_type_high_nn, None, 'high vegetation type', '-')
+        add_ds_var(ds, 'type_low_veg',  self.veg_type_low_nn,  None, 'ECMWF low vegetation type (Fortran indexing!)', '-')
+        add_ds_var(ds, 'type_high_veg', self.veg_type_high_nn, None, 'ECMWF high vegetation type (Fortran indexing!)', '-')
 
         add_ds_var(ds, 'root_frac_low_veg',  self.root_frac_low_nn,  ('zs'), 'root fraction low vegetation', '-')
         add_ds_var(ds, 'root_frac_high_veg', self.root_frac_high_nn, ('zs'), 'root fraction high vegetation', '-')
