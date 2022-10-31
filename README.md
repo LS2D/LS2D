@@ -14,7 +14,7 @@ Python package to download ERA5 (using CDS or MARS), and calculate the initial c
 
 ### Setup
 
-In the future, (LS)<sup>2</sup>D will be uploaded to PyPI (allowing for a simple `pip install ls2d`). For now, download the LS2D source code, e.g. with `git`:
+In the future, (LS)<sup>2</sup>D will be uploaded to PyPI (allowing for a simple `pip install ls2d`). For now, download the (LS)<sup>2</sup>D source code, e.g. with `git`:
 
     git clone https://github.com/LS2D/LS2D.git
 
