@@ -46,7 +46,7 @@ settings = {
     'end_date'    : datetime(year=2016, month=8, day=15, hour=18),
     'write_log'   : True,
     'data_source' : 'CDS',
-    'ntasks'      : 3
+    'ntasks'      : 1
     }
 
 # Download required ERA5 files:
