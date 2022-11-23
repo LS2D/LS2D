@@ -43,4 +43,3 @@ All settings for (LS)<sup>2</sup>D are wrapped in a dictionary:
 - `end_date`: Python `datetime` object with end date/time
 - `write_log`: Write ERA5 download to screen (`False`) or log file (`True`)
 - `data_source`: Download method (`CDS` or `MARS`)
-- `ntasks`: option for parallel downloads (only for `CDS`).
