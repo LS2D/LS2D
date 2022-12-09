@@ -27,7 +27,7 @@ In each script where you want to use (LS)<sup>2</sup>D, add the (LS)<sup>2</sup>
 
 An example script is provided in `examples/example_1.py`, which downloads the ERA5 data, calculates the initial conditions and large scale forcings, and creates an example plot.
 
-The examples directory also contains an example case for MicroHH (https://github.com/microhh/microhh).
+The examples directory also contains an example case for MicroHH (https://github.com/microhh/microhh) and DALES (https://github.com/dalesteam/dales).
 
 ### The `settings` dictionary
 
@@ -42,4 +42,4 @@ All settings for (LS)<sup>2</sup>D are wrapped in a dictionary:
 - `start_date`: Python `datetime` object with start date/time
 - `end_date`: Python `datetime` object with end date/time
 - `write_log`: Write ERA5 download to screen (`False`) or log file (`True`)
-- `data_source`: Download method (`CDS` or `MARS`)
+- `data_source`: Download method (`CDS` or `MARS`). `MARS` only works on e.g. the ECMWF supercomputer.
