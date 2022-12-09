@@ -27,7 +27,7 @@ import sys
 import numpy as np
 
 # LS2D & custom modules
-#sys.path.append('/home/bart/meteo/models/LS2D')
+sys.path.append('/home/bart/meteo/models/LS2D')
 sys.path.append('/Users/bart/meteo/models/LS2D')
 import ls2d
 import dales_ls2d_tools as dlt
@@ -40,8 +40,8 @@ settings = {
     'central_lon' : 4.927,
     'area_size'   : 1,
     'case_name'   : 'cabauw',
-    #'era5_path'   : '/home/scratch1/meteo_data/LS2D/',
-    'era5_path'   : '/Users/bart/meteo/data/ERA5/LS2D',
+    'era5_path'   : '/home/scratch1/meteo_data/LS2D/',
+    #'era5_path'   : '/Users/bart/meteo/data/ERA5/LS2D',
     'start_date'  : datetime(year=2016, month=8, day=15, hour=6),
     'end_date'    : datetime(year=2016, month=8, day=15, hour=18),
     'write_log'   : True,
@@ -139,6 +139,23 @@ output = odict([
 
 dlt.write_time_profiles(
         'nudge.inp.{0:03d}'.format(expnr), les_input.time_sec.values, output, grid.kmax, docstring)
+
+#
+# Also create non-time dependent file (lscale.inp), required by DALES (why?)
+#
+zero = np.zeros_like(grid.z)
+
+output = odict([
+        ('height', grid.z),
+        ('ug', zero),
+        ('vg', zero),
+        ('wfls', zero),
+        ('dqtdxls', zero),
+        ('dqtdyls', zero),
+        ('dqtdtls', zero),
+        ('dthldt', zero)])
+
+dlt.write_profiles('lscale.inp.{0:03d}'.format(expnr), output, grid.kmax, docstring)
 
 #
 # Write radiation background profiles to `backrad.inp.expnr`.
