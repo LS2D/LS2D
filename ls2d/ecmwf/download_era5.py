@@ -75,10 +75,11 @@ def _retrieve_from_MARS(request, settings, nc_dir, nc_file, qos):
     f.write('#SBATCH --job-name={}\n'.format(jobname))
     f.write('#SBATCH --output={}.%N.%j.out\n'.format(slurm_job))
     f.write('#SBATCH --error={}.%N.%j.err\n'.format(slurm_job))
-    f.write('#SBATCH --workdir={}\n'.format(nc_dir))
+    f.write('#SBATCH --chdir={}\n'.format(nc_dir))
     f.write('#SBATCH --time={}\n\n'.format(wc_lim))
 
     f.write('mars {}\n'.format(mars_req))
+    f.write('module load ecmwf-toolbox \n')
     f.write('grib_to_netcdf -o {} {}'.format(nc_file, grib_file))
     f.close()
 
@@ -263,7 +264,7 @@ def _download_era5_file(settings):
 
         # Update request based on level/analysis/forecast:
         if settings['ftype'] == 'model_an':
-            qos = 'normal'
+            qos = 'nf'
             request.update({
                 'levtype'  : 'ml',
                 'type'     : 'an',
@@ -273,7 +274,7 @@ def _download_era5_file(settings):
             })
 
         elif settings['ftype'] == 'pressure_an':
-            qos = 'normal'
+            qos = 'nf'
             request.update({
                 'levtype'  : 'pl',
                 'type'     : 'an',
@@ -283,7 +284,7 @@ def _download_era5_file(settings):
             })
 
         elif settings['ftype'] == 'surface_an':
-            qos = 'normal'
+            qos = 'nf'
             request.update({
                 'levtype'  : 'sfc',
                 'type'     : 'an',
