@@ -31,6 +31,7 @@ class _Grid:
         self.dz0  = dz0
 
         self.z = np.zeros(kmax)
+        self.zh = np.zeros(kmax+1)
         self.dz = np.zeros(kmax)
         self.zsize = None
 
@@ -66,6 +67,7 @@ class Grid_equidist(_Grid):
 
         self.zsize = kmax * dz0
         self.z[:]  = np.arange(dz0/2, self.zsize, dz0)
+        self.zh[:] = np.arange(0, self.zsize+0.1, dz0)
         self.dz[:] = dz0
 
 
@@ -107,16 +109,20 @@ class Grid_stretched(_Grid):
 
         self.zsize = self.z[kmax-1] + 0.5*self.dz[kmax-1]
 
+        self.zh[1:-1] = self.z[1:] - self.z[:-1]
+        self.zh[-1] = self.zsize
+
+
 
 class Grid_linear_stretched(_Grid):
     def __init__(self, kmax, dz0, alpha):
         _Grid.__init__(self, kmax, dz0)
 
         self.dz[:] = dz0 * (1 + alpha)**np.arange(kmax)
-        zh         = np.zeros(kmax+1)
-        zh[1:]     = np.cumsum(self.dz)
-        self.z[:]  = 0.5 * (zh[1:] + zh[:-1])
-        self.zsize = zh[-1]
+        self.zh = np.zeros(kmax+1)
+        self.zh[1:]= np.cumsum(self.dz)
+        self.z[:] = 0.5 * (self.zh[1:] + self.zh[:-1])
+        self.zsize = self.zh[-1]
 
 
 class Grid_stretched_manual(_Grid):
@@ -134,3 +140,6 @@ class Grid_stretched_manual(_Grid):
             self.z[k] = self.z[k-1] + self.dz[k]
 
         self.zsize = self.z[kmax-1] + 0.5*self.dz[kmax-1]
+
+        self.zh[1:-1] = self.z[1:] - self.z[:-1]
+        self.zh[-1] = self.zsize
