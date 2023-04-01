@@ -1,7 +1,7 @@
 # LS2D
 (LS)<sup>2</sup>D: LES and SCM - Large Scale Dynamics
 
-Python package to download ERA5 (using CDS or MARS), and calculate the initial conditions and large scale forcings, for large eddy simulation (LES) or single column model (SCM) experiments.
+Python package to download ERA5 (using CDS or MARS), and calculate the initial conditions and large scale forcings, for doubly-periodic large eddy simulation (LES) or single column model (SCM) experiments.
 
 ### Required Python modules
 - numpy

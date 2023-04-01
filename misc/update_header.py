@@ -1,7 +1,7 @@
 #
 # This file is part of LS2D.
 #
-# Copyright (c) 2017-2022 Wageningen University & Research
+# Copyright (c) 2017-2023 Wageningen University & Research
 # Author: Bart van Stratum (WUR)
 #
 # LS2D is free software: you can redistribute it and/or modify
@@ -20,10 +20,11 @@
 
 import os
 
-ls2d_root = '/Users/bart/meteo/models/LS2D/'
+#ls2d_root = '/Users/bart/meteo/models/LS2D/'
+ls2d_root = '/home/bart/meteo/models/LS2D/'
 
-old = 'Copyright (c) 2017-2022 Wageningen University & Research'
-new = 'Copyright (c) 2017-2022 Wageningen University & Research'
+old = 'Copyright (c) 2017-2023 Wageningen University & Research'
+new = 'Copyright (c) 2017-2023 Wageningen University & Research'
 
 for root, dirs, files in os.walk(ls2d_root):
     for file in files:
