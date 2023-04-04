@@ -1,0 +1,4 @@
+include examples/microhh/cabauw.ini.base
+include examples/microhh/link_lookup_tables.sh
+include ls2d/ecmwf/L60_grid.txt
+include ls2d/ecmwf/L137_grid.txt

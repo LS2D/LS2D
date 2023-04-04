@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = [
+    "ls2d",
+    "ls2d.ecmwf",
+    "ls2d.src"]
+
+[project]
+name = "ls2d"
+version = "0.9.0"
+description = "Python toolkit to downscale ERA5 with doubly-periodic large-eddy simulation"
+readme = "README.md"
+authors = [{ name = "Bart van Stratum", email = "bart.vanstratum@wur.nl" }]
+license = { file = "LICENSE.txt" }
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+]
+keywords = ["meteorology", "ERA5", "large-eddy simulation"]
+dependencies = [
+    "numpy",
+    "scipy",
+    "netCDF4",
+    "xarray",
+    "matplotlib",
+    "requests"
+]
+requires-python = ">=3.6"
+
+[project.optional-dependencies]
+cds = ["cdsapi"]
+
+[project.urls]
+Homepage = "https://github.com/LS2D/LS2D"
