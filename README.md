@@ -1,20 +1,25 @@
 # LS2D
 (LS)<sup>2</sup>D: LES and SCM - Large Scale Dynamics
 
-Python package to download ERA5 (using CDS or MARS), and calculate the initial conditions and large scale forcings, for doubly-periodic large eddy simulation (LES) or single column model (SCM) experiments.
+(LS)<sup>2</sup>D is a Python toolkit, developed to simplify all the steps required to downscale ERA5 with doubly-periodic large-eddy simulation (LES), or single-column models (SCMs). For the retrieval of ERA data, it relies on the Copernicus Data Store (CDS), or the Meteorological Archival and Retrieval System (MARS) at ECMWF computer systems.
 
-### Required Python modules
-- numpy
-- scipy
-- matplotlib
-- netCDF4
-- cdsapi (*)
+### Installation
 
-(*): required if you want to use the Copernicus Data Store (CDS) Python API. See https://cds.climate.copernicus.eu/api-how-to for information on how to setup the API.
+If you want to use CDS to download the ERA5 data, then please start by following the steps explained at https://cds.climate.copernicus.eu/api-how-to .
 
-### Setup
+#### PyPI
 
-In the future, (LS)<sup>2</sup>D will be uploaded to PyPI (allowing for a simple `pip install ls2d`). For now, download the (LS)<sup>2</sup>D source code, e.g. with `git`:
+It is easiest to install (LS)<sup>2</sup>D from PyPI:
+
+    pip install ls2d
+    
+By default, this excludes the `cdsapi` as a dependency. If you do want to install that as a dependency, use:
+    
+    pip install ls2d[cds]
+   
+#### Manual
+
+For a manual installation, you can clone the package from Github:
 
     git clone https://github.com/LS2D/LS2D.git
 
@@ -22,10 +27,12 @@ In each script where you want to use (LS)<sup>2</sup>D, add the (LS)<sup>2</sup>
 
     import sys
     sys.path.append('/path/to/LS2D')
-
+    
+You will have to manually install the dependencies with `pip install numpy scipy netCDF4 matplotlib cdsapi`.
+    
 ### Usage
 
-An example script is provided in `examples/example_1.py`, which downloads the ERA5 data, calculates the initial conditions and large scale forcings, and creates an example plot.
+Some examples are provided at https://github.com/LS2D/LS2D/tree/main/examples. The script `example_1.py` downloads the ERA5 data, calculates the initial conditions and large scale forcings, and creates an example plot.
 
 The examples directory also contains example cases for:
 - MicroHH (https://github.com/microhh/microhh)
