@@ -26,7 +26,9 @@ import sys
 import numpy as np
 
 # LS2D & custom modules
-sys.path.append('/home/bart/meteo/models/LS2D')
+# The next line is only needed if you did not install (LS)2D using PyPI:
+#sys.path.append('/home/bart/meteo/models/LS2D')
+
 import ls2d
 import microhh_ls2d_tools as mlt
 

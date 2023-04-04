@@ -31,7 +31,9 @@ import numpy as np
 pl.close('all'); pl.ion()
 
 # LS2D modules
-sys.path.append('/home/bart/meteo/models/LS2D')
+# The next line is only needed if you did not install (LS)2D using PyPI:
+#sys.path.append('/home/bart/meteo/models/LS2D')
+
 import ls2d
 
 settings = {
