@@ -34,9 +34,7 @@ You will have to manually install the dependencies with `pip install numpy scipy
 
 Some examples are provided at https://github.com/LS2D/LS2D/tree/main/examples. The script `example_1.py` downloads the ERA5 data, calculates the initial conditions and large scale forcings, and creates an example plot.
 
-The examples directory also contains example cases for:
-- MicroHH (https://github.com/microhh/microhh)
-- DALES (https://github.com/dalesteam/dales).
+The examples directory also contains example cases for MicroHH (https://github.com/microhh/microhh).
 
 ### Downloading ERA5 data
 
