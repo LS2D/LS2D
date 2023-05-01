@@ -299,7 +299,7 @@ class Read_era5:
         self.exns = IFS_tools.calc_exner(self.ps)  # Exner at surface (-)
         self.wths = self.H / (self.rhos * IFS_tools.cpd * self.exns)  # Surface kinematic heat flux (K m s-1)
 
-        self.fc  = 2 * 7.2921e-5 * np.sin(np.deg2rad(self.settings['central_lat']))  # Coriolis parameter
+        self.fc = 2 * 7.2921e-5 * np.sin(np.deg2rad(self.settings['central_lat']))  # Coriolis parameter
 
         # Store soil temperature, and moisture content, in 3D array
         self.z_soil = np.array([-0.035, -0.175, -0.64, -1.945])
@@ -425,38 +425,25 @@ class Read_era5:
             dzdx = np.gradient(self.z_p, axis=3) / dxdi[None, None, :, :]
             dzdy = np.gradient(self.z_p, axis=2) / dydj[None, None, :, :]
 
-            ug = -IFS_tools.grav / self.fc * dzdy
-            vg =  IFS_tools.grav / self.fc * dzdx
+            self.ug_p = -IFS_tools.grav / self.fc * dzdy
+            self.vg_p =  IFS_tools.grav / self.fc * dzdx
 
-            ug_p_mean = ug[center4d].mean(axis=(2,3))
-            vg_p_mean = vg[center4d].mean(axis=(2,3))
+            ug_p_mean = self.ug_p[center4d].mean(axis=(2,3))
+            vg_p_mean = self.vg_p[center4d].mean(axis=(2,3))
 
-        #if (method == '2nd'):
+            # Bonus for large domains; spatial (ug,vg) on model levels.
+            # Use Scipy's interpolation, as it can extrapolate (in case ps > 1000 hPa)
+            self.ug = np.zeros_like(self.u)
+            self.vg = np.zeros_like(self.u)
 
-        #    s = Slice(istart, iend, jstart, jend)
+            for t in range(self.ntime):
+                for j in range(self.nlat):
+                    for i in range(self.nlon):
+                        self.ug[t,:,j,i] = interpolate.interp1d(
+                            self.p_p, self.ug_p[t,:,j,i], fill_value='extrapolate')(self.p[t,:,j,i])
+                        self.vg[t,:,j,i] = interpolate.interp1d(
+                            self.p_p, self.vg_p[t,:,j,i], fill_value='extrapolate')(self.p[t,:,j,i])
 
-        #    # Calculate advective tendencies
-        #    self.dtthl_advec_mean = (
-        #        -self.u[s(0,0)] * fd.grad2c( self.thl[s(0,-1)], self.thl[s(0,+1)], dx) \
-        #        -self.v[s(0,0)] * fd.grad2c( self.thl[s(-1,0)], self.thl[s(+1,0)], dy) ).mean(axis=(2,3))
-
-        #    self.dtqt_advec_mean = (
-        #        -self.u[s(0,0)] * fd.grad2c( self.qt[s(0,-1)], self.qt[s(0,+1)], dx) \
-        #        -self.v[s(0,0)] * fd.grad2c( self.qt[s(-1,0)], self.qt[s(+1,0)], dy) ).mean(axis=(2,3))
-
-        #    self.dtu_advec_mean = (
-        #        -self.u[s(0,0)] * fd.grad2c( self.u[s(0,-1)], self.u[s(0,+1)], dx) \
-        #        -self.v[s(0,0)] * fd.grad2c( self.u[s(-1,0)], self.u[s(+1,0)], dy) ).mean(axis=(2,3))
-
-        #    self.dtv_advec_mean = (
-        #        -self.u[s(0,0)] * fd.grad2c( self.v[s(0,-1)], self.v[s(0,+1)], dx) \
-        #        -self.v[s(0,0)] * fd.grad2c( self.v[s(-1,0)], self.v[s(+1,0)], dy) ).mean(axis=(2,3))
-
-        #    # Geostrophic wind (gradient geopotential height on constant pressure levels)
-        #    vg_p_mean = (  IFS_tools.grav / self.fc * fd.grad2c(
-        #        self.z_p[s(0,-1)], self.z_p[s(0,+1)], dx) ).mean(axis=(2,3))
-        #    ug_p_mean = ( -IFS_tools.grav / self.fc * fd.grad2c(
-        #        self.z_p[s(-1,0)], self.z_p[s(+1,0)], dy) ).mean(axis=(2,3))
 
         elif (method == '4th'):
 
@@ -501,8 +488,9 @@ class Read_era5:
                     self.z_p[s(-2,0)], self.z_p[s(-1,0)], self.z_p[s(+1,0)], self.z_p[s(+2,0)], dy)
                         ).mean(axis=(2,3))
 
-        # Interpolate geostrophic wind onto model grid. Use Scipy's interpolation,
-        # as it can extrapolate (in case ps > 1000 hPa)
+
+        # Interpolate geostrophic wind onto model grid.
+        # Use Scipy's interpolation, as it can extrapolate (in case ps > 1000 hPa)
         self.ug_mean = np.zeros_like(self.p_mean)
         self.vg_mean = np.zeros_like(self.p_mean)
 
@@ -544,13 +532,13 @@ class Read_era5:
             rf[0] = 1.-rf.sum()
             return rf[::-1]
 
-
         if gridpoint_is_land:
             self.root_frac_low_nn  = calc_root_fraction(self.veg_type_low_nn-1)
             self.root_frac_high_nn = calc_root_fraction(self.veg_type_high_nn-1)
         else:
             self.root_frac_low_nn = np.zeros(4)-1
             self.root_frac_high_nn = np.zeros(4)-1
+
 
     def get_les_input(self, z):
         """
