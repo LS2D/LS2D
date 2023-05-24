@@ -231,9 +231,9 @@ class Read_era5:
         self.z0h =  get_variable(self.fsa, 'flsr', s2d, np.exp)  # Surface roughness length heat (m)
         self.ps  =  get_variable(self.fsa, 'sp',   s2d)  # Surface pressure (Pa)
 
-        self.soil_type     = get_variable(self.fsa, 'slt', s2d, np.round, np.int)  # Soil type (-)
-        self.veg_type_low  = get_variable(self.fsa, 'tvl', s2d, np.round, np.int)  # Low vegetation type (-)
-        self.veg_type_high = get_variable(self.fsa, 'tvh', s2d, np.round, np.int)  # High vegetation type (-)
+        self.soil_type     = get_variable(self.fsa, 'slt', s2d, np.round, np.int32)  # Soil type (-)
+        self.veg_type_low  = get_variable(self.fsa, 'tvl', s2d, np.round, np.int32)  # Low vegetation type (-)
+        self.veg_type_high = get_variable(self.fsa, 'tvh', s2d, np.round, np.int32)  # High vegetation type (-)
 
         self.lai_low  = get_variable(self.fsa, 'lai_lv', s2d)  # LAI low veg (-)
         self.lai_high = get_variable(self.fsa, 'lai_hv', s2d)  # LAI high veg (-)
