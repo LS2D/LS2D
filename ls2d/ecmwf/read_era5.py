@@ -369,7 +369,7 @@ class Read_era5:
             data = getattr(self, var)
             setattr(self, '{}_nn'.format(var), data[0, self.j, self.i])
 
-        if self.veg_type_low_nn == 0 or self.veg_type_high_nn == 0 or self.soil_type_nn == 0:
+        if self.soil_type_nn == 0:
             warning('Selected grid point is water/sea! Setting vegetation/soil indexes to 1e9.')
 
             self.soil_type_nn = int(1e9)
