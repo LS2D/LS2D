@@ -58,8 +58,8 @@ cams_vars = {
 settings = {
     'central_lon'   : 4.92,
     'central_lat'   : 51.97,
-    'start_date'    : datetime(year=2022, month=4, day=1, hour=6),
-    'end_date'      : datetime(year=2022, month=4, day=1, hour=18),
+    'start_date'    : datetime(year=2016, month=8, day=15, hour=6),
+    'end_date'      : datetime(year=2016, month=8, day=15, hour=18),
     'area_size'     : 1,
     'case_name'     : 'cabauw',
     'era5_path'     : env['era5_path'],

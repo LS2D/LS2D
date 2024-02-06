@@ -129,6 +129,7 @@ def _download_cams_file(settings):
             'variable': settings['cams_vars'][settings['ftype']],
             'date': date,
             'area': area,
+            'grid': '0.25/0.25',
         }
 
         if settings['ftype'] == 'eac4_ml' or settings['ftype'] == 'eac4_sfc':
@@ -229,7 +230,7 @@ def download_cams(settings):
     if not finished:
         print(' --------------------------------------------------------------')
         print(' | One or more requests are not finished.                     |')
-        print(' | For CDS request, you can monitor the progress at:          |')
+        print(' | For ADS request, you can monitor the progress at:          |')
         print(' | https://ads.atmosphere.copernicus.eu/cdsapp#!/yourrequests |')
         print(' | This script will stop now, you can restart it              |')
         print(' | at any time to retry, or download the results.             |')
