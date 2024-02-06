@@ -18,6 +18,15 @@
 # along with LS2D.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from .download_era5 import download_era5
-from .download_cams import download_cams
-from .read_era5 import Read_era5
+import glob
+
+replace_in = '# Copyright (c) 2017-2024 Wageningen University & Research'
+replace_out = '# Copyright (c) 2017-2024 Wageningen University & Research'
+
+files = glob.iglob('**/*.py', recursive=True)
+for file in files:
+    with open(file, 'r') as f:
+        lines = f.readlines()
+    with open(file, 'w') as f:
+        for l in lines:
+            f.write(l.replace(replace_in, replace_out))
