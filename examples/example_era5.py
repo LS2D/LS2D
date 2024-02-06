@@ -32,19 +32,22 @@ pl.close('all'); pl.ion()
 
 # LS2D modules
 # The next line is only needed if you did not install (LS)2D using PyPI:
-#sys.path.append('/home/bart/meteo/models/LS2D')
-
+sys.path.append('/home/bart/meteo/models/LS2D')
 import ls2d
 
 settings = {
-    'central_lat' : 51.971,
-    'central_lon' : 4.927,
+    #'central_lat' : 51.971,
+    #'central_lon' : 4.927,
+    #'central_lat' : 51.9,
+    #'central_lon' : 4.45,
+    'central_lat' : 52.17,
+    'central_lon' : 5.74,
     'area_size'   : 1,
     'case_name'   : 'cabauw',
     'era5_path'   : '/home/scratch1/meteo_data/LS2D/',
     'era5_expver' : 1,   # 1=normal ERA5, 5=ERA5 near-realtime
-    'start_date'  : datetime(year=2016, month=8, day=15, hour=6),
-    'end_date'    : datetime(year=2016, month=8, day=15, hour=18),
+    'start_date'  : datetime(year=2022, month=5, day=17, hour=0),
+    'end_date'    : datetime(year=2022, month=5, day=19, hour=0),
     'write_log'   : False,
     'data_source' : 'CDS'
     }
@@ -61,11 +64,11 @@ era = ls2d.Read_era5(settings)
 era.calculate_forcings(n_av=0, method='2nd')
 
 # Interpolate ERA5 to fixed height grid:
-z = np.arange(10, 4000, 20).astype(float)
+z = np.arange(10, 5000, 20).astype(float)
 les_input = era.get_les_input(z)
 
 # `les_input` is an xarray.Dataset, which can easily be save to NetCDF:
-les_input.to_netcdf('example_1.nc')
+les_input.to_netcdf('ls2d_loobos.nc')
 
 # Plot variables as example:
 nrow = 5

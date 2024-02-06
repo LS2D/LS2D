@@ -19,4 +19,5 @@
 #
 
 from .download_era5 import download_era5
+from .download_cams import download_cams
 from .read_era5 import Read_era5
