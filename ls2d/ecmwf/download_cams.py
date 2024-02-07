@@ -128,7 +128,7 @@ def _download_cams_file(settings):
             'variable': settings['cams_vars'][settings['ftype']],
             'date': date,
             'area': area,
-            'grid': '0.25/0.25'
+            #'grid': '0.25/0.25'   # NOTE to self: not supported in the ADS!
         }
 
         if settings['ftype'] == 'eac4_ml' or settings['ftype'] == 'eac4_sfc':
