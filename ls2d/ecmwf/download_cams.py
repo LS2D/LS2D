@@ -199,7 +199,7 @@ def download_cams(settings):
     end   = era_tools.lower_to_hour(settings['end_date']  )
 
     # Get list of required forecast and analysis times
-    an_dates = era_tools.get_required_analysis(start, end)
+    an_dates = era_tools.get_required_analysis(start, end, freq=3)
 
     # Loop over all required files, check if there is a local version, if not add to download queue
     download_settings = settings.copy()
