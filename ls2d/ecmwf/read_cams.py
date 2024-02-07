@@ -165,6 +165,11 @@ class Read_cams:
         distance = spatial.haversine(self.ds_ml.longitude[ic], self.ds_ml.latitude[jc], clon, clat)
         message('Using nearest lat/lon = {0:.2f}/{1:.2f} (requested = {2:.2f}/{3:.2f}), distance ~= {4:.1f} km'\
                 .format(self.ds_ml.latitude[jc], self.ds_ml.longitude[ic], clat, clon, distance/1000.))
+
+        # Calculate and output averaging area.
+        dlon = (1+2*n_av) * float(self.ds_ml.longitude[1] - self.ds_ml.longitude[0])
+        dlat = (1+2*n_av) * float(self.ds_ml.latitude[0] - self.ds_ml.latitude[1])
+        message(f'Averaging CAMS over a {dlon:.2f}°×{dlat:.2f}° spatial area.')
     
         # Slice out averaging sub-domain, and calculate mean over sub-domain.
         self.ds_ml = self.ds_ml.isel(longitude=slice(ic-n_av, ic+n_av+1), latitude=slice(jc-n_av, jc+n_av+1))

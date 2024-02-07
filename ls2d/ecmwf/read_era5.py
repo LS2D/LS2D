@@ -41,6 +41,8 @@ Rd = 287.04
 Rv = 461.5
 ep = Rd/Rv
 
+ifs_tools = IFS_tools('L137')
+
 
 class Slice:
     def __init__(self, istart, iend, jstart, jend):
@@ -253,7 +255,7 @@ class Read_era5:
         self.theta_soil4 = get_variable(self.fsa, 'swvl4', s2d)  # Bottom soil layer moistsure (-)
 
         # Pressure level data:
-        self.z_p = get_variable(self.fpa, 'z', s3d) / IFS_tools.grav  # Geopotential height on pressure levels (m)
+        self.z_p = get_variable(self.fpa, 'z', s3d) / ifs_tools.grav  # Geopotential height on pressure levels (m)
         self.p_p = get_variable(self.fpa, 'level', s1d) * 100         # Pressure levels (Pa)
 
         # Convert ozone from mass mixing ratio to volume mixing ratio
@@ -268,7 +270,7 @@ class Read_era5:
 
         self.ql  = self.qc + self.qi + self.qr + self.qs  # Total liquid/solid specific humidity (kg kg-1)
         self.qt  = self.q + self.ql                       # Total specific humidity (kg kg-1)
-        self.Tv  = IFS_tools.calc_virtual_temp(
+        self.Tv  = ifs_tools.calc_virtual_temp(
                 self.T, self.q, self.qc, self.qi, self.qr, self.qs)  # Virtual temp on full levels (K)
 
         # Calculate half level pressure and heights
@@ -279,25 +281,25 @@ class Read_era5:
         for t in range(self.ntime):
             for la in range(self.nlat):
                 for lo in range(self.nlon):
-                    self.ph[t,:,la,lo] = IFS_tools.calc_half_level_pressure(self.ps[t,la,lo])
-                    self.zh[t,:,la,lo] = IFS_tools.calc_half_level_Zg(self.ph[t,:,la,lo], self.Tv[t,:,la,lo])
+                    self.ph[t,:,la,lo] = ifs_tools.calc_half_level_pressure(self.ps[t,la,lo])
+                    self.zh[t,:,la,lo] = ifs_tools.calc_half_level_Zg(self.ph[t,:,la,lo], self.Tv[t,:,la,lo])
 
         # Full level pressure and height as interpolation of the half level values
         self.p  = 0.5 * (self.ph[:,1:,:,:] + self.ph[:,:-1:,:])  # Full level pressure (Pa)
         self.z  = 0.5 * (self.zh[:,1:,:,:] + self.zh[:,:-1:,:])  # Full level height (m)
 
         # Other derived quantities
-        self.exn  = IFS_tools.calc_exner(self.p)  # Exner on full model levels (-)
+        self.exn  = ifs_tools.calc_exner(self.p)  # Exner on full model levels (-)
         self.th   = (self.T / self.exn)  # Potential temperature (K)
-        self.thl  = self.th - IFS_tools.Lv / (IFS_tools.cpd * self.exn) * self.ql  # Liquid water potential temperature (K)
-        self.rho  = self.p / (IFS_tools.Rd * self.Tv)  # Density at full levels (kg m-3)
-        self.wls  = -self.w / (self.rho * IFS_tools.grav)  # Vertical velocity (m s-1)
+        self.thl  = self.th - ifs_tools.Lv / (ifs_tools.cpd * self.exn) * self.ql  # Liquid water potential temperature (K)
+        self.rho  = self.p / (ifs_tools.Rd * self.Tv)  # Density at full levels (kg m-3)
+        self.wls  = -self.w / (self.rho * ifs_tools.grav)  # Vertical velocity (m s-1)
         self.U    = (self.u**2. + self.v**2)**0.5  # Absolute horizontal wind (m s-1)
 
-        self.Tvs  = IFS_tools.calc_virtual_temp(self.Ts, self.q[:,0])  # Estimate surface Tv using lowest model q (...)
-        self.rhos = self.ph[:,0] / (IFS_tools.Rd * self.Tvs)  # Surface density (kg m-3)
-        self.exns = IFS_tools.calc_exner(self.ps)  # Exner at surface (-)
-        self.wths = self.H / (self.rhos * IFS_tools.cpd * self.exns)  # Surface kinematic heat flux (K m s-1)
+        self.Tvs  = ifs_tools.calc_virtual_temp(self.Ts, self.q[:,0])  # Estimate surface Tv using lowest model q (...)
+        self.rhos = self.ph[:,0] / (ifs_tools.Rd * self.Tvs)  # Surface density (kg m-3)
+        self.exns = ifs_tools.calc_exner(self.ps)  # Exner at surface (-)
+        self.wths = self.H / (self.rhos * ifs_tools.cpd * self.exns)  # Surface kinematic heat flux (K m s-1)
 
         self.fc = 2 * 7.2921e-5 * np.sin(np.deg2rad(self.settings['central_lat']))  # Coriolis parameter
 
@@ -335,6 +337,11 @@ class Read_era5:
         message('Using nearest lat/lon = {0:.2f}/{1:.2f} (requested = {2:.2f}/{3:.2f}), distance ~= {4:.1f} km'\
                 .format(self.lats[self.j], self.lons[self.i],
                         self.settings['central_lat'], self.settings['central_lon'], distance/1000.))
+
+        # Print averaging area.
+        dlon = (1+2*n_av) * float(self.lons[1] - self.lons[0])
+        dlat = (1+2*n_av) * float(self.lats[1] - self.lats[0])
+        message(f'Averaging ERA5 over a {dlon:.2f}°×{dlat:.2f}° spatial area.')
 
         # Start and end indices of averaging domain:
         istart = self.i - n_av
@@ -425,8 +432,8 @@ class Read_era5:
             dzdx = np.gradient(self.z_p, axis=3) / dxdi[None, None, :, :]
             dzdy = np.gradient(self.z_p, axis=2) / dydj[None, None, :, :]
 
-            self.ug_p = -IFS_tools.grav / self.fc * dzdy
-            self.vg_p =  IFS_tools.grav / self.fc * dzdx
+            self.ug_p = -ifs_tools.grav / self.fc * dzdy
+            self.vg_p =  ifs_tools.grav / self.fc * dzdx
 
             ug_p_mean = self.ug_p[center4d].mean(axis=(2,3))
             vg_p_mean = self.vg_p[center4d].mean(axis=(2,3))
@@ -480,11 +487,11 @@ class Read_era5:
 
             # Geostrophic wind (gradient geopotential height on constant pressure levels)
             vg_p_mean = (
-                IFS_tools.grav / self.fc * fd.grad4c(
+                ifs_tools.grav / self.fc * fd.grad4c(
                     self.z_p[s(0,-2)], self.z_p[s(0,-1)], self.z_p[s(0,+1)], self.z_p[s(0,+2)], dx)
                         ).mean(axis=(2,3))
             ug_p_mean = (
-               -IFS_tools.grav / self.fc * fd.grad4c(
+               -ifs_tools.grav / self.fc * fd.grad4c(
                     self.z_p[s(-2,0)], self.z_p[s(-1,0)], self.z_p[s(+1,0)], self.z_p[s(+2,0)], dy)
                         ).mean(axis=(2,3))
 

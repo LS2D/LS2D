@@ -27,13 +27,12 @@ import numpy as np
 
 # Only necessary if (LS)2D is not installed.
 sys.path.append('/home/bart/meteo/models/LS2D')
-
 import ls2d
 
 env = {
         'system': 'arch',
-        'era5_path': '/home/scratch1/bart/LS2D_ERA5/',
-        'cams_path': '/home/scratch1/bart/LS2D_CAMS/',
+        'era5_path': '/home/scratch1/meteo_data/LS2D_ERA5/',
+        'cams_path': '/home/scratch1/meteo_data/LS2D_CAMS/',
         'cdsapirc': '/home/bart/.cdsapirc'}
 
 cams_vars = {
@@ -62,8 +61,8 @@ cams_vars = {
 settings = {
     'central_lon'   : 4.92,
     'central_lat'   : 51.97,
-    'start_date'    : datetime(year=2016, month=8, day=15, hour=0),
-    'end_date'      : datetime(year=2016, month=8, day=16, hour=0),
+    'start_date'    : datetime(year=2016, month=8, day=15, hour=6),
+    'end_date'      : datetime(year=2016, month=8, day=15, hour=18),
     'area_size'     : 1,
     'case_name'     : 'cabauw',
     'cams_path'     : env['cams_path'],
@@ -82,8 +81,8 @@ ls2d.download_cams(settings)
 
 # Read, average over 3x3 grid points, and interpolate on LES grid.
 cams = ls2d.Read_cams(settings)
-z = np.linspace(5, 8000, 128)
-les_input = cams.get_les_input(z, n_av=1)
+z = np.arange(10, 5000, 20).astype(float)
+les_input = cams.get_les_input(z, n_av=0)
 
 # Quick plot.
 pl.figure(figsize=(10,8))
