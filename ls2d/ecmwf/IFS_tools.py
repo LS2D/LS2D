@@ -25,13 +25,13 @@ import os
 # Third party modules
 import numpy as np
 
-class _IFS_tools:
+class IFS_tools:
     """
     Various tools to calculate e.g. properties of the vertical IFS/ERA grid,
     or the thermodynamics as used by IFS. Wrapped in a class, to prevent
     mixing up differences in methods/constants/.. between IFS and other models
     """
-    def __init__(self):
+    def __init__(self, grid_def='L137'):
 
         # Constants (see IFS part IV, chapter 12)
         self.grav  = 9.80665
@@ -43,7 +43,12 @@ class _IFS_tools:
 
         # Read the table with the vertical grid properties/parameters
         # From: https://www.ecmwf.int/en/forecasts/documentation-and-support/137-model-levels
-        path = pkg_resources.resource_filename(__name__, 'L137_grid.txt')
+        if grid_def == 'L137':
+            path = pkg_resources.resource_filename(__name__, 'L137_grid.txt')
+        elif grid_def == 'L60':
+            path = pkg_resources.resource_filename(__name__, 'L60_grid.txt')
+        else:
+            sys.exit(f'Unknow grid definition \"{grid_def}\".')
         f = np.loadtxt(path)
 
         # Half and full level number
@@ -206,7 +211,6 @@ class _IFS_tools:
         pl.tight_layout()
         pl.savefig('IFS_tools_validation.pdf')
 
-IFS_tools = _IFS_tools()
 
 if __name__ == "__main__":
     """ Test / example, only executed if script is called directly """
@@ -215,5 +219,7 @@ if __name__ == "__main__":
     pl.ion()
     pl.close('all')
 
+    ifs_tools = IFS_tools('L60')
+
     # Validate the IFS_tools conversion from surface pressure to model level pressure, height, etc.
-    IFS_tools.validate()
+    ifs_tools.validate()

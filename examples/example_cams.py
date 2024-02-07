@@ -22,6 +22,9 @@
 from datetime import datetime
 import sys
 
+import matplotlib.pyplot as pl
+import numpy as np
+
 # Only necessary if (LS)2D is not installed.
 sys.path.append('/home/bart/meteo/models/LS2D')
 
@@ -50,17 +53,17 @@ cams_vars = {
             'temperature'],
         'eac4_sfc': [
             'surface_pressure'],
-        'egg4_ml': [
-            'carbon_dioxide',
-            'methane']
+        #'egg4_ml': [
+        #    'carbon_dioxide',
+        #    'methane']
         }
 
 # Dictionary with (LS)2D settings
 settings = {
     'central_lon'   : 4.92,
     'central_lat'   : 51.97,
-    'start_date'    : datetime(year=2016, month=8, day=15, hour=6),
-    'end_date'      : datetime(year=2016, month=8, day=15, hour=18),
+    'start_date'    : datetime(year=2016, month=8, day=15, hour=0),
+    'end_date'      : datetime(year=2016, month=8, day=16, hour=0),
     'area_size'     : 1,
     'case_name'     : 'cabauw',
     'cams_path'     : env['cams_path'],
@@ -72,4 +75,27 @@ settings = {
     'ntasks'        : 1
     }
 
+pl.close('all')
+
+# Download data.
 ls2d.download_cams(settings)
+
+# Read, average over 3x3 grid points, and interpolate on LES grid.
+cams = ls2d.Read_cams(settings)
+z = np.linspace(5, 8000, 128)
+les_input = cams.get_les_input(z, n_av=1)
+
+# Quick plot.
+pl.figure(figsize=(10,8))
+ncol = 5
+nrow = 6
+sp = 1
+
+for name, da in les_input.data_vars.items():
+    pl.subplot(nrow, ncol, sp); sp+=1
+    if 'lay' in name:
+        pl.plot(da[0,:], les_input.z_lay[0,:])
+    else:
+        pl.plot(da[0,:], les_input.z)
+    pl.xlabel(name)
+pl.tight_layout()

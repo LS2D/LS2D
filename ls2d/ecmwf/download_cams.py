@@ -116,7 +116,6 @@ def _download_cams_file(settings):
         server = cdsapi.Client(
                 url=credentials['url_ads'], key=credentials['key_ads'], verify=True,
                 wait_until_complete=False, delete=False)
-    
 
         model_level = [str(x) for x in range(1,61)]
         analysis_times = ['{0:02d}:00'.format(i) for i in range(0, 22, 3)]
@@ -129,7 +128,7 @@ def _download_cams_file(settings):
             'variable': settings['cams_vars'][settings['ftype']],
             'date': date,
             'area': area,
-            'grid': '0.25/0.25',
+            'grid': '0.25/0.25'
         }
 
         if settings['ftype'] == 'eac4_ml' or settings['ftype'] == 'eac4_sfc':
@@ -144,7 +143,7 @@ def _download_cams_file(settings):
             cds_request = server.retrieve('cams-global-reanalysis-eac4', request)
         elif settings['ftype'] == 'egg4_ml':
             cds_request = server.retrieve('cams-global-ghg-reanalysis-egg4', request)
-    
+
         # Save pickle for later processing/download
         with open(pickle_file, 'wb') as f:
             pickle.dump(cds_request, f)
@@ -207,6 +206,9 @@ def download_cams(settings):
 
     for date in an_dates:
         for ftype in settings['cams_vars'].keys():
+
+            if ftype == 'egg4_ml':
+                error('Downloading CAMS EGG4 data currently does not work due to an open ADS bug.')
 
             era_dir, era_file = era_tools.era5_file_path(
                     date.year, date.month, date.day, settings['cams_path'], settings['case_name'], ftype)
