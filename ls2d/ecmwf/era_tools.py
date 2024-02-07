@@ -1,7 +1,7 @@
 #
 # This file is part of LS2D.
 #
-# Copyright (c) 2017-2024 Wageningen University & Research
+# Copyright (c) 2017-2023 Wageningen University & Research
 # Author: Bart van Stratum (WUR)
 #
 # LS2D is free software: you can redistribute it and/or modify
@@ -41,7 +41,7 @@ def era5_file_path(year, month, day, path, case, ftype, return_dir=True):
         return era_file
 
 
-def get_required_analysis(start, end, freq=1):
+def get_required_analysis(start, end):
 
     # One day datetime offset
     one_day = datetime.timedelta(days=1)
@@ -49,10 +49,8 @@ def get_required_analysis(start, end, freq=1):
     # Analysis start at 00 UTC, so first analysis = start day
     first_analysis = datetime.datetime(start.year, start.month, start.day)
 
-    # If end time is after (24-freq) UTC, include next day for the analysis files.
-    # `freq` is typically 1 hour for ERA5, and 3 hours for CAMS.
-    hour = end.hour + end.minute / 60.
-    if hour > 24 - freq:
+    # If end time is after 23 UTC, include next day for the analysis files
+    if end.hour == 23 and end.minute > 0:
         last_analysis = datetime.datetime(end.year, end.month, end.day) + one_day
     else:
         last_analysis = datetime.datetime(end.year, end.month, end.day)

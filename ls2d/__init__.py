@@ -1,7 +1,7 @@
 #
 # This file is part of LS2D.
 #
-# Copyright (c) 2017-2024 Wageningen University & Research
+# Copyright (c) 2017-2023 Wageningen University & Research
 # Author: Bart van Stratum (WUR)
 #
 # LS2D is free software: you can redistribute it and/or modify
@@ -27,9 +27,6 @@ if sys.version_info.major < 3:
 # Make packages directly available as e.g.:
 # ls2d.download_era5() instead of ls2d.ecmwf.download_era5()
 from ls2d.ecmwf import download_era5
-from ls2d.ecmwf import download_cams
-
 from ls2d.ecmwf import Read_era5
-from ls2d.ecmwf import Read_cams
 
 from ls2d.src import grid
