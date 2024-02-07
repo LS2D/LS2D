@@ -29,7 +29,8 @@ import ls2d
 
 env = {
         'system': 'arch',
-        'era5_path': '/home/scratch1/meteo_data/LS2D/',
+        'era5_path': '/home/scratch1/bart/LS2D_ERA5/',
+        'cams_path': '/home/scratch1/bart/LS2D_CAMS/',
         'cdsapirc': '/home/bart/.cdsapirc'}
 
 cams_vars = {
@@ -62,7 +63,7 @@ settings = {
     'end_date'      : datetime(year=2016, month=8, day=15, hour=18),
     'area_size'     : 1,
     'case_name'     : 'cabauw',
-    'era5_path'     : env['era5_path'],
+    'cams_path'     : env['cams_path'],
     'cdsapirc'      : env['cdsapirc'],
     'cams_vars'     : cams_vars,
     'era5_expver'   : 1,

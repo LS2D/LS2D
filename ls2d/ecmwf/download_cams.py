@@ -61,7 +61,7 @@ def _download_cams_file(settings):
     # Output file name
     nc_dir, nc_file = era_tools.era5_file_path(
             settings['date'].year, settings['date'].month, settings['date'].day,
-            settings['era5_path'], settings['case_name'], settings['ftype'])
+            settings['cams_path'], settings['case_name'], settings['ftype'])
 
     # Write CDS API prints to log file (NetCDF file path/name appended with .out/.err)
     if settings['write_log']:
@@ -167,7 +167,7 @@ def download_cams(settings):
                 date : datetime object with date to download (always retrieves 00:00 to 23:00 UTC)
                 lat, lon : requested latitude and longitude
                 size : download an area of lat+/-size, lon+/-size (degrees)
-                era5_path : absolute or relative path to save the NetCDF data
+                cams_path : absolute or relative path to save the NetCDF data
                 cams_vars : dictionary with CAMS variables (`eac4_ml`, `eac4_sfc` or `egg4_ml`)
                 case : case name used in file name of NetCDF files
                 cdsapirc : absolute path to `.cdsapirc` file.
@@ -186,10 +186,10 @@ def download_cams(settings):
     header('Downloading CAMS for period: {} to {}'.format(settings['start_date'], settings['end_date']))
 
     # Check if output directory exists, and ends with '/'
-    if not os.path.isdir(settings['era5_path']):
-        error('Output directory \"{}\" does not exist!'.format(settings['era5_path']))
-    if settings['era5_path'][-1] != '/':
-        settings['era5_path'] += '/'
+    if not os.path.isdir(settings['cams_path']):
+        error('Output directory \"{}\" does not exist!'.format(settings['cams_path']))
+    if settings['cams_path'][-1] != '/':
+        settings['cams_path'] += '/'
 
     if cdsapi is None:
         error('CDS API is not installed. See: https://cds.climate.copernicus.eu/api-how-to')
@@ -209,7 +209,7 @@ def download_cams(settings):
         for ftype in settings['cams_vars'].keys():
 
             era_dir, era_file = era_tools.era5_file_path(
-                    date.year, date.month, date.day, settings['era5_path'], settings['case_name'], ftype)
+                    date.year, date.month, date.day, settings['cams_path'], settings['case_name'], ftype)
 
             if not os.path.exists(era_dir):
                 message('Creating output directory {}'.format(era_dir))
