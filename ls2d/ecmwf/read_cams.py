@@ -41,9 +41,10 @@ class Read_cams:
     and optionally calculate the LES/SCM forcings
     """
 
-    def __init__(self, settings):
+    def __init__(self, settings, variables):
 
         self.settings = settings
+        self.variables = variables
         self.start = settings['start_date']
         self.end   = settings['end_date']
 
@@ -76,7 +77,7 @@ class Read_cams:
         cams_files = []
         for date in an_dates:
             for cams_type in ['eac4_ml', 'eac4_sfc', 'egg4_ml']:
-                if cams_type in self.settings['cams_vars'].keys():
+                if cams_type in self.variables.keys():
                     
                     if cams_type == 'egg4_ml':
                         error('Processing CAMS EGG4 data currently does not work due to an open ADS bug.')
@@ -167,8 +168,8 @@ class Read_cams:
                 .format(self.ds_ml.latitude[jc], self.ds_ml.longitude[ic], clat, clon, distance/1000.))
 
         # Calculate and output averaging area.
-        dlon = (1+2*n_av) * float(self.ds_ml.longitude[1] - self.ds_ml.longitude[0])
-        dlat = (1+2*n_av) * float(self.ds_ml.latitude[0] - self.ds_ml.latitude[1])
+        dlon = (1+2*n_av) * abs(float(self.ds_ml.longitude[1] - self.ds_ml.longitude[0]))
+        dlat = (1+2*n_av) * abs(float(self.ds_ml.latitude[0] - self.ds_ml.latitude[1]))
         message(f'Averaging CAMS over a {dlon:.2f}°×{dlat:.2f}° spatial area.')
     
         # Slice out averaging sub-domain, and calculate mean over sub-domain.

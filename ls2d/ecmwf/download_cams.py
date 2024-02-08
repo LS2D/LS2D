@@ -28,6 +28,7 @@ import requests
 import yaml
 
 # Third party modules
+import xarray as xr
 import numpy as np
 
 # LS2D modules
@@ -42,11 +43,56 @@ except ImportError:
     cdsapi = None
 
 
-def _download_cams_file(settings):
+def regrid(nc_file, central_lon, central_lat, resolution):
+    """
+    Re-grid regular lat/lon NetCDF file (like ERA5 or CAMS)
+    onto new grid / resolution. Note: this function
+    overwrites the original `nc_file`.
+
+    Arguments:
+        nc_file : str
+            Path to NetCDF file.
+        central_lon : float
+            Central longitude of new grid
+        central_lat : float
+            Central latitude of new grid
+        resolution : float
+            New output resolution
+    """
+
+    ds = xr.open_dataset(nc_file)
+
+    # Find start/end lon/lat to stay within bounds of input dataset.
+    lon_frac = np.abs((ds.longitude.values - central_lon) / resolution)
+    lat_frac = np.abs((ds.latitude.values  - central_lat) / resolution)
+
+    lon_0 = central_lon - np.floor(lon_frac[0 ]) * resolution
+    lon_1 = central_lon + np.floor(lon_frac[-1]) * resolution
+
+    lat_0 = central_lat - np.floor(lat_frac[0 ]) * resolution
+    lat_1 = central_lat + np.floor(lat_frac[-1]) * resolution
+
+    lon_out = np.arange(lon_0, lon_1+1e-12, resolution)
+    lat_out = np.arange(lat_0, lat_1+1e-12, resolution)
+
+    # Interpolate. Extrapolation is necessary if the first or last
+    # new coordinate is exactly equal to the start/end coordinate
+    # of the input NetCDF file. Otherwise, those values are set to
+    # NaN (no idea why....).
+    dsi = ds.interp(longitude=lon_out, latitude=lat_out, kwargs={'fill_value': 'extrapolate'})
+
+    # Save back.
+    ds.close()
+    dsi.to_netcdf(nc_file)
+
+
+def _download_cams_file(settings, variables, grid):
     """
     Download single CAMS file.
     """
     header('Downloading: {} - {}'.format(settings['date'], settings['ftype']))
+
+    variables = variables[settings['ftype']]
 
     # Read ADS url/key from `.cdsapirc` file.
     with open(settings['cdsapirc'], 'r') as f:
@@ -81,37 +127,45 @@ def _download_cams_file(settings):
     # Check if pickle with previous request is available.
     # If so, try to download NetCDF file, if not, submit new request
     pickle_file = '{}.pickle'.format(nc_file[:-3])
-    
+
     if os.path.isfile(pickle_file):
         message('Found previous CDS request!')
-    
+
         with open(pickle_file, 'rb') as f:
             cds_request = pickle.load(f)
-    
+
             try:
                 cds_request.update()
             except requests.exceptions.HTTPError:
                 error('CDS request is no longer available online!', exit=False)
                 error('To continue, delete the previous request: {}'.format(pickle_file))
-    
+
             state = cds_request.reply['state']
-    
+
             if state == 'completed':
                 message('Request finished, downloading NetCDF file')
+
                 cds_request.download(nc_file)
+                os.remove(pickle_file)
+
+                if grid is not None:
+                    message(f'Re-gridding NetCDF to {grid:.2f}°×{grid:.2f}° degree grid.')
+                    regrid(nc_file, settings['central_lon'], settings['central_lat'], grid)
+
                 finished = True
-    
+
             elif state in ('queued', 'running'):
                 message('Request not finished, current status = \"{}\"'.format(state))
-    
+
             else:
                 error('Request failed, status = \"{}\"'.format(state), exit=False)
                 message('Error message = {}'.format(cds_request.reply['error'].get('message')))
                 message('Error reason = {}'.format(cds_request.reply['error'].get('reason')))
-    
+
+
     else:
         message('No previous CDS request, submitting new one')
-    
+
         # Create instance of CDS API
         server = cdsapi.Client(
                 url=credentials['url_ads'], key=credentials['key_ads'], verify=True,
@@ -125,7 +179,7 @@ def _download_cams_file(settings):
 
         request = {
             'format': 'netcdf',
-            'variable': settings['cams_vars'][settings['ftype']],
+            'variable': variables,
             'date': date,
             'area': area,
             #'grid': '0.25/0.25'   # NOTE to self: not supported in the ADS!
@@ -155,7 +209,7 @@ def _download_cams_file(settings):
     return finished
 
 
-def download_cams(settings):
+def download_cams(settings, variables, grid=None):
     """
     Download all required CAMS fields.
     Only `data_source = 'CDS' is supported for now!
@@ -167,9 +221,12 @@ def download_cams(settings):
                 lat, lon : requested latitude and longitude
                 size : download an area of lat+/-size, lon+/-size (degrees)
                 cams_path : absolute or relative path to save the NetCDF data
-                cams_vars : dictionary with CAMS variables (`eac4_ml`, `eac4_sfc` or `egg4_ml`)
                 case : case name used in file name of NetCDF files
                 cdsapirc : absolute path to `.cdsapirc` file.
+        variables : dictionary
+            Nested dictionary with variables for each CAMS type (see examples).
+        grid : float, optional (default = None)
+            Option to regrid from 0.75 degree regular lat/lon grid (CAMS default) to another resolution.
     """
 
     # Checks!
@@ -178,9 +235,6 @@ def download_cams(settings):
 
     if 'cdsapirc' not in settings.keys():
         error('You need to specify the location of your `.cdsapirc` file in `settings`!')
-
-    if 'cams_vars' not in settings.keys():
-        error('You need to specify a dictionary with CAMS variables in `settings`!')
 
     header('Downloading CAMS for period: {} to {}'.format(settings['start_date'], settings['end_date']))
 
@@ -205,7 +259,7 @@ def download_cams(settings):
     download_queue = []
 
     for date in an_dates:
-        for ftype in settings['cams_vars'].keys():
+        for ftype in variables.keys():
 
             if ftype == 'egg4_ml':
                 error('Downloading CAMS EGG4 data currently does not work due to an open ADS bug.')
@@ -226,7 +280,7 @@ def download_cams(settings):
 
     finished = True
     for req in download_queue:
-        if not _download_cams_file(req):
+        if not _download_cams_file(req, variables, grid):
             finished = False
 
     if not finished:

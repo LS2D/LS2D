@@ -31,8 +31,8 @@ import ls2d
 
 env = {
         'system': 'arch',
-        'era5_path': '/home/scratch1/meteo_data/LS2D_ERA5/',
-        'cams_path': '/home/scratch1/meteo_data/LS2D_CAMS/',
+        'era5_path': '/home/scratch1/bart/LS2D_ERA5/',
+        'cams_path': '/home/scratch1/bart/LS2D_CAMS/',
         'cdsapirc': '/home/bart/.cdsapirc'}
 
 cams_vars = {
@@ -61,13 +61,12 @@ cams_vars = {
 settings = {
     'central_lon'   : 4.92,
     'central_lat'   : 51.97,
-    'start_date'    : datetime(year=2016, month=8, day=15, hour=6),
-    'end_date'      : datetime(year=2016, month=8, day=15, hour=18),
-    'area_size'     : 1,
+    'start_date'    : datetime(year=2021, month=8, day=13, hour=6),
+    'end_date'      : datetime(year=2021, month=8, day=13, hour=18),
+    'area_size'     : 2,
     'case_name'     : 'cabauw',
     'cams_path'     : env['cams_path'],
     'cdsapirc'      : env['cdsapirc'],
-    'cams_vars'     : cams_vars,
     'era5_expver'   : 1,
     'write_log'     : False,
     'data_source'   : 'CDS',
@@ -77,12 +76,12 @@ settings = {
 pl.close('all')
 
 # Download data.
-ls2d.download_cams(settings)
+ls2d.download_cams(settings, variables=cams_vars, grid=0.25)
 
 # Read, average over 3x3 grid points, and interpolate on LES grid.
-cams = ls2d.Read_cams(settings)
+cams = ls2d.Read_cams(settings, variables=cams_vars)
 z = np.arange(10, 5000, 20).astype(float)
-les_input = cams.get_les_input(z, n_av=0)
+les_input = cams.get_les_input(z, n_av=1)
 
 # Quick plot.
 pl.figure(figsize=(10,8))

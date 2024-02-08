@@ -154,7 +154,10 @@ def _download_era5_file(settings):
 
                 if state == 'completed':
                     message('Request finished, downloading NetCDF file')
+
                     cds_request.download(nc_file)
+                    os.remove(pickle_file)
+
                     finished = True
 
                 elif state in ('queued', 'running'):
