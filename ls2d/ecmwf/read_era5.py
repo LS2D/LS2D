@@ -630,7 +630,7 @@ class Read_era5:
         add_ds_var(ds, 't_lay', self.T_mean, ('time', 'lay'), 'full level temperature radiation', 'K')
         add_ds_var(ds, 't_lev', self.Th_mean, ('time', 'lev'), 'half level temperature radiation', 'K')
 
-        h2o_lay = self.qt_mean / (ep - ep*self.qt_mean)
+        h2o_lay = self.qt_mean / (ep - ep * self.qt_mean)
         add_ds_var(ds, 'h2o_lay', h2o_lay, ('time', 'lay'), 'moisture volume mixing ratio', '')
         add_ds_var(ds, 'o3_lay', self.o3_mean, ('time', 'lay'), 'ozone volume mixing ratio radiation', 'ppmv')
 

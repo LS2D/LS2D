@@ -217,5 +217,9 @@ class Read_cams:
                                 self.ds_ml_mean['z'][t,:].values, da[t,:].values, fill_value='extrapolate')(z)
     
                     self.ds_les[name] = (dims_les, out)
+
+        # Calculate time in seconds since start of LES.
+        date = self.ds_les.time.values
+        self.ds_les['time_sec'] = (date - date[0]).astype(np.float32) * 1e-9
     
         return self.ds_les
