@@ -25,8 +25,6 @@ import sys
 import matplotlib.pyplot as pl
 import numpy as np
 
-# Only necessary if (LS)2D is not installed.
-sys.path.append('/home/bart/meteo/models/LS2D')
 import ls2d
 
 env = {
@@ -83,6 +81,8 @@ cams = ls2d.Read_cams(settings, variables=cams_vars)
 
 z = np.arange(10, 5000, 20).astype(float)
 les_input = cams.get_les_input(z, n_av=1)
+
+les_input.to_netcdf('ls2d_cams.nc')
 
 # Quick plot.
 pl.figure(figsize=(10,8))

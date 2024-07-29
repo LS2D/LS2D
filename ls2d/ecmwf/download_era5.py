@@ -306,7 +306,7 @@ def _download_era5_file(settings):
     return finished
 
 
-def download_era5(settings):
+def download_era5(settings, exit_when_waiting=True):
     """
     Download all required ERA5 fields for an experiment
     between `starttime` and `endtime`
@@ -390,8 +390,10 @@ def download_era5(settings):
             print(' | One or more requests are not finished.                  |')
             print(' | For CDS request, you can monitor the progress at:       |')
             print(' | https://cds.climate.copernicus.eu/cdsapp#!/yourrequests |')
-            print(' | This script will stop now, you can restart it           |')
-            print(' | at any time to retry, or download the results.          |')
+            if exit_when_waiting:
+                print(' | This script will stop now, you can restart it           |')
+                print(' | at any time to retry, or download the results.          |')
+                sys.exit(1)
             print(' -----------------------------------------------------------')
         else:
             print(' -------------------------------------------------')
@@ -399,5 +401,3 @@ def download_era5(settings):
             print(' | This script will stop now, you can restart it |')
             print(' | at any time to retry.                         |')
             print(' -------------------------------------------------')
-
-        sys.exit(1)
