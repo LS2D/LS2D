@@ -76,7 +76,14 @@ class Read_era5:
         # Calculate derived properties needed for LES:
         self.calc_derived_data()
 
+        # remove aggregated netcdf files
+        self.remove_agg_files()
 
+    def remove_agg_files(self):
+        os.remove("surface_an_agg.nc")
+        os.remove("model_an_agg.nc")
+        os.remove("pres_an_agg.nc")
+    
     def open_netcdf_files(self):
         """
         Open all NetCDF files required for start->end period
@@ -118,11 +125,14 @@ class Read_era5:
         if files_missing:
             error('One or more required ERA5 files are missing..')
 
-        # Open NetCDF files: MFDataset automatically merges the files / time dimensions
-        self.fsa = nc4.MFDataset(an_sfc_files,   aggdim='time')
-        self.fma = nc4.MFDataset(an_model_files, aggdim='time')
-        self.fpa = nc4.MFDataset(an_pres_files,  aggdim='time')
-
+        # Open NetCDF files with xarray mfdataset and temporarily save to aggregated nc file
+        xr.open_mfdataset(an_sfc_files   ).rename({'valid_time':'time'}).to_netcdf("surface_an_agg.nc")
+        xr.open_mfdataset(an_model_files ).rename({'valid_time':'time'}).to_netcdf("model_an_agg.nc")
+        xr.open_mfdataset(an_pres_files  ).rename({'valid_time':'time'}).to_netcdf("pres_an_agg.nc")
+        
+        self.fsa = nc4.Dataset("surface_an_agg.nc")
+        self.fma = nc4.Dataset("model_an_agg.nc")
+        self.fpa = nc4.Dataset("pres_an_agg.nc")
 
     def read_data(self):
         """
@@ -166,9 +176,9 @@ class Read_era5:
 
         # Find start and end time indices
         # ERA5 time is in hours since 1900-01-01; convert `start` and `end` to same units
-        date_00 = datetime.datetime(year=1900, month=1, day=1, hour=0)
-        start_h_since = (self.start - date_00).total_seconds()/3600.
-        end_h_since   = (self.end   - date_00).total_seconds()/3600.
+        date_00 = datetime.datetime(year=1970, month=1, day=1, hour=0)
+        start_h_since = (self.start - date_00).total_seconds()
+        end_h_since   = (self.end   - date_00).total_seconds()
 
         t0_an = np.abs(an_time_tmp - start_h_since).argmin()
         t1_an = np.abs(an_time_tmp - end_h_since  ).argmin()
@@ -193,13 +203,13 @@ class Read_era5:
         if np.any(self.lons>180):
             self.lons = -360+self.lons
 
-        self.time_sec = (self.time-self.time[0])*3600.
+        self.time_sec = (self.time-self.time[0])
 
         # Time in datetime format
-        self.datetime = [datetime.datetime(1900, 1, 1) + datetime.timedelta(hours=int(h)) for h in self.time]
-
+        self.datetime = [datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=int(s)) for s in self.time]
+        
         # Grid and time dimensions
-        self.nfull = self.fma.dimensions['level'].size
+        self.nfull = self.fma.dimensions['model_level'].size
         self.nhalf = self.nfull+1
         self.nlat  = self.fma.dimensions['latitude'].size
         self.nlon  = self.fma.dimensions['longitude'].size
@@ -256,7 +266,7 @@ class Read_era5:
 
         # Pressure level data:
         self.z_p = get_variable(self.fpa, 'z', s3d) / ifs_tools.grav  # Geopotential height on pressure levels (m)
-        self.p_p = get_variable(self.fpa, 'level', s1d) * 100         # Pressure levels (Pa)
+        self.p_p = get_variable(self.fpa, 'pressure_level', s1d) * 100         # Pressure levels (Pa)
 
         # Convert ozone from mass mixing ratio to volume mixing ratio
         self.o3 = 28.9644 / 47.9982 * self.o3 * 1e6

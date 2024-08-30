@@ -22,7 +22,7 @@
 import subprocess as sp
 import datetime
 import sys,os
-import pickle
+import dill as pickle
 import requests
 
 # Third party modules
