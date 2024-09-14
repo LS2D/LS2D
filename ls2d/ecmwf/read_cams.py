@@ -93,7 +93,13 @@ class Read_cams:
             error('One or more required CAMS files are missing...!')
 
         # Open NetCDF files with Xarray
-        ds = xr.open_mfdataset(cams_files).rename({'valid_time':'time'})
+        ds = xr.open_mfdataset(cams_files)
+
+        # :-( Copernicus renamed some dimensions. Why?!
+        if 'valid_time' in ds.dims or 'model_level' in ds.dims:
+            ds = ds.rename({
+                'valid_time': 'time',
+                'model_level': 'level'})
 
         # Interpolate to hourly frequency, to stay in line with ERA5.
         # This automagically selects the correct time period as a bonus.
@@ -101,7 +107,7 @@ class Read_cams:
         self.ds_ml = ds.interp(time=dates)
 
         # Reverse height dimension such that height increases with increasing levels.
-        self.ds_ml = self.ds_ml.reindex(model_level=self.ds_ml.model_level[::-1])
+        self.ds_ml = self.ds_ml.reindex(level=self.ds_ml.level[::-1])
 
 
     def calc_model_levels(self):
@@ -113,10 +119,10 @@ class Read_cams:
         ds = self.ds_ml
 
         dims = self.ds_ml.dims
-        dim_name = ['time', 'model_level', 'latitude', 'longitude']
+        dim_name = ['time', 'level', 'latitude', 'longitude']
 
         ntime = dims['time']
-        nlevel = dims['model_level']
+        nlevel = dims['level']
         nlon = dims['longitude']
         nlat = dims['latitude']
 
@@ -186,7 +192,7 @@ class Read_cams:
                 coords = {
                     'time': self.ds_ml.time,
                     'z': z,
-                    'lay': self.ds_ml.model_level.values
+                    'lay': self.ds_ml.level.values
                 })
     
         dims_sfc = ['time']
