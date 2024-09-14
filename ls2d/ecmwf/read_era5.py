@@ -198,10 +198,19 @@ class Read_era5:
         an_time_tmp = self.fsa.variables['time'][:]
 
         # Find start and end time indices
-        # ERA5 time is in hours since 1900-01-01; convert `start` and `end` to same units
-        date_00 = datetime.datetime(year=1970, month=1, day=1, hour=0)
-        start_h_since = (self.start - date_00).total_seconds()
-        end_h_since   = (self.end   - date_00).total_seconds()
+        # Switch between old and new NetCDFs from CDS.
+        time_units = self.fsa.variables['time'].units
+        if time_units == 'hours since 1900-01-01 00:00:00.0':
+            date_00 = datetime.datetime(year=1900, month=1, day=1, hour=0)
+            start_h_since = (self.start - date_00).total_seconds() / 3600
+            end_h_since   = (self.end   - date_00).total_seconds() / 3600
+            time_is_in_hours = True
+
+        elif time_units == 'seconds since 1970-01-01':
+            date_00 = datetime.datetime(year=1970, month=1, day=1, hour=0)
+            start_h_since = (self.start - date_00).total_seconds()
+            end_h_since   = (self.end   - date_00).total_seconds()
+            time_is_in_hours = False
 
         t0_an = np.abs(an_time_tmp - start_h_since).argmin()
         t1_an = np.abs(an_time_tmp - end_h_since  ).argmin()
@@ -227,9 +236,14 @@ class Read_era5:
             self.lons = -360+self.lons
 
         self.time_sec = (self.time-self.time[0])
+        if time_is_in_hours:
+            self.time_sec *= 3600
 
         # Time in datetime format
-        self.datetime = [datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=int(s)) for s in self.time]
+        if time_is_in_hours:
+            self.datetime = [date_00 + datetime.timedelta(hours=int(s)) for s in self.time]
+        else:
+            self.datetime = [date_00 + datetime.timedelta(seconds=int(s)) for s in self.time]
         
         # Grid and time dimensions
         self.nfull = self.fma.dimensions['level'].size
