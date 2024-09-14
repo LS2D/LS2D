@@ -80,9 +80,17 @@ class Read_era5:
         self.remove_agg_files()
 
     def remove_agg_files(self):
-        os.remove("surface_an_agg.nc")
-        os.remove("model_an_agg.nc")
-        os.remove("pres_an_agg.nc")
+        """
+        Cleanup intermediate files.
+        """
+
+        def try_remove(f):
+            if os.path.exists(f):
+                os.remove(f)
+
+        try_remove("surface_an_agg.nc")
+        try_remove("model_an_agg.nc")
+        try_remove("pres_an_agg.nc")
     
     def open_netcdf_files(self):
         """
@@ -126,13 +134,28 @@ class Read_era5:
             error('One or more required ERA5 files are missing..')
 
         # Open NetCDF files with xarray mfdataset and temporarily save to aggregated nc file
-        xr.open_mfdataset(an_sfc_files   ).rename({'valid_time':'time'}).to_netcdf("surface_an_agg.nc")
-        xr.open_mfdataset(an_model_files ).rename({'valid_time':'time'}).to_netcdf("model_an_agg.nc")
-        xr.open_mfdataset(an_pres_files  ).rename({'valid_time':'time'}).to_netcdf("pres_an_agg.nc")
+        tmp_an_sfc = xr.open_mfdataset(an_sfc_files  )
+        tmp_an_mod = xr.open_mfdataset(an_model_files)
+        tmp_an_pre = xr.open_mfdataset(an_pres_files )
+
+        if 'valid_time' in tmp_an_sfc.dims:
+            to_rename = {
+                    'valid_time': 'time',
+                    'model_level': 'level',
+                    'pressure_level': 'level'}
+
+            tmp_an_sfc.rename({'valid_time': 'time'}).to_netcdf('surface_an_agg.nc')
+            tmp_an_mod.rename({'valid_time': 'time', 'model_level': 'level'}).to_netcdf('model_an_agg.nc')
+            tmp_an_pre.rename({'valid_time': 'time', 'pressure_level': 'level'}).to_netcdf('pres_an_agg.nc')
         
-        self.fsa = nc4.Dataset("surface_an_agg.nc")
-        self.fma = nc4.Dataset("model_an_agg.nc")
-        self.fpa = nc4.Dataset("pres_an_agg.nc")
+            self.fsa = nc4.Dataset('surface_an_agg.nc')
+            self.fma = nc4.Dataset('model_an_agg.nc')
+            self.fpa = nc4.Dataset('pres_an_agg.nc')
+        else:
+            self.fsa = nc4.MFDataset(an_sfc_files,   aggdim='time')
+            self.fma = nc4.MFDataset(an_model_files, aggdim='time')
+            self.fpa = nc4.MFDataset(an_pres_files,  aggdim='time')
+
 
     def read_data(self):
         """
@@ -209,7 +232,7 @@ class Read_era5:
         self.datetime = [datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=int(s)) for s in self.time]
         
         # Grid and time dimensions
-        self.nfull = self.fma.dimensions['model_level'].size
+        self.nfull = self.fma.dimensions['level'].size
         self.nhalf = self.nfull+1
         self.nlat  = self.fma.dimensions['latitude'].size
         self.nlon  = self.fma.dimensions['longitude'].size
@@ -266,7 +289,7 @@ class Read_era5:
 
         # Pressure level data:
         self.z_p = get_variable(self.fpa, 'z', s3d) / ifs_tools.grav  # Geopotential height on pressure levels (m)
-        self.p_p = get_variable(self.fpa, 'pressure_level', s1d) * 100         # Pressure levels (Pa)
+        self.p_p = get_variable(self.fpa, 'level', s1d) * 100         # Pressure levels (Pa)
 
         # Convert ozone from mass mixing ratio to volume mixing ratio
         self.o3 = 28.9644 / 47.9982 * self.o3 * 1e6

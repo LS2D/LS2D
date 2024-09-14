@@ -30,6 +30,7 @@ import numpy as np
 
 pl.close('all'); pl.ion()
 
+sys.path.append('/home/bart/meteo/models/LS2D')
 import ls2d
 
 settings = {
@@ -37,7 +38,7 @@ settings = {
     'central_lon' : 4.93,
     'area_size'   : 1,
     'case_name'   : 'cabauw',
-    'era5_path'   : '/home/scratch1/meteo_data/LS2D_ERA5/',
+    'era5_path'   : '/home/scratch1/bart/LS2D_ERA5/',
     'era5_expver' : 1,   # 1=normal ERA5, 5=ERA5 near-realtime
     'start_date'  : datetime(year=2016, month=8, day=15, hour=6),
     'end_date'    : datetime(year=2016, month=8, day=15, hour=18),
@@ -61,7 +62,7 @@ z = np.arange(10, 5000, 20).astype(float)
 les_input = era.get_les_input(z)
 
 # `les_input` is an xarray.Dataset, which can easily be save to NetCDF:
-les_input.to_netcdf('ls2d_era5.nc')
+les_input.to_netcdf('ls2d_era5_old.nc')
 
 # Plot variables as example:
 nrow = 5

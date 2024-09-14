@@ -29,7 +29,8 @@ dependencies = [
     "netCDF4",
     "xarray",
     "matplotlib",
-    "requests"
+    "requests",
+    "dill"
 ]
 requires-python = ">=3.6"
 
