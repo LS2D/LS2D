@@ -103,7 +103,7 @@ class Read_cams:
 
         # Interpolate to hourly frequency, to stay in line with ERA5.
         # This automagically selects the correct time period as a bonus.
-        dates = pd.date_range(self.start, self.end, freq='H')
+        dates = pd.date_range(self.start, self.end, freq='h')
         self.ds_ml = ds.interp(time=dates)
 
         # Reverse height dimension such that height increases with increasing levels.
@@ -118,7 +118,7 @@ class Read_cams:
         # Short-cut
         ds = self.ds_ml
 
-        dims = self.ds_ml.dims
+        dims = self.ds_ml.sizes
         dim_name = ['time', 'level', 'latitude', 'longitude']
 
         ntime = dims['time']
@@ -199,8 +199,8 @@ class Read_cams:
         dims_lay = ['time', 'lay']
         dims_les = ['time', 'z']
     
-        ntime = self.ds_les.dims['time']
-        ktot = self.ds_les.dims['z']
+        ntime = self.ds_les.sizes['time']
+        ktot = self.ds_les.sizes['z']
     
         # Parse all variables in the CAMS NetCDF files. This might be more than the variables
         # specified in settings['cams_vars'], but since those variable names differ from
