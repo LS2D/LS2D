@@ -30,7 +30,7 @@ import numpy as np
 
 pl.close('all'); pl.ion()
 
-sys.path.append('/home/bart/meteo/models/LS2D')
+#sys.path.append('/home/bart/meteo/models/LS2D')
 import ls2d
 
 settings = {
@@ -63,6 +63,7 @@ les_input = era.get_les_input(z)
 
 # `les_input` is an xarray.Dataset, which can easily be save to NetCDF:
 les_input.to_netcdf('ls2d_era5.nc')
+
 
 # Plot variables as example:
 nrow = 5

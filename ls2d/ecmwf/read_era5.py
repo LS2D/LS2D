@@ -159,9 +159,17 @@ class Read_era5:
                     'model_level': 'level',
                     'pressure_level': 'level'}
 
-            tmp_an_sfc.rename({'valid_time': 'time'}).to_netcdf('surface_an_agg.nc')
-            tmp_an_mod.rename({'valid_time': 'time', 'model_level': 'level'}).to_netcdf('model_an_agg.nc')
-            tmp_an_pre.rename({'valid_time': 'time', 'pressure_level': 'level'}).to_netcdf('pres_an_agg.nc')
+            tmp_an_sfc = tmp_an_sfc.rename({'valid_time': 'time'})
+            tmp_an_mod = tmp_an_mod.rename({'valid_time': 'time', 'model_level': 'level'})
+            tmp_an_pre = tmp_an_pre.rename({'valid_time': 'time', 'pressure_level': 'level'})
+
+            tmp_an_sfc = tmp_an_sfc.drop('expver')
+            tmp_an_mod = tmp_an_mod.drop('expver')
+            tmp_an_pre = tmp_an_pre.drop('expver')
+
+            tmp_an_sfc.to_netcdf('surface_an_agg.nc')
+            tmp_an_mod.to_netcdf('model_an_agg.nc')
+            tmp_an_pre.to_netcdf('pres_an_agg.nc')
 
             self.fsa = nc4.Dataset('surface_an_agg.nc')
             self.fma = nc4.Dataset('model_an_agg.nc')
