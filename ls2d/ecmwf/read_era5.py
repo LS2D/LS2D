@@ -76,8 +76,22 @@ class Read_era5:
         # Calculate derived properties needed for LES:
         self.calc_derived_data()
 
-        # remove aggregated netcdf files
+        # Remove aggregated netcdf files
         self.remove_agg_files()
+
+        # Cast everything to normal arrays.
+        self.recast_masked_arrays()
+
+
+    def recast_masked_arrays(self):
+        """
+        Somehow, the new CDS data results in masked arrays.
+        Cast all masked arrays back to normal Numpy arrays.
+        """
+        for var, data in vars(self).items():
+            if type(data) == np.ma.core.MaskedArray:
+                setattr(self, var, data.data)
+
 
     def remove_agg_files(self):
         """
@@ -88,10 +102,11 @@ class Read_era5:
             if os.path.exists(f):
                 os.remove(f)
 
-        try_remove("surface_an_agg.nc")
-        try_remove("model_an_agg.nc")
-        try_remove("pres_an_agg.nc")
-    
+        try_remove('surface_an_agg.nc')
+        try_remove('model_an_agg.nc')
+        try_remove('pres_an_agg.nc')
+
+
     def open_netcdf_files(self):
         """
         Open all NetCDF files required for start->end period
@@ -147,7 +162,7 @@ class Read_era5:
             tmp_an_sfc.rename({'valid_time': 'time'}).to_netcdf('surface_an_agg.nc')
             tmp_an_mod.rename({'valid_time': 'time', 'model_level': 'level'}).to_netcdf('model_an_agg.nc')
             tmp_an_pre.rename({'valid_time': 'time', 'pressure_level': 'level'}).to_netcdf('pres_an_agg.nc')
-        
+
             self.fsa = nc4.Dataset('surface_an_agg.nc')
             self.fma = nc4.Dataset('model_an_agg.nc')
             self.fpa = nc4.Dataset('pres_an_agg.nc')
@@ -244,7 +259,7 @@ class Read_era5:
             self.datetime = [date_00 + datetime.timedelta(hours=int(s)) for s in self.time]
         else:
             self.datetime = [date_00 + datetime.timedelta(seconds=int(s)) for s in self.time]
-        
+
         # Grid and time dimensions
         self.nfull = self.fma.dimensions['level'].size
         self.nhalf = self.nfull+1
@@ -618,7 +633,6 @@ class Read_era5:
         #
         # Create xarray Dataset
         #
-
         ds = xr.Dataset(
                 coords = {
                     'time': self.datetime,

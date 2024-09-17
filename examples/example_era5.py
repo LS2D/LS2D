@@ -62,7 +62,7 @@ z = np.arange(10, 5000, 20).astype(float)
 les_input = era.get_les_input(z)
 
 # `les_input` is an xarray.Dataset, which can easily be save to NetCDF:
-les_input.to_netcdf('ls2d_era5_old.nc')
+les_input.to_netcdf('ls2d_era5.nc')
 
 # Plot variables as example:
 nrow = 5
