@@ -21,6 +21,7 @@
 # Python modules
 import datetime
 import sys, os
+import click
 
 # Third party modules
 import netCDF4 as nc4
@@ -35,6 +36,8 @@ from ls2d.src.messages import *
 
 import ls2d.ecmwf.era_tools as era_tools
 from ls2d.ecmwf.IFS_tools import IFS_tools
+
+from ls2d.ecmwf.patch_era5 import patch_era5
 
 # Constants
 Rd = 287.04
@@ -117,6 +120,15 @@ class Read_era5:
         files_missing += check_files(an_pres_files )
         if files_missing:
             error('One or more required ERA5 files are missing..')
+
+        # Check if files are from new CDS, which require patching.
+        # This is only a fallback option, in case someone has unpatched NetCDF files.
+        # The patching is now automatically done after downloading the files.
+        for f in an_sfc_files + an_model_files + an_pres_files:
+            ds = xr.open_dataset(f)
+            if 'valid_time' in ds.dims:
+                if click.confirm(f'NetCDF file \"{f}\" requires patching. Do you want me to patch it?', default=True):
+                    patch_era5(f)
 
         # Open NetCDF files: MFDataset automatically merges the files / time dimensions
         self.fsa = nc4.MFDataset(an_sfc_files,   aggdim='time')
