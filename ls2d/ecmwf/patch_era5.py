@@ -45,9 +45,10 @@ def patch_era5(nc_file_path):
     identical enough for (LS)2D to read and parse them. 
     """
 
-    # Backup old file.
+    # Backup old file, and remove original.
     backup_file_path = f'{nc_file_path}.unpatched'
     shutil.copyfile(nc_file_path, backup_file_path)
+    os.remove(nc_file_path)
 
     # Edit with Xarray. Read the copied file, so that we can overwrite the original one.
     ds = xr.open_dataset(backup_file_path, decode_times=False)
