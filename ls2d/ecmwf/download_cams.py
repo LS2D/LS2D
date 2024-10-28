@@ -23,7 +23,7 @@ import subprocess as sp
 import datetime
 import sys
 import os
-import dill as pickle
+import pickle
 import requests
 import yaml
 

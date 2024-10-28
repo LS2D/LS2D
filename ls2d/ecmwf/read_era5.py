@@ -76,36 +76,6 @@ class Read_era5:
         # Calculate derived properties needed for LES:
         self.calc_derived_data()
 
-        # Remove aggregated netcdf files
-        self.remove_agg_files()
-
-        # Cast everything to normal arrays.
-        self.recast_masked_arrays()
-
-
-    def recast_masked_arrays(self):
-        """
-        Somehow, the new CDS data results in masked arrays.
-        Cast all masked arrays back to normal Numpy arrays.
-        """
-        for var, data in vars(self).items():
-            if type(data) == np.ma.core.MaskedArray:
-                setattr(self, var, data.data)
-
-
-    def remove_agg_files(self):
-        """
-        Cleanup intermediate files.
-        """
-
-        def try_remove(f):
-            if os.path.exists(f):
-                os.remove(f)
-
-        try_remove('surface_an_agg.nc')
-        try_remove('model_an_agg.nc')
-        try_remove('pres_an_agg.nc')
-
 
     def open_netcdf_files(self):
         """
@@ -148,36 +118,10 @@ class Read_era5:
         if files_missing:
             error('One or more required ERA5 files are missing..')
 
-        # Open NetCDF files with xarray mfdataset and temporarily save to aggregated nc file
-        tmp_an_sfc = xr.open_mfdataset(an_sfc_files  )
-        tmp_an_mod = xr.open_mfdataset(an_model_files)
-        tmp_an_pre = xr.open_mfdataset(an_pres_files )
-
-        if 'valid_time' in tmp_an_sfc.dims:
-            to_rename = {
-                    'valid_time': 'time',
-                    'model_level': 'level',
-                    'pressure_level': 'level'}
-
-            tmp_an_sfc = tmp_an_sfc.rename({'valid_time': 'time'})
-            tmp_an_mod = tmp_an_mod.rename({'valid_time': 'time', 'model_level': 'level'})
-            tmp_an_pre = tmp_an_pre.rename({'valid_time': 'time', 'pressure_level': 'level'})
-
-            tmp_an_sfc = tmp_an_sfc.drop('expver')
-            tmp_an_mod = tmp_an_mod.drop('expver')
-            tmp_an_pre = tmp_an_pre.drop('expver')
-
-            tmp_an_sfc.to_netcdf('surface_an_agg.nc')
-            tmp_an_mod.to_netcdf('model_an_agg.nc')
-            tmp_an_pre.to_netcdf('pres_an_agg.nc')
-
-            self.fsa = nc4.Dataset('surface_an_agg.nc')
-            self.fma = nc4.Dataset('model_an_agg.nc')
-            self.fpa = nc4.Dataset('pres_an_agg.nc')
-        else:
-            self.fsa = nc4.MFDataset(an_sfc_files,   aggdim='time')
-            self.fma = nc4.MFDataset(an_model_files, aggdim='time')
-            self.fpa = nc4.MFDataset(an_pres_files,  aggdim='time')
+        # Open NetCDF files: MFDataset automatically merges the files / time dimensions
+        self.fsa = nc4.MFDataset(an_sfc_files,   aggdim='time')
+        self.fma = nc4.MFDataset(an_model_files, aggdim='time')
+        self.fpa = nc4.MFDataset(an_pres_files,  aggdim='time')
 
 
     def read_data(self):
@@ -221,19 +165,10 @@ class Read_era5:
         an_time_tmp = self.fsa.variables['time'][:]
 
         # Find start and end time indices
-        # Switch between old and new NetCDFs from CDS.
-        time_units = self.fsa.variables['time'].units
-        if time_units == 'hours since 1900-01-01 00:00:00.0':
-            date_00 = datetime.datetime(year=1900, month=1, day=1, hour=0)
-            start_h_since = (self.start - date_00).total_seconds() / 3600
-            end_h_since   = (self.end   - date_00).total_seconds() / 3600
-            time_is_in_hours = True
-
-        elif time_units == 'seconds since 1970-01-01':
-            date_00 = datetime.datetime(year=1970, month=1, day=1, hour=0)
-            start_h_since = (self.start - date_00).total_seconds()
-            end_h_since   = (self.end   - date_00).total_seconds()
-            time_is_in_hours = False
+        # ERA5 time is in hours since 1900-01-01; convert `start` and `end` to same units
+        date_00 = datetime.datetime(year=1900, month=1, day=1, hour=0)
+        start_h_since = (self.start - date_00).total_seconds()/3600.
+        end_h_since   = (self.end   - date_00).total_seconds()/3600.
 
         t0_an = np.abs(an_time_tmp - start_h_since).argmin()
         t1_an = np.abs(an_time_tmp - end_h_since  ).argmin()
@@ -258,15 +193,10 @@ class Read_era5:
         if np.any(self.lons>180):
             self.lons = -360+self.lons
 
-        self.time_sec = (self.time-self.time[0])
-        if time_is_in_hours:
-            self.time_sec *= 3600
+        self.time_sec = (self.time-self.time[0])*3600.
 
         # Time in datetime format
-        if time_is_in_hours:
-            self.datetime = [date_00 + datetime.timedelta(hours=int(s)) for s in self.time]
-        else:
-            self.datetime = [date_00 + datetime.timedelta(seconds=int(s)) for s in self.time]
+        self.datetime = [datetime.datetime(1900, 1, 1) + datetime.timedelta(hours=int(h)) for h in self.time]
 
         # Grid and time dimensions
         self.nfull = self.fma.dimensions['level'].size
@@ -641,6 +571,7 @@ class Read_era5:
         #
         # Create xarray Dataset
         #
+
         ds = xr.Dataset(
                 coords = {
                     'time': self.datetime,

@@ -95,15 +95,9 @@ class Read_cams:
         # Open NetCDF files with Xarray
         ds = xr.open_mfdataset(cams_files)
 
-        # :-( Copernicus renamed some dimensions. Why?!
-        if 'valid_time' in ds.dims or 'model_level' in ds.dims:
-            ds = ds.rename({
-                'valid_time': 'time',
-                'model_level': 'level'})
-
         # Interpolate to hourly frequency, to stay in line with ERA5.
         # This automagically selects the correct time period as a bonus.
-        dates = pd.date_range(self.start, self.end, freq='h')
+        dates = pd.date_range(self.start, self.end, freq='H')
         self.ds_ml = ds.interp(time=dates)
 
         # Reverse height dimension such that height increases with increasing levels.
@@ -118,7 +112,7 @@ class Read_cams:
         # Short-cut
         ds = self.ds_ml
 
-        dims = self.ds_ml.sizes
+        dims = self.ds_ml.dims
         dim_name = ['time', 'level', 'latitude', 'longitude']
 
         ntime = dims['time']
@@ -199,8 +193,8 @@ class Read_cams:
         dims_lay = ['time', 'lay']
         dims_les = ['time', 'z']
     
-        ntime = self.ds_les.sizes['time']
-        ktot = self.ds_les.sizes['z']
+        ntime = self.ds_les.dims['time']
+        ktot = self.ds_les.dims['z']
     
         # Parse all variables in the CAMS NetCDF files. This might be more than the variables
         # specified in settings['cams_vars'], but since those variable names differ from

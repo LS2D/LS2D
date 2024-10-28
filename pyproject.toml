@@ -10,7 +10,7 @@ packages = [
 
 [project]
 name = "ls2d"
-version = "1.0.10"
+version = "1.0.7"
 description = "Python toolkit to downscale ERA5 with doubly-periodic large-eddy simulation"
 readme = "README.md"
 authors = [{ name = "Bart van Stratum", email = "bart.vanstratum@wur.nl" }]
@@ -29,8 +29,7 @@ dependencies = [
     "netCDF4",
     "xarray",
     "matplotlib",
-    "requests",
-    "dill"
+    "requests"
 ]
 requires-python = ">=3.6"
 
