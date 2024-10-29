@@ -398,7 +398,8 @@ def download_era5(settings, exit_when_waiting=True):
             if exit_when_waiting:
                 print(' | This script will stop now, you can restart it           |')
                 print(' | at any time to retry, or download the results.          |')
-                sys.exit(1)
+                print(' -----------------------------------------------------------')
+                sys.exit(0)
             print(' -----------------------------------------------------------')
         else:
             print(' -------------------------------------------------')

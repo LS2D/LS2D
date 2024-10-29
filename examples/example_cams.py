@@ -25,7 +25,6 @@ import sys
 import matplotlib.pyplot as pl
 import numpy as np
 
-#sys.path.append('/home/bart/meteo/models/LS2D')
 import ls2d
 
 env = {
