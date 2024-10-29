@@ -34,7 +34,7 @@ sys.path.append('/home/bart/meteo/models/LS2D')
 from ls2d.src.messages import *
 
 
-def patch_era5(nc_file_path):
+def patch_netcdf(nc_file_path):
     """
     With the introduction of the new Copernicus Data Store (CDS) in September 2024,
     the NetCDF format for ERA5 data has undergone some changes. As a result, these
@@ -59,11 +59,12 @@ def patch_era5(nc_file_path):
 
     # Drop `expver`; we need to save this file in classic NetCDF4 format, which
     # does not support variable length strings.
-    ds = ds.drop('expver')
+    if 'expver' in ds.variables:
+        ds = ds.drop('expver')
 
     file_name = os.path.basename(nc_file_path)
     
-    if file_name == 'model_an.nc':
+    if file_name == 'model_an.nc' or file_name == 'eac4_ml.nc':
         new_ds = ds.rename({
                 'model_level': 'level',
                 'valid_time': 'time'})
@@ -76,7 +77,7 @@ def patch_era5(nc_file_path):
         # Yeah, somehow they thought it was a good idea to reverse the pressure levels......
         new_ds = new_ds.reindex(level=new_ds.level[::-1])
 
-    elif file_name == 'surface_an.nc':
+    elif file_name == 'surface_an.nc' or file_name == 'eac4_sfc.nc':
         new_ds = ds.rename({
                 'valid_time': 'time'})
 
@@ -113,6 +114,9 @@ if __name__ == '__main__':
     """
     For debugging...
     """
-    model_an = patch_era5('/home/scratch1/bart/LS2D_ERA5/cabauw_test/2016/08/15/model_an.nc')
-    surf_an = patch_era5('/home/scratch1/bart/LS2D_ERA5/cabauw_test/2016/08/15/surface_an.nc')
-    pres_an = patch_era5('/home/scratch1/bart/LS2D_ERA5/cabauw_test/2016/08/15/pressure_an.nc')
+    #model_an = patch_netcdf('/home/scratch1/bart/LS2D_ERA5/cabauw_test/2016/08/15/model_an.nc')
+    #surf_an = patch_netcdf('/home/scratch1/bart/LS2D_ERA5/cabauw_test/2016/08/15/surface_an.nc')
+    #pres_an = patch_netcdf('/home/scratch1/bart/LS2D_ERA5/cabauw_test/2016/08/15/pressure_an.nc')
+
+    model_an = patch_netcdf('/home/scratch1/bart/LS2D_CAMS/cabauw_test/2016/08/15/eac4_ml.nc')
+    surf_an = patch_netcdf('/home/scratch1/bart/LS2D_CAMS/cabauw_test/2016/08/15/eac4_sfc.nc')

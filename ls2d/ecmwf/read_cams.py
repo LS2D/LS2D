@@ -33,6 +33,7 @@ from ls2d.src.messages import *
 import ls2d.src.spatial_tools as spatial
 import ls2d.ecmwf.era_tools as era_tools
 from ls2d.ecmwf.IFS_tools import IFS_tools
+from ls2d.ecmwf.patch_cds_ads import patch_netcdf
 
 
 class Read_cams:
@@ -91,6 +92,12 @@ class Read_cams:
 
         if files_missing:
             error('One or more required CAMS files are missing...!')
+
+        # Check if any files are from the new CDS/ADS, and require patching.
+        for f in cams_files:
+            ds = xr.open_dataset(f)
+            if 'valid_time' in ds.dims:
+                patch_netcdf(f)
 
         # Open NetCDF files with Xarray
         ds = xr.open_mfdataset(cams_files)

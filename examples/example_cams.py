@@ -25,12 +25,13 @@ import sys
 import matplotlib.pyplot as pl
 import numpy as np
 
+#sys.path.append('/home/bart/meteo/models/LS2D')
 import ls2d
 
 env = {
         'system': 'arch',
-        'era5_path': '/home/scratch1/meteo_data/LS2D_ERA5/',
-        'cams_path': '/home/scratch1/meteo_data/LS2D_CAMS/',
+        'era5_path': '/home/scratch1/bart/LS2D_ERA5/',
+        'cams_path': '/home/scratch1/bart/LS2D_CAMS/',
         'cdsapirc': '/home/bart/.cdsapirc'}
 
 cams_vars = {
@@ -59,10 +60,10 @@ cams_vars = {
 settings = {
     'central_lon'   : 4.92,
     'central_lat'   : 51.97,
-    'start_date'    : datetime(year=2022, month=4, day=1, hour=6),
-    'end_date'      : datetime(year=2022, month=4, day=2, hour=18),
+    'start_date'    : datetime(year=2016, month=8, day=15, hour=6),
+    'end_date'      : datetime(year=2016, month=8, day=15, hour=18),
     'area_size'     : 2,
-    'case_name'     : 'cabauw_obc',
+    'case_name'     : 'cabauw',
     'cams_path'     : env['cams_path'],
     'cdsapirc'      : env['cdsapirc'],
     'era5_expver'   : 1,

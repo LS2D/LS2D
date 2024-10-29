@@ -34,6 +34,7 @@ import numpy as np
 # LS2D modules
 import ls2d.ecmwf.era_tools as era_tools
 from ls2d.src.messages import *
+from ls2d.ecmwf.patch_cds_ads import patch_netcdf
 
 # Yikes, but necessary (?) if you want to use
 # MARS downloads without the Python CDS api installed?
@@ -148,13 +149,15 @@ def _download_cams_file(settings, variables, grid):
                 cds_request.download(nc_file)
                 os.remove(pickle_file)
 
+                patch_netcdf(nc_file)
+
                 if grid is not None:
                     message(f'Re-gridding NetCDF to {grid:.2f}°×{grid:.2f}° degree grid.')
                     regrid(nc_file, settings['central_lon'], settings['central_lat'], grid)
 
                 finished = True
 
-            elif state in ('queued', 'running'):
+            elif state in ('accepted', 'queued', 'running'):
                 message('Request not finished, current status = \"{}\"'.format(state))
 
             else:
