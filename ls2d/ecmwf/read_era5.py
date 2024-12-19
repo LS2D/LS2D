@@ -280,6 +280,7 @@ class Read_era5:
 
         self.ql  = self.qc + self.qi + self.qr + self.qs  # Total liquid/solid specific humidity (kg kg-1)
         self.qt  = self.q + self.ql                       # Total specific humidity (kg kg-1)
+        self.qti = self.q + self.ql + self.qi             # Total specific humidity including ice (kg kg-1)
         self.Tv  = ifs_tools.calc_virtual_temp(
                 self.T, self.q, self.qc, self.qi, self.qr, self.qs)  # Virtual temp on full levels (K)
 
@@ -301,7 +302,10 @@ class Read_era5:
         # Other derived quantities
         self.exn  = ifs_tools.calc_exner(self.p)  # Exner on full model levels (-)
         self.th   = (self.T / self.exn)  # Potential temperature (K)
+
         self.thl  = self.th - ifs_tools.Lv / (ifs_tools.cpd * self.exn) * self.ql  # Liquid water potential temperature (K)
+        self.thli  = self.th - ifs_tools.Lv / (ifs_tools.cpd * self.exn) * self.ql - ifs_tools.Ls / (ifs_tools.cpd * self.exn) * self.qi  # Liquid water + ice potential temperature (K)
+
         self.rho  = self.p / (ifs_tools.Rd * self.Tv)  # Density at full levels (kg m-3)
         self.wls  = -self.w / (self.rho * ifs_tools.grav)  # Vertical velocity (m s-1)
         self.U    = (self.u**2. + self.v**2)**0.5  # Absolute horizontal wind (m s-1)
@@ -366,7 +370,7 @@ class Read_era5:
 
         # Variables averaged from (time, height, lon, lat) to (time, height):
         var_4d_mean = [
-                'z', 'zh', 'p', 'ph', 'T', 'thl', 'qt', 'qc', 'qi',
+                'z', 'zh', 'p', 'ph', 'T', 'thl', 'thli', 'qt', 'qti', 'qc', 'qi',
                 'u', 'v', 'U', 'wls', 'rho', 'o3',
                 'T_soil', 'theta_soil']
         for var in var_4d_mean:
@@ -434,10 +438,12 @@ class Read_era5:
                 return dtvar[center4d].mean(axis=(2,3))
 
             # Calculate advective tendencies:
+            self.dtthli_advec_mean = advec(self.thli)
             self.dtthl_advec_mean = advec(self.thl)
-            self.dtqt_advec_mean  = advec(self.qt)
-            self.dtu_advec_mean   = advec(self.u)
-            self.dtv_advec_mean   = advec(self.v)
+            self.dtqt_advec_mean = advec(self.qt)
+            self.dtqti_advec_mean = advec(self.qti)
+            self.dtu_advec_mean = advec(self.u)
+            self.dtv_advec_mean = advec(self.v)
 
             # Geostrophic wind:
             dzdx = np.gradient(self.z_p, axis=3) / dxdi[None, None, :, :]
@@ -475,11 +481,25 @@ class Read_era5:
                     self.thl[s(-2,0)], self.thl[s(-1,0)], self.thl[s(+1,0)], self.thl[s(+2,0)], dy)
                                     ).mean(axis=(2,3))
 
+            self.dtthli_advec_mean = (
+                -self.u[s(0,0)] * fd.grad4c(
+                    self.thli[s(0,-2)], self.thli[s(0,-1)], self.thli[s(0,+1)], self.thli[s(0,+2)], dx) \
+                -self.v[s(0,0)] * fd.grad4c(
+                    self.thli[s(-2,0)], self.thli[s(-1,0)], self.thli[s(+1,0)], self.thli[s(+2,0)], dy)
+                                    ).mean(axis=(2,3))
+
             self.dtqt_advec_mean =  (
                 -self.u[s(0,0)] * fd.grad4c(
                     self.qt[s(0,-2)], self.qt[s(0,-1)], self.qt[s(0,+1)], self.qt[s(0,+2)], dx) \
                 -self.v[s(0,0)] * fd.grad4c(
                     self.qt[s(-2,0)], self.qt[s(-1,0)], self.qt[s(+1,0)], self.qt[s(+2,0)], dy)
+                                    ).mean(axis=(2,3))
+
+            self.dtqti_advec_mean =  (
+                -self.u[s(0,0)] * fd.grad4c(
+                    self.qti[s(0,-2)], self.qti[s(0,-1)], self.qti[s(0,+1)], self.qti[s(0,+2)], dx) \
+                -self.v[s(0,0)] * fd.grad4c(
+                    self.qti[s(-2,0)], self.qti[s(-1,0)], self.qti[s(+1,0)], self.qti[s(+2,0)], dy)
                                     ).mean(axis=(2,3))
 
             self.dtu_advec_mean = (
@@ -599,13 +619,17 @@ class Read_era5:
 
         variables = {
                 'thl': ('liquid water potential temperature', 'K'),
+                'thli': ('liquid water + ice potential temperature', 'K'),
                 'qt': ('total specific humidity', 'kg kg-1'),
+                'qti': ('total specific humidity including ice', 'kg kg-1'),
                 'u': ('zonal wind component', 'm s-1'),
                 'v': ('meridional wind component', 'm s-1'),
                 'wls': ('vertical wind component', 'm s-1'),
                 'p': ('air pressure', 'Pa'),
                 'dtthl_advec': ('advective tendency liquid water potential temperature', 'K s-1'),
+                'dtthli_advec': ('advective tendency liquid water + ice potential temperature', 'K s-1'),
                 'dtqt_advec': ('advective tendency total specific humidity', 'kg kg-1 s-1'),
+                'dtqti_advec': ('advective tendency total specific humidity including ice', 'kg kg-1 s-1'),
                 'dtu_advec': ('advective tendency zonal wind', 'm s-2'),
                 'dtv_advec': ('advective tendency meridional wind', 'm s-2'),
                 'ug': ('geostrophic wind component zonal wind', 'm s-1'),

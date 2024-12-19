@@ -40,6 +40,7 @@ class IFS_tools:
         self.eps   = self.Rv/self.Rd-1.
         self.cpd   = 1004.7090
         self.Lv    = 2.5008e6
+        self.Ls    = 2.8345e6
 
         # Read the table with the vertical grid properties/parameters
         # From: https://www.ecmwf.int/en/forecasts/documentation-and-support/137-model-levels
