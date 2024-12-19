@@ -26,7 +26,10 @@ import sys, os
 import netCDF4 as nc4
 import xarray as xr
 import numpy as np
-from scipy import interpolate
+
+from scipy.interpolate import interp1d
+from scipy.interpolate import CubicSpline as cubic_spline
+from scipy.interpolate import PchipInterpolator as pchip
 
 # LS2D modules
 import ls2d.src.spatial_tools as spatial
@@ -463,9 +466,9 @@ class Read_era5:
             for t in range(self.ntime):
                 for j in range(self.nlat):
                     for i in range(self.nlon):
-                        self.ug[t,:,j,i] = interpolate.interp1d(
+                        self.ug[t,:,j,i] = interp1d(
                             self.p_p, self.ug_p[t,:,j,i], fill_value='extrapolate')(self.p[t,:,j,i])
-                        self.vg[t,:,j,i] = interpolate.interp1d(
+                        self.vg[t,:,j,i] = interp1d(
                             self.p_p, self.vg_p[t,:,j,i], fill_value='extrapolate')(self.p[t,:,j,i])
 
 
@@ -533,9 +536,9 @@ class Read_era5:
         self.vg_mean = np.zeros_like(self.p_mean)
 
         for t in range(self.ntime):
-            self.ug_mean[t,:] = interpolate.interp1d(
+            self.ug_mean[t,:] = interp1d(
                     self.p_p, ug_p_mean[t,:], fill_value='extrapolate')(self.p_mean[t,:])
-            self.vg_mean[t,:] = interpolate.interp1d(
+            self.vg_mean[t,:] = interp1d(
                     self.p_p, vg_p_mean[t,:], fill_value='extrapolate')(self.p_mean[t,:])
 
         # Momentum tendency coriolis
@@ -578,17 +581,54 @@ class Read_era5:
             self.root_frac_high_nn = np.zeros(4)-1
 
 
-    def get_les_input(self, z):
+    def get_les_input(self, z, zh=None, method='linear'):
         """
-        Interpolate variables required for LES onto model grid,
-        and return xarray.Dataset with all possible LES input
+        Interpolate variables required for LES onto model grid.
+
+        Parameters:
+        ----------
+        z : np.ndarray(float)
+            Array with full level LES model heights (m).
+        zh : np.ndarray(float), optional
+            Array with half level LES model heights (m).
+        method : str
+            Interpolation method, in ('linear', 'cubic', 'pchip').
+            See https://docs.scipy.org/doc/scipy/tutorial/interpolate/1D.html#tutorial-interpolate-1dsection for details.
+
+        Returns:
+        -------
+        ds : xarray.Dataset
+            Xarray dataset LES input.
         """
+
+
+        def interp(arr_in, z_in, z_out):
+            """
+            Interpolate 1D array `arr_in` at heights `z_in` to `z_out`.
+            """
+            if method == 'linear':
+                return interp1d(z_in, arr_in, fill_value='extrapolate')(z_out)
+            elif method == 'cubic':
+                return cubic_spline(z_in, arr_in, extrapolate=True)(z_out)
+            elif method == 'pchip':
+                return pchip(z_in, arr_in, extrapolate=True)(z_out)
+            else:
+                raise Exception('Invalid interpolation method.')
+
 
         def interp_z(array, z):
             out = np.empty((self.ntime, z.size))
             for t in range(self.ntime):
-                out[t,:] = np.interp(z, self.z_mean[t,:], array[t,:])
+                out[t,:] = interp(array[t,:], self.z_mean[t,:], z)
             return out
+
+
+        def interp_zh(array, zh):
+            out = np.empty((self.ntime, zh.size))
+            for t in range(self.ntime):
+                out[t,:] = interp(array[t,:], self.zh_mean[t,:], zh)
+            return out
+
 
         def add_ds_var(ds, name, data, dims, long_name, units):
             if dims is not None:
@@ -601,15 +641,18 @@ class Read_era5:
         #
         # Create xarray Dataset
         #
-
         ds = xr.Dataset(
                 coords = {
                     'time': self.datetime,
                     'z': z,
+                    'zh': zh,
                     'zs': self.z_soil,
                     'lev': np.arange(self.nhalf),
                     'lay': np.arange(self.nfull)
                 })
+
+        ds['zh'].attrs['long_name'] = 'half level height LES'
+        ds['zh'].attrs['units'] = 'm'
 
         ds['z'].attrs['long_name'] = 'full level height LES'
         ds['z'].attrs['units'] = 'm'
@@ -625,7 +668,7 @@ class Read_era5:
                 'u': ('zonal wind component', 'm s-1'),
                 'v': ('meridional wind component', 'm s-1'),
                 'wls': ('vertical wind component', 'm s-1'),
-                'p': ('air pressure', 'Pa'),
+                'p': ('Hydrostatic pressure at full levels', 'Pa'),
                 'dtthl_advec': ('advective tendency liquid water potential temperature', 'K s-1'),
                 'dtthli_advec': ('advective tendency liquid water + ice potential temperature', 'K s-1'),
                 'dtqt_advec': ('advective tendency total specific humidity', 'kg kg-1 s-1'),
@@ -648,6 +691,12 @@ class Read_era5:
                 add_ds_var(ds, var, data, ('time', 'z'), attrs[0], attrs[1])
             else:
                 error('Can\'t interpolate variable \"{}\"...'.format(var))
+
+        if zh is not None:
+            # Add half level pressure.
+            ph = interp_zh(self.ph_mean, zh)
+            add_ds_var(ds, 'ph', ph, ('time', 'zh'), 'Hydrostatic pressure at half levels', 'Pa')
+
 
         #
         # Add other input variables, which don't require interpolation
