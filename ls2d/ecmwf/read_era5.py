@@ -126,6 +126,7 @@ class Read_era5:
         for f in an_sfc_files + an_model_files + an_pres_files:
             ds = xr.open_dataset(f)
             if 'valid_time' in ds.dims:
+                ds.close()
                 patch_netcdf(f)
 
         # Open NetCDF files: MFDataset automatically merges the files / time dimensions
