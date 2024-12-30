@@ -157,6 +157,7 @@ def _download_era5_file(settings):
                     message('Request finished, downloading NetCDF file')
 
                     cds_request.download(nc_file)
+                    f.close()
                     os.remove(pickle_file)
 
                     # Patch NetCDF file, to make the (+/-) identical to the old CDS
@@ -407,3 +408,5 @@ def download_era5(settings, exit_when_waiting=True):
             print(' | This script will stop now, you can restart it |')
             print(' | at any time to retry.                         |')
             print(' -------------------------------------------------')
+
+    return finished
