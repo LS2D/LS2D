@@ -25,6 +25,7 @@ import sys
 import matplotlib.pyplot as pl
 import numpy as np
 
+sys.path.append('/home/bart/meteo/models/LS2D')
 import ls2d
 
 env = {
@@ -59,8 +60,8 @@ cams_vars = {
 settings = {
     'central_lon'   : 4.92,
     'central_lat'   : 51.97,
-    'start_date'    : datetime(year=2016, month=8, day=15, hour=6),
-    'end_date'      : datetime(year=2016, month=8, day=15, hour=18),
+    'start_date'    : datetime(year=2016, month=7, day=15, hour=6),
+    'end_date'      : datetime(year=2016, month=7, day=15, hour=18),
     'area_size'     : 2,
     'case_name'     : 'cabauw',
     'cams_path'     : env['cams_path'],

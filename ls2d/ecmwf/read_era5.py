@@ -34,7 +34,7 @@ from scipy.interpolate import PchipInterpolator as pchip
 # LS2D modules
 import ls2d.src.spatial_tools as spatial
 import ls2d.src.finite_difference as fd
-from ls2d.src.messages import *
+from ls2d.src.logger import logger
 
 import ls2d.ecmwf.era_tools as era_tools
 from ls2d.ecmwf.IFS_tools import IFS_tools
@@ -86,7 +86,7 @@ class Read_era5:
         """
         Open all NetCDF files required for start->end period
         """
-        header('Reading ERA5 from {} to {}'.format(self.start, self.end))
+        logger.info('Reading ERA5 from {} to {}'.format(self.start, self.end))
 
         # Get list of required forecast and analysis times
         an_dates = era_tools.get_required_analysis(self.start, self.end)
@@ -112,7 +112,7 @@ class Read_era5:
             file_missing = False
             for f in files:
                 if not os.path.exists(f):
-                    error('File \"{}\" does not exist...'.format(f), exit=False)
+                    logger.warning('File \"{}\" does not exist...'.format(f), exit=False)
                     file_missing = True
             return file_missing
 
@@ -121,7 +121,7 @@ class Read_era5:
         files_missing += check_files(an_model_files)
         files_missing += check_files(an_pres_files )
         if files_missing:
-            error('One or more required ERA5 files are missing..')
+            logger.critical('One or more required ERA5 files are missing..')
 
         # Check if files are from new CDS, which require patching.
         # This is only a fallback option, in case someone has unpatched NetCDF files.
@@ -198,9 +198,9 @@ class Read_era5:
         time_check = self.fsa.variables['time'][t_an]
 
         if not np.all(self.time == time_check):
-            warning('Model level times: {}'.format(self.time))
-            warning('Surface times:     {}'.format(time_check))
-            error('Model level and surface times are not synced!')
+            logger.warning('Model level times: {}'.format(self.time))
+            logger.warning('Surface times:     {}'.format(time_check))
+            logger.critical('Model level and surface times are not synced!')
 
         # Shift grid from 0-360 to -180, 180 (if needed)
         if np.any(self.lons>180):
@@ -340,7 +340,7 @@ class Read_era5:
         """
         Calculate the advective tendencies, geostrophic wind, et cetera.
         """
-        header('Calculating large-scale forcings')
+        logger.debug('Calculating large-scale forcings')
 
         # Find nearest location on (regular lat/lon) grid
         self.i = np.abs(self.lons - self.settings['central_lon']).argmin()
@@ -351,7 +351,7 @@ class Read_era5:
                 self.lons[self.i], self.lats[self.j],
                 self.settings['central_lon'], self.settings['central_lat'])
 
-        message('Using nearest lat/lon = {0:.2f}/{1:.2f} (requested = {2:.2f}/{3:.2f}), distance ~= {4:.1f} km'\
+        logger.debug('Using nearest lat/lon = {0:.2f}/{1:.2f} (requested = {2:.2f}/{3:.2f}), distance ~= {4:.1f} km'\
                 .format(self.lats[self.j], self.lons[self.i],
                         self.settings['central_lat'], self.settings['central_lon'], distance/1000.))
 
@@ -359,7 +359,7 @@ class Read_era5:
         dlon = (1+2*n_av) * float(self.lons[1] - self.lons[0])
         dlat = (1+2*n_av) * float(self.lats[1] - self.lats[0])
         self.area = f'{dlon:.2f}°×{dlat:.2f}°'
-        message(f'Averaging ERA5 over a {self.area} spatial area.')
+        logger.debug(f'Averaging ERA5 over a {self.area} spatial area.')
 
         # Start and end indices of averaging domain:
         istart = self.i - n_av
@@ -395,7 +395,7 @@ class Read_era5:
             setattr(self, '{}_nn'.format(var), data[0, self.j, self.i])
 
         if self.soil_type_nn == 0:
-            warning('Selected grid point is water/sea! Setting vegetation/soil indexes to 1e9.')
+            logger.warning('Selected grid point is water/sea! Setting vegetation/soil indexes to 1e9.')
 
             self.soil_type_nn = int(1e9)
             self.veg_type_low_nn = int(1e9)
@@ -403,7 +403,7 @@ class Read_era5:
 
             gridpoint_is_land = False
         else:
-            message('Selected grid point is over land.')
+            logger.debug('Selected grid point is over land.')
             gridpoint_is_land = True
 
         # Half level values temperature for radiation
@@ -690,7 +690,7 @@ class Read_era5:
                 attrs = variables[var]
                 add_ds_var(ds, var, data, ('time', 'z'), attrs[0], attrs[1])
             else:
-                error('Can\'t interpolate variable \"{}\"...'.format(var))
+                logger.critical('Can\'t interpolate variable \"{}\"...'.format(var))
 
         if zh is not None:
             # Add half level pressure.

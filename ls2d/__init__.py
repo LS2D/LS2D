@@ -33,3 +33,4 @@ from ls2d.ecmwf import Read_era5
 from ls2d.ecmwf import Read_cams
 
 from ls2d.src import grid
+from ls2d.src import logger

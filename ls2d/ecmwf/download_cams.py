@@ -33,8 +33,8 @@ import numpy as np
 
 # LS2D modules
 import ls2d.ecmwf.era_tools as era_tools
-from ls2d.src.messages import *
 from ls2d.ecmwf.patch_cds_ads import patch_netcdf
+from ls2d.src.logger import logger
 
 # Yikes, but necessary (?) if you want to use
 # MARS downloads without the Python CDS api installed?
@@ -91,7 +91,7 @@ def _download_cams_file(settings, variables, grid):
     """
     Download single CAMS file.
     """
-    header('Downloading: {} - {}'.format(settings['date'], settings['ftype']))
+    logger.info('Downloading: {} - {}'.format(settings['date'], settings['ftype']))
 
     variables = variables[settings['ftype']]
 
@@ -100,7 +100,7 @@ def _download_cams_file(settings, variables, grid):
         credentials = yaml.safe_load(f)
 
     if 'url_ads' not in credentials.keys() or 'key_ads' not in credentials:
-        error('You need to specify `url_ads` and `key_ads` in your `.cdsapirc` file!')
+        logger.critical('You need to specify `url_ads` and `key_ads` in your `.cdsapirc` file!')
 
     # Keep track of CDS downloads which are finished:
     finished = False
@@ -130,7 +130,7 @@ def _download_cams_file(settings, variables, grid):
     pickle_file = '{}.pickle'.format(nc_file[:-3])
 
     if os.path.isfile(pickle_file):
-        message('Found previous CDS request!')
+        logger.debug('Found previous CDS request!')
 
         with open(pickle_file, 'rb') as f:
             cds_request = pickle.load(f)
@@ -138,13 +138,13 @@ def _download_cams_file(settings, variables, grid):
             try:
                 cds_request.update()
             except requests.exceptions.HTTPError:
-                error('CDS request is no longer available online!', exit=False)
-                error('To continue, delete the previous request: {}'.format(pickle_file))
+                logger.error('CDS request is no longer available online!', exit=False)
+                logger.critical('To continue, delete the previous request: {}'.format(pickle_file))
 
             state = cds_request.reply['state']
 
             if state == 'completed':
-                message('Request finished, downloading NetCDF file')
+                logger.debug('Request finished, downloading NetCDF file')
 
                 cds_request.download(nc_file)
                 os.remove(pickle_file)
@@ -152,22 +152,22 @@ def _download_cams_file(settings, variables, grid):
                 patch_netcdf(nc_file)
 
                 if grid is not None:
-                    message(f'Re-gridding NetCDF to {grid:.2f}°×{grid:.2f}° degree grid.')
+                    logger.debug(f'Re-gridding NetCDF to {grid:.2f}°×{grid:.2f}° degree grid.')
                     regrid(nc_file, settings['central_lon'], settings['central_lat'], grid)
 
                 finished = True
 
             elif state in ('accepted', 'queued', 'running'):
-                message('Request not finished, current status = \"{}\"'.format(state))
+                logger.debug('Request not finished, current status = \"{}\"'.format(state))
 
             else:
-                error('Request failed, status = \"{}\"'.format(state), exit=False)
-                message('Error message = {}'.format(cds_request.reply['error'].get('message')))
-                message('Error reason = {}'.format(cds_request.reply['error'].get('reason')))
+                logger.error('Request failed, status = \"{}\"'.format(state), exit=False)
+                logger.error('Error message = {}'.format(cds_request.reply['error'].get('message')))
+                logger.critical('Error reason = {}'.format(cds_request.reply['error'].get('reason')))
 
 
     else:
-        message('No previous CDS request, submitting new one')
+        logger.debug('No previous CDS request, submitting new one')
 
         # Create instance of CDS API
         server = cdsapi.Client(
@@ -234,21 +234,21 @@ def download_cams(settings, variables, grid=None):
 
     # Checks!
     if settings['data_source'] != 'CDS':
-        error('CAMS downloads only support CDS (for now...)!')
+        logger.critical('CAMS downloads only support CDS (for now...)!')
 
     if 'cdsapirc' not in settings.keys():
-        error('You need to specify the location of your `.cdsapirc` file in `settings`!')
+        logger.critical('You need to specify the location of your `.cdsapirc` file in `settings`!')
 
-    header('Downloading CAMS for period: {} to {}'.format(settings['start_date'], settings['end_date']))
+    logger.info('Downloading CAMS for period: {} to {}'.format(settings['start_date'], settings['end_date']))
 
     # Check if output directory exists, and ends with '/'
     if not os.path.isdir(settings['cams_path']):
-        error('Output directory \"{}\" does not exist!'.format(settings['cams_path']))
+        logger.critical('Output directory \"{}\" does not exist!'.format(settings['cams_path']))
     if settings['cams_path'][-1] != '/':
         settings['cams_path'] += '/'
 
     if cdsapi is None:
-        error('CDS API is not installed. See: https://cds.climate.copernicus.eu/api-how-to')
+        logger.critical('CDS API is not installed. See: https://cds.climate.copernicus.eu/api-how-to')
 
     # Round date/time to full hours
     start = era_tools.lower_to_hour(settings['start_date'])
@@ -265,17 +265,17 @@ def download_cams(settings, variables, grid=None):
         for ftype in variables.keys():
 
             if ftype == 'egg4_ml':
-                error('Downloading CAMS EGG4 data currently does not work due to an open ADS bug.')
+                logger.critical('Downloading CAMS EGG4 data currently does not work due to an open ADS bug.')
 
             era_dir, era_file = era_tools.era5_file_path(
                     date.year, date.month, date.day, settings['cams_path'], settings['case_name'], ftype)
 
             if not os.path.exists(era_dir):
-                message('Creating output directory {}'.format(era_dir))
+                logger.debug('Creating output directory {}'.format(era_dir))
                 os.makedirs(era_dir)
 
             if os.path.isfile(era_file):
-                message('Found {} - {} local'.format(date, ftype))
+                logger.debug('Found {} - {} local'.format(date, ftype))
             else:
                 settings_tmp = download_settings.copy()
                 settings_tmp.update({'date': date, 'ftype': ftype})
@@ -287,12 +287,6 @@ def download_cams(settings, variables, grid=None):
             finished = False
 
     if not finished:
-        print(' --------------------------------------------------------------')
-        print(' | One or more requests are not finished.                     |')
-        print(' | For ADS request, you can monitor the progress at:          |')
-        print(' | https://ads.atmosphere.copernicus.eu/cdsapp#!/yourrequests |')
-        print(' | This script will stop now, you can restart it              |')
-        print(' | at any time to retry, or download the results.             |')
-        print(' --------------------------------------------------------------')
-
-        sys.exit(1)
+        logger.warning('One or more requests not finished.')
+        logger.warning('You can monitor the progress at https://ads.atmosphere.copernicus.eu/requests?tab=all')
+        sys.exit(0)

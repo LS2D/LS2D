@@ -29,11 +29,11 @@ import numpy as np
 from scipy import interpolate
 
 # LS2D modules
-from ls2d.src.messages import *
 import ls2d.src.spatial_tools as spatial
 import ls2d.ecmwf.era_tools as era_tools
 from ls2d.ecmwf.IFS_tools import IFS_tools
 from ls2d.ecmwf.patch_cds_ads import patch_netcdf
+from ls2d.src.logger import logger
 
 
 class Read_cams:
@@ -58,7 +58,7 @@ class Read_cams:
         Open all NetCDF files required for start->end period using Xarray.
         """
 
-        header('Reading CAMS from {} to {}'.format(self.start, self.end))
+        logger.info('Reading CAMS from {} to {}'.format(self.start, self.end))
 
         # Get list of required forecast and analysis times
         an_dates = era_tools.get_required_analysis(self.start, self.end, freq=3)
@@ -78,7 +78,7 @@ class Read_cams:
                 if cams_type in self.variables.keys():
 
                     if cams_type == 'egg4_ml':
-                        error('Processing CAMS EGG4 data currently does not work due to an open ADS bug.')
+                        logger.critical('Processing CAMS EGG4 data currently does not work due to an open ADS bug.')
 
                     cams_files.append(era_tools.era5_file_path(
                         date.year, date.month, date.day, path, case, cams_type, False))
@@ -168,13 +168,13 @@ class Read_cams:
 
         # Some debugging output
         distance = spatial.haversine(self.ds_ml.longitude[ic], self.ds_ml.latitude[jc], clon, clat)
-        message('Using nearest lat/lon = {0:.2f}/{1:.2f} (requested = {2:.2f}/{3:.2f}), distance ~= {4:.1f} km'\
+        logger.debug('Using nearest lat/lon = {0:.2f}/{1:.2f} (requested = {2:.2f}/{3:.2f}), distance ~= {4:.1f} km'\
                 .format(self.ds_ml.latitude[jc], self.ds_ml.longitude[ic], clat, clon, distance/1000.))
 
         # Calculate and output averaging area.
         dlon = (1+2*n_av) * abs(float(self.ds_ml.longitude[1] - self.ds_ml.longitude[0]))
         dlat = (1+2*n_av) * abs(float(self.ds_ml.latitude[0] - self.ds_ml.latitude[1]))
-        message(f'Averaging CAMS over a {dlon:.2f}°×{dlat:.2f}° spatial area.')
+        logger.debug(f'Averaging CAMS over a {dlon:.2f}°×{dlat:.2f}° spatial area.')
 
         # Slice out averaging sub-domain, and calculate mean over sub-domain.
         self.ds_ml = self.ds_ml.isel(longitude=slice(ic-n_av, ic+n_av+1), latitude=slice(jc-n_av, jc+n_av+1))

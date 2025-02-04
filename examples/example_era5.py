@@ -28,17 +28,18 @@ import sys,os
 import matplotlib.pyplot as pl
 import numpy as np
 
+sys.path.append('/home/bart/meteo/models/LS2D')
 import ls2d
 
 settings = {
     'central_lat' : 51.97,
     'central_lon' : 4.93,
     'area_size'   : 1,
-    'case_name'   : 'cabauw',
+    'case_name'   : 'acabauw',
     'era5_path'   : '/home/scratch1/bart/LS2D_ERA5/',
     'era5_expver' : 1,   # 1=normal ERA5, 5=ERA5 near-realtime
-    'start_date'  : datetime(year=2016, month=8, day=15, hour=6),
-    'end_date'    : datetime(year=2016, month=8, day=15, hour=18),
+    'start_date'  : datetime(year=2006, month=8, day=16, hour=6),
+    'end_date'    : datetime(year=2006, month=8, day=16, hour=18),
     'write_log'   : False,
     'data_source' : 'CDS'
     }
