@@ -112,7 +112,7 @@ class Read_era5:
             file_missing = False
             for f in files:
                 if not os.path.exists(f):
-                    logger.warning('File \"{}\" does not exist...'.format(f), exit=False)
+                    logger.warning('File \"{}\" does not exist...'.format(f))
                     file_missing = True
             return file_missing
 
