@@ -370,7 +370,7 @@ class Read_era5:
 
         # Variables averaged from (time, height, lon, lat) to (time, height):
         var_4d_mean = [
-                'z', 'zh', 'p', 'ph', 'T', 'thl', 'thli', 'qt', 'qti', 'qc', 'qi',
+                'z', 'zh', 'p', 'ph', 'T', 'thl', 'qt', 'qc', 'qi',
                 'u', 'v', 'U', 'wls', 'rho', 'o3',
                 'T_soil', 'theta_soil']
         for var in var_4d_mean:
