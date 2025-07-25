@@ -1,6 +1,6 @@
 [master]
 npx=2
-npy=2
+npy=4
 
 [grid]
 itot=64
@@ -12,9 +12,11 @@ zsize=8533.330758996863
 utrans=0.0
 vtrans=0.0
 swspatialorder=2
+lat=51.971
+lon=4.927
 
 [advec]
-swadvec=2i53
+swadvec=2i5
 cflmax=1.2
 
 [diff]
@@ -45,8 +47,6 @@ sfc_alb_dir=0.22
 sfc_alb_dif=0.22
 swclearskystats=1
 swfixedsza=0
-lat=51.971
-lon=4.927
 
 [land_surface]
 sw_land_surface=1
@@ -74,7 +74,7 @@ swnudge=1
 swtimedep_nudge=1
 nudgelist=thl,qt,u,v
 timedeplist_nudge=thl,qt,u,v
-swwls=1
+swwls=local
 swtimedep_wls=1
 
 [boundary]
@@ -128,7 +128,7 @@ sampletime=60
 swcross=1
 sampletime=60
 xy=0
-crosslist=qtpath,qlqipath,qlqibase,qlqitop,qlqicore_max_thv_prime,sw_flux_dn,sw_flux_dn_dir,thlbot,u,v,thlfluxbot,qtfluxbot
+crosslist=qt_path,qlqi_path,qlqi_base,qlqi_top,qlqicore_max_thv_prime,sw_flux_dn,sw_flux_dn_dir,thl_bot,u,v,thl_fluxbot,qt_fluxbot
 
 [column]
 swcolumn=1
