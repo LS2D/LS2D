@@ -102,6 +102,7 @@ class Read_cams:
         # Open NetCDF files with Xarray
         ds = xr.open_mfdataset(cams_files)
 
+
         # Interpolate to hourly frequency, to stay in line with ERA5.
         # This automagically selects the correct time period as a bonus.
         dates = pd.date_range(self.start, self.end, freq='h')
@@ -165,7 +166,7 @@ class Read_cams:
     
         ic = int(np.abs(self.ds_ml.longitude - clon).argmin())
         jc = int(np.abs(self.ds_ml.latitude  - clat).argmin())
-    
+
         # Some debugging output
         distance = spatial.haversine(self.ds_ml.longitude[ic], self.ds_ml.latitude[jc], clon, clat)
         message('Using nearest lat/lon = {0:.2f}/{1:.2f} (requested = {2:.2f}/{3:.2f}), distance ~= {4:.1f} km'\
@@ -175,9 +176,10 @@ class Read_cams:
         dlon = (1+2*n_av) * abs(float(self.ds_ml.longitude[1] - self.ds_ml.longitude[0]))
         dlat = (1+2*n_av) * abs(float(self.ds_ml.latitude[0] - self.ds_ml.latitude[1]))
         message(f'Averaging CAMS over a {dlon:.2f}°×{dlat:.2f}° spatial area.')
-    
+
         # Slice out averaging sub-domain, and calculate mean over sub-domain.
         self.ds_ml = self.ds_ml.isel(longitude=slice(ic-n_av, ic+n_av+1), latitude=slice(jc-n_av, jc+n_av+1))
+
 
         # Load dataset to get rid of Dask/chuncks.
         self.ds_ml = self.ds_ml.load()

@@ -71,6 +71,21 @@ settings = {
     'ntasks'        : 1
     }
 
+#settings = {
+#    'central_lon'   : -57.7,
+#    'central_lat'   : 13.3,
+#    'start_date'    : datetime(year=2022, month=1, day=2, hour=6),
+#    'end_date'      : datetime(year=2022, month=1, day=2, hour=18),
+#    'area_size'     : 2,
+#    'case_name'     : 'barbados',
+#    'cams_path'     : env['cams_path'],
+#    'cdsapirc'      : env['cdsapirc'],
+#    'era5_expver'   : 1,
+#    'write_log'     : False,
+#    'data_source'   : 'CDS',
+#    'ntasks'        : 1
+#    }
+
 pl.close('all')
 
 # Download data.

@@ -21,6 +21,7 @@
 # Python modules
 import subprocess as sp
 import datetime
+import shutil
 import sys
 import os
 import dill as pickle
@@ -60,12 +61,22 @@ def regrid(nc_file, central_lon, central_lat, resolution):
         resolution : float
             New output resolution
     """
-
     ds = xr.open_dataset(nc_file)
+
+    #     Some CAMS files have longitudes -180 to 180 (surface files).
+    # And some CAMS files have longitudes 0 to 360 (model level files).
+    # And someone thought this was reeeeeeaaally convenient....
+    lon_in = ds.longitude.values
+    lon_in = np.where(lon_in > 180, lon_in - 360, lon_in)
+    ds['longitude'] = lon_in
 
     # Find start/end lon/lat to stay within bounds of input dataset.
     lon_frac = np.abs((ds.longitude.values - central_lon) / resolution)
     lat_frac = np.abs((ds.latitude.values  - central_lat) / resolution)
+
+    # The longitude conversion above results in some minor floating point inaccuracies.
+    lon_frac = np.round(lon_frac, 6)
+    lat_frac = np.round(lat_frac, 6)
 
     lon_0 = central_lon - np.floor(lon_frac[0 ]) * resolution
     lon_1 = central_lon + np.floor(lon_frac[-1]) * resolution
