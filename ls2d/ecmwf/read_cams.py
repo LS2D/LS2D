@@ -52,6 +52,12 @@ class Read_cams:
         # Open all required NetCDF files:
         self.read_netcdf()
 
+        # Read to memory to speed up calculations.
+        self.ds_ml = self.ds_ml.load()
+
+        # Calculate height and pressure of model levels.
+        self.calc_model_levels()
+
 
     def read_netcdf(self):
         """
@@ -178,12 +184,6 @@ class Read_cams:
     
         # Slice out averaging sub-domain, and calculate mean over sub-domain.
         self.ds_ml = self.ds_ml.isel(longitude=slice(ic-n_av, ic+n_av+1), latitude=slice(jc-n_av, jc+n_av+1))
-
-        # Load dataset to get rid of Dask/chuncks.
-        self.ds_ml = self.ds_ml.load()
-
-        # Calculate model level pressure / height.
-        self.calc_model_levels()
 
         # Calculate Spatial mean over requested area.
         self.ds_ml_mean = self.ds_ml.mean(dim=['longitude', 'latitude'])
