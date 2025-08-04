@@ -27,6 +27,7 @@ import os
 import dill as pickle
 import requests
 import yaml
+import shutil
 
 # Third party modules
 import xarray as xr
@@ -35,7 +36,7 @@ import numpy as np
 # LS2D modules
 import ls2d.ecmwf.era_tools as era_tools
 from ls2d.src.messages import *
-from ls2d.ecmwf.patch_cds_ads import patch_netcdf
+from ls2d.ecmwf.patch_cds_ads import patch_netcdf, patch_longitude
 
 # Yikes, but necessary (?) if you want to use
 # MARS downloads without the Python CDS api installed?
@@ -61,14 +62,10 @@ def regrid(nc_file, central_lon, central_lat, resolution):
         resolution : float
             New output resolution
     """
-    ds = xr.open_dataset(nc_file)
 
-    #     Some CAMS files have longitudes -180 to 180 (surface files).
-    # And some CAMS files have longitudes 0 to 360 (model level files).
-    # And someone thought this was reeeeeeaaally convenient....
-    lon_in = ds.longitude.values
-    lon_in = np.where(lon_in > 180, lon_in - 360, lon_in)
-    ds['longitude'] = lon_in
+    shutil.copyfile(nc_file, nc_file + '.orig_grid')
+
+    ds = xr.open_dataset(nc_file)
 
     # Find start/end lon/lat to stay within bounds of input dataset.
     lon_frac = np.abs((ds.longitude.values - central_lon) / resolution)
@@ -160,7 +157,13 @@ def _download_cams_file(settings, variables, grid):
                 cds_request.download(nc_file)
                 os.remove(pickle_file)
 
+                # Patch NetCDF files to match the old CDS/ADS format.
                 patch_netcdf(nc_file)
+
+                # Patch longitude (if necessary) from 0 to 360 to -180 to 180.
+                with xr.open_dataset(nc_file) as ds:
+                    if np.any(ds.longitude.values > 180):
+                        patch_longitude(nc_file)
 
                 if grid is not None:
                     message(f'Re-gridding NetCDF to {grid:.2f}°×{grid:.2f}° degree grid.')

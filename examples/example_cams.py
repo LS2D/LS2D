@@ -20,7 +20,6 @@
 
 # Python modules
 from datetime import datetime
-import sys
 
 import matplotlib.pyplot as pl
 import numpy as np

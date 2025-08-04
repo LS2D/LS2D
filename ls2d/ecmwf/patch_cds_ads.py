@@ -42,7 +42,7 @@ def patch_netcdf(nc_file_path):
     This function patches the new NetCDF files, to make them +/- identical to the old format.
 
     NOTE: the patched files are not 100% identical to the old format, just
-    identical enough for (LS)2D to read and parse them. 
+    identical enough for (LS)2D to read and parse them.
     """
 
     # Backup old file, and remove original.
@@ -63,7 +63,7 @@ def patch_netcdf(nc_file_path):
         ds = ds.drop('expver')
 
     file_name = os.path.basename(nc_file_path)
-    
+
     if file_name == 'model_an.nc' or file_name == 'eac4_ml.nc':
         new_ds = ds.rename({
                 'model_level': 'level',
@@ -107,6 +107,38 @@ def patch_netcdf(nc_file_path):
     new_ds.to_netcdf(nc_file_path, format='NETCDF4_CLASSIC')
 
     return new_ds   # Just for debugging...
+
+
+def patch_longitude(nc_file_path):
+    """
+    Convert files with longitude in range 0 to 360 to -180 to 180.
+    """
+
+    # Backup old file, and remove original.
+    backup_file_path = f'{nc_file_path}.orig_lon'
+    shutil.copyfile(nc_file_path, backup_file_path)
+    os.remove(nc_file_path)
+
+    # Edit with Xarray. Read the copied file, so that we can overwrite the original one.
+    ds = xr.open_dataset(backup_file_path, decode_times=False)
+    new_ds = ds.copy()
+
+    # Original longitudes.
+    lon_vals = new_ds['longitude'].values
+
+    # Convert longitudes > 180 to negative values
+    lon_converted = np.where(lon_vals > 180, lon_vals - 360, lon_vals)
+
+    # Create sorting indices to maintain proper order (-180 to 180)
+    sort_idx = np.argsort(lon_converted)
+
+    # Apply the conversion and sorting
+    new_ds = new_ds.isel({'longitude': sort_idx})
+    new_ds['longitude'] = lon_converted[sort_idx]
+
+    new_ds.to_netcdf(nc_file_path, format='NETCDF4_CLASSIC')
+
+    return new_ds
 
 
 
