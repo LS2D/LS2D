@@ -64,7 +64,7 @@ def patch_netcdf(nc_file_path):
 
     file_name = os.path.basename(nc_file_path)
 
-    if file_name == 'model_an.nc' or file_name == 'eac4_ml.nc':
+    if file_name in ['model_an.nc', 'eac4_ml.nc', 'egg4_ml.nc']:
         new_ds = ds.rename({
                 'model_level': 'level',
                 'valid_time': 'time'})
@@ -77,7 +77,7 @@ def patch_netcdf(nc_file_path):
         # Yeah, somehow they thought it was a good idea to reverse the pressure levels......
         new_ds = new_ds.reindex(level=new_ds.level[::-1])
 
-    elif file_name == 'surface_an.nc' or file_name == 'eac4_sfc.nc':
+    elif file_name in ['surface_an.nc', 'eac4_sfc.nc', 'egg4_sfc.nc', 'egg4_sl.nc']:
         new_ds = ds.rename({
                 'valid_time': 'time'})
 
@@ -150,5 +150,9 @@ if __name__ == '__main__':
     #surf_an = patch_netcdf('/home/scratch1/bart/LS2D_ERA5/cabauw_test/2016/08/15/surface_an.nc')
     #pres_an = patch_netcdf('/home/scratch1/bart/LS2D_ERA5/cabauw_test/2016/08/15/pressure_an.nc')
 
-    model_an = patch_netcdf('/home/scratch1/bart/LS2D_CAMS/cabauw_test/2016/08/15/eac4_ml.nc')
-    surf_an = patch_netcdf('/home/scratch1/bart/LS2D_CAMS/cabauw_test/2016/08/15/eac4_sfc.nc')
+    #model_an = patch_netcdf('/home/scratch1/bart/LS2D_CAMS/cabauw_test/2016/08/15/eac4_ml.nc')
+    #surf_an = patch_netcdf('/home/scratch1/bart/LS2D_CAMS/cabauw_test/2016/08/15/eac4_sfc.nc')
+
+    #model_an = patch_netcdf('/home/scratch1/bart/LS2D_CAMS/cabauw/2016/08/15/egg4_ml.nc')
+
+    patch_netcdf('/home/scratch1/bart/LS2D_CAMS/cabauw/2016/08/15/egg4_sl.nc')

@@ -27,32 +27,45 @@ import numpy as np
 import ls2d
 
 env = {
-        'system': 'arch',
-        'era5_path': '/home/scratch1/bart/LS2D_ERA5/',
-        'cams_path': '/home/scratch1/bart/LS2D_CAMS/',
-        'cdsapirc': '/home/bart/.cdsapirc'}
+    'system': 'arch',
+    'era5_path': '/home/scratch1/bart/LS2D_ERA5/',
+    'cams_path': '/home/scratch1/bart/LS2D_CAMS/',
+    'cdsapirc': '/home/bart/.cdsapirc'}
 
-cams_vars = {
-        'eac4_ml': [
-            'dust_aerosol_0.03-0.55um_mixing_ratio',
-            'dust_aerosol_0.55-0.9um_mixing_ratio',
-            'dust_aerosol_0.9-20um_mixing_ratio',
-            'hydrophilic_black_carbon_aerosol_mixing_ratio',
-            'hydrophilic_organic_matter_aerosol_mixing_ratio',
-            'hydrophobic_black_carbon_aerosol_mixing_ratio',
-            'hydrophobic_organic_matter_aerosol_mixing_ratio',
-            'sea_salt_aerosol_0.03-0.5um_mixing_ratio',
-            'sea_salt_aerosol_0.5-5um_mixing_ratio',
-            'sea_salt_aerosol_5-20um_mixing_ratio',
-            'specific_humidity',
-            'sulphate_aerosol_mixing_ratio',
-            'temperature'],
-        'eac4_sfc': [
-            'surface_pressure'],
-        #'egg4_ml': [
-        #    'carbon_dioxide',
-        #    'methane']
-        }
+cams_eac4_vars = {
+    'eac4_ml': [
+        'dust_aerosol_0.03-0.55um_mixing_ratio',
+        'dust_aerosol_0.55-0.9um_mixing_ratio',
+        'dust_aerosol_0.9-20um_mixing_ratio',
+        'hydrophilic_black_carbon_aerosol_mixing_ratio',
+        'hydrophilic_organic_matter_aerosol_mixing_ratio',
+        'hydrophobic_black_carbon_aerosol_mixing_ratio',
+        'hydrophobic_organic_matter_aerosol_mixing_ratio',
+        'sea_salt_aerosol_0.03-0.5um_mixing_ratio',
+        'sea_salt_aerosol_0.5-5um_mixing_ratio',
+        'sea_salt_aerosol_5-20um_mixing_ratio',
+        'specific_humidity',
+        'sulphate_aerosol_mixing_ratio',
+        'temperature'],
+    'eac4_sfc': [
+        'surface_pressure']
+    }
+
+# NOTE: EGG4 provides several variables defined on model levels,
+#       but some of them (surface pressure, geopotential, etc.)
+#       are only available at model level 1. These cannot
+#       be downloaded together with standard model-level variables.
+#       To retrieve them, use the `egg4_sl` variable group instead.
+cams_egg4_vars = {
+    'egg4_ml': [
+        'carbon_dioxide',
+        'methane',
+        'temperature',
+        'specific_humidity'],
+    'egg4_sl': [
+        'logarithm_of_surface_pressure']
+    }
+
 
 # Dictionary with (LS)2D settings
 settings = {
@@ -85,30 +98,32 @@ settings = {
 #    'ntasks'        : 1
 #    }
 
-pl.close('all')
+
+# Switch between EAC4 (chemistry) and EGG4 (greenhouse gasses).
+cams_vars = cams_egg4_vars
 
 # Download data.
 ls2d.download_cams(settings, variables=cams_vars, grid=0.25)
 
 # Read, average over 3x3 grid points, and interpolate on LES grid.
-cams = ls2d.Read_cams(settings, variables=cams_vars)
+#cams = ls2d.Read_cams(settings, variables=cams_vars)
 
-z = np.arange(10, 5000, 20).astype(float)
-les_input = cams.get_les_input(z, n_av=1)
-
-les_input.to_netcdf('ls2d_cams.nc')
-
-# Quick plot.
-pl.figure(figsize=(10,8))
-ncol = 5
-nrow = 6
-sp = 1
-
-for name, da in les_input.data_vars.items():
-    pl.subplot(nrow, ncol, sp); sp+=1
-    if 'lay' in name:
-        pl.plot(da[0,:], les_input.z_lay[0,:])
-    else:
-        pl.plot(da[0,:], les_input.z)
-    pl.xlabel(name)
-pl.tight_layout()
+#z = np.arange(10, 5000, 20).astype(float)
+#les_input = cams.get_les_input(z, n_av=1)
+#
+#les_input.to_netcdf('ls2d_cams.nc')
+#
+## Quick plot.
+#pl.figure(figsize=(10,8))
+#ncol = 5
+#nrow = 6
+#sp = 1
+#
+#for name, da in les_input.data_vars.items():
+#    pl.subplot(nrow, ncol, sp); sp+=1
+#    if 'lay' in name:
+#        pl.plot(da[0,:], les_input.z_lay[0,:])
+#    else:
+#        pl.plot(da[0,:], les_input.z)
+#    pl.xlabel(name)
+#pl.tight_layout()

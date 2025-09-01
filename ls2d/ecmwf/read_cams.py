@@ -74,14 +74,10 @@ class Read_cams:
         # Populate list of NetCDF files for each CAMS file type.
         cams_files = []
         for date in an_dates:
-            for cams_type in ['eac4_ml', 'eac4_sfc', 'egg4_ml']:
-                if cams_type in self.variables.keys():
+            for cams_type in self.variables.keys():
 
-                    if cams_type == 'egg4_ml':
-                        error('Processing CAMS EGG4 data currently does not work due to an open ADS bug.')
-
-                    cams_files.append(era_tools.era5_file_path(
-                        date.year, date.month, date.day, path, case, cams_type, False))
+                cams_files.append(era_tools.era5_file_path(
+                    date.year, date.month, date.day, path, case, cams_type, False))
 
         # Check if all files are present.
         files_missing = False
