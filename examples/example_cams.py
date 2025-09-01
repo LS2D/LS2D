@@ -106,24 +106,24 @@ cams_vars = cams_egg4_vars
 ls2d.download_cams(settings, variables=cams_vars, grid=0.25)
 
 # Read, average over 3x3 grid points, and interpolate on LES grid.
-#cams = ls2d.Read_cams(settings, variables=cams_vars)
+cams = ls2d.Read_cams(settings, variables=cams_vars)
 
-#z = np.arange(10, 5000, 20).astype(float)
-#les_input = cams.get_les_input(z, n_av=1)
-#
-#les_input.to_netcdf('ls2d_cams.nc')
-#
-## Quick plot.
-#pl.figure(figsize=(10,8))
-#ncol = 5
-#nrow = 6
-#sp = 1
-#
-#for name, da in les_input.data_vars.items():
-#    pl.subplot(nrow, ncol, sp); sp+=1
-#    if 'lay' in name:
-#        pl.plot(da[0,:], les_input.z_lay[0,:])
-#    else:
-#        pl.plot(da[0,:], les_input.z)
-#    pl.xlabel(name)
-#pl.tight_layout()
+z = np.arange(10, 5000, 20).astype(float)
+les_input = cams.get_les_input(z, n_av=1)
+
+les_input.to_netcdf('ls2d_cams.nc')
+
+# Quick plot.
+pl.figure(figsize=(10,8))
+ncol = 5
+nrow = 6
+sp = 1
+
+for name, da in les_input.data_vars.items():
+    pl.subplot(nrow, ncol, sp); sp+=1
+    if 'lay' in name:
+        pl.plot(da[0,:], les_input.z_lay[0,:])
+    else:
+        pl.plot(da[0,:], les_input.z)
+    pl.xlabel(name)
+pl.tight_layout()

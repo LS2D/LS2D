@@ -111,6 +111,10 @@ class Read_cams:
         # Reverse height dimension such that height increases with increasing levels.
         self.ds_ml = self.ds_ml.reindex(level=self.ds_ml.level[::-1])
 
+        # Convert log(ps) to normal surface pressure.
+        if 'lnsp' in self.ds_ml.variables:
+            self.ds_ml['sp'] = np.exp(self.ds_ml['lnsp'])
+
 
     def calc_model_levels(self):
         """
@@ -179,7 +183,6 @@ class Read_cams:
 
         # Slice out averaging sub-domain, and calculate mean over sub-domain.
         self.ds_ml = self.ds_ml.isel(longitude=slice(ic-n_av, ic+n_av+1), latitude=slice(jc-n_av, jc+n_av+1))
-
 
         # Load dataset to get rid of Dask/chuncks.
         self.ds_ml = self.ds_ml.load()

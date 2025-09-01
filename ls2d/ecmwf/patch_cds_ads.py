@@ -103,6 +103,9 @@ def patch_netcdf(nc_file_path):
         for attr in to_rm:
             del da.attrs[attr]
 
+    # Remove dimensions of size 1.
+    new_ds = new_ds.squeeze()
+
     # Overwrite old file.
     new_ds.to_netcdf(nc_file_path, format='NETCDF4_CLASSIC')
 
