@@ -21,11 +21,13 @@
 # Python modules
 import subprocess as sp
 import datetime
+import shutil
 import sys
 import os
 import dill as pickle
 import requests
 import yaml
+import shutil
 
 # Third party modules
 import xarray as xr
@@ -34,7 +36,7 @@ import numpy as np
 # LS2D modules
 import ls2d.ecmwf.era_tools as era_tools
 from ls2d.src.messages import *
-from ls2d.ecmwf.patch_cds_ads import patch_netcdf
+from ls2d.ecmwf.patch_cds_ads import patch_netcdf, patch_longitude
 
 # Yikes, but necessary (?) if you want to use
 # MARS downloads without the Python CDS api installed?
@@ -61,11 +63,17 @@ def regrid(nc_file, central_lon, central_lat, resolution):
             New output resolution
     """
 
+    shutil.copyfile(nc_file, nc_file + '.orig_grid')
+
     ds = xr.open_dataset(nc_file)
 
     # Find start/end lon/lat to stay within bounds of input dataset.
     lon_frac = np.abs((ds.longitude.values - central_lon) / resolution)
     lat_frac = np.abs((ds.latitude.values  - central_lat) / resolution)
+
+    # The longitude conversion above results in some minor floating point inaccuracies.
+    lon_frac = np.round(lon_frac, 6)
+    lat_frac = np.round(lat_frac, 6)
 
     lon_0 = central_lon - np.floor(lon_frac[0 ]) * resolution
     lon_1 = central_lon + np.floor(lon_frac[-1]) * resolution
@@ -93,7 +101,8 @@ def _download_cams_file(settings, variables, grid):
     """
     header('Downloading: {} - {}'.format(settings['date'], settings['ftype']))
 
-    variables = variables[settings['ftype']]
+    ftype = settings['ftype']
+    variables = variables[ftype]
 
     # Read ADS url/key from `.cdsapirc` file.
     with open(settings['cdsapirc'], 'r') as f:
@@ -108,7 +117,7 @@ def _download_cams_file(settings, variables, grid):
     # Output file name
     nc_dir, nc_file = era_tools.era5_file_path(
             settings['date'].year, settings['date'].month, settings['date'].day,
-            settings['cams_path'], settings['case_name'], settings['ftype'])
+            settings['cams_path'], settings['case_name'], ftype)
 
     # Write CDS API prints to log file (NetCDF file path/name appended with .out/.err)
     if settings['write_log']:
@@ -149,7 +158,13 @@ def _download_cams_file(settings, variables, grid):
                 cds_request.download(nc_file)
                 os.remove(pickle_file)
 
+                # Patch NetCDF files to match the old CDS/ADS format.
                 patch_netcdf(nc_file)
+
+                # Patch longitude (if necessary) from 0 to 360 to -180 to 180.
+                with xr.open_dataset(nc_file) as ds:
+                    if np.any(ds.longitude.values > 180):
+                        patch_longitude(nc_file)
 
                 if grid is not None:
                     message(f'Re-gridding NetCDF to {grid:.2f}°×{grid:.2f}° degree grid.')
@@ -171,8 +186,11 @@ def _download_cams_file(settings, variables, grid):
 
         # Create instance of CDS API
         server = cdsapi.Client(
-                url=credentials['url_ads'], key=credentials['key_ads'], verify=True,
-                wait_until_complete=False, delete=False)
+                url=credentials['url_ads'],
+                key=credentials['key_ads'],
+                verify=True,
+                wait_until_complete=False,
+                delete=False)
 
         model_level = [str(x) for x in range(1,61)]
         analysis_times = ['{0:02d}:00'.format(i) for i in range(0, 22, 3)]
@@ -188,17 +206,19 @@ def _download_cams_file(settings, variables, grid):
             #'grid': '0.25/0.25'   # NOTE to self: not supported in the ADS!
         }
 
-        if settings['ftype'] == 'eac4_ml' or settings['ftype'] == 'eac4_sfc':
+        if ftype == 'eac4_ml' or ftype == 'eac4_sfc':
             request.update({'time': analysis_times})
-        elif settings['ftype'] == 'egg4_ml':
+        elif ftype == 'egg4_ml' or ftype == 'egg4_sfc' or ftype == 'egg4_sl':
             request.update({'step': steps})
 
-        if settings['ftype'] == 'eac4_ml' or settings['ftype'] == 'egg4_ml':
+        if ftype == 'eac4_ml' or ftype == 'egg4_ml':
             request.update({'model_level': model_level})
+        elif ftype == 'egg4_sl':
+            request.update({'model_level': ["1"]})
 
-        if settings['ftype'] == 'eac4_ml' or settings['ftype'] == 'eac4_sfc':
+        if ftype == 'eac4_ml' or ftype == 'eac4_sfc':
             cds_request = server.retrieve('cams-global-reanalysis-eac4', request)
-        elif settings['ftype'] == 'egg4_ml':
+        elif ftype == 'egg4_ml' or ftype == 'egg4_sfc' or ftype == 'egg4_sl':
             cds_request = server.retrieve('cams-global-ghg-reanalysis-egg4', request)
 
         # Save pickle for later processing/download
@@ -257,15 +277,12 @@ def download_cams(settings, variables, grid=None):
     # Get list of required forecast and analysis times
     an_dates = era_tools.get_required_analysis(start, end, freq=3)
 
-    # Loop over all required files, check if there is a local version, if not add to download queue
+    # Loop over all required files, check if there is a local version, if not add to download queue.
     download_settings = settings.copy()
     download_queue = []
 
     for date in an_dates:
         for ftype in variables.keys():
-
-            if ftype == 'egg4_ml':
-                error('Downloading CAMS EGG4 data currently does not work due to an open ADS bug.')
 
             era_dir, era_file = era_tools.era5_file_path(
                     date.year, date.month, date.day, settings['cams_path'], settings['case_name'], ftype)
