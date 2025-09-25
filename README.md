@@ -23,7 +23,7 @@ If you use (LS)<sup>2</sup>D, we kindly request citing this paper.
 
 ### Installation
 
-If you want to use CDS to download the ERA5 data, then please start by following the steps explained at https://cds.climate.copernicus.eu/api-how-to .
+If you want to use CDS to download the ERA5 data, then please start by following the steps explained at https://cds.climate.copernicus.eu/how-to-api .
 
 #### PyPI
 
