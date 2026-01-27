@@ -19,8 +19,8 @@
 #
 
 # Python modules
-import pkg_resources
-import os
+from importlib.resources import files
+import sys
 
 # Third party modules
 import numpy as np
@@ -44,11 +44,11 @@ class IFS_tools:
         # Read the table with the vertical grid properties/parameters
         # From: https://www.ecmwf.int/en/forecasts/documentation-and-support/137-model-levels
         if grid_def == 'L137':
-            path = pkg_resources.resource_filename(__name__, 'L137_grid.txt')
+            path = files(__package__).joinpath("L137_grid.txt")
         elif grid_def == 'L60':
-            path = pkg_resources.resource_filename(__name__, 'L60_grid.txt')
+            path = files(__package__).joinpath("L60_grid.txt")
         else:
-            sys.exit(f'Unknow grid definition \"{grid_def}\".')
+            sys.exit(f'Unknown grid definition "{grid_def}".')
         f = np.loadtxt(path)
 
         # Half and full level number

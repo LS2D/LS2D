@@ -29,9 +29,9 @@ import numpy as np
 from scipy import interpolate
 
 # LS2D modules
-import ls2d.src.spatial_tools as spatial
-import ls2d.src.finite_difference as fd
-from ls2d.src.messages import *
+import ls2d.core.spatial_tools as spatial
+import ls2d.core.finite_difference as fd
+from ls2d.core.messages import *
 
 import ls2d.ecmwf.era_tools as era_tools
 from ls2d.ecmwf.IFS_tools import IFS_tools
