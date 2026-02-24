@@ -19,11 +19,15 @@
 #
 
 # Python modules
-import pkg_resources
 import os
+import pathlib
 
 # Third party modules
 import numpy as np
+
+# Always resolves to the directory of this script, ie IFS_tools.py
+PKG_ROOT = pathlib.Path(os.path.dirname(__file__))
+
 
 class IFS_tools:
     """
@@ -44,9 +48,9 @@ class IFS_tools:
         # Read the table with the vertical grid properties/parameters
         # From: https://www.ecmwf.int/en/forecasts/documentation-and-support/137-model-levels
         if grid_def == 'L137':
-            path = pkg_resources.resource_filename(__name__, 'L137_grid.txt')
+            path = PKG_ROOT / 'L137_grid.txt'
         elif grid_def == 'L60':
-            path = pkg_resources.resource_filename(__name__, 'L60_grid.txt')
+            path = PKG_ROOT / 'L60_grid.txt'
         else:
             sys.exit(f'Unknow grid definition \"{grid_def}\".')
         f = np.loadtxt(path)
