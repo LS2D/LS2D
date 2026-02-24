@@ -20,9 +20,11 @@
 
 # Ban Python 2.x:
 import sys
+
 if sys.version_info.major < 3:
     from ls2d.src.messages import error
-    error('(LS)2D requires Python 3.x')
+
+    error("(LS)2D requires Python 3.x")
 
 # Make packages directly available as e.g.:
 # ls2d.download_era5() instead of ls2d.ecmwf.download_era5()
