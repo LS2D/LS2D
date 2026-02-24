@@ -32,8 +32,8 @@ def era5_file_path(year, month, day, path, case, ftype, return_dir=True):
     Return saving path of files in format `path/yyyy/mm/dd/type.nc`
     """
 
-    era_dir = "{0}/{1}/{2:04d}/{3:02d}/{4:02d}".format(path, case, year, month, day)
-    era_file = "{0}/{1}.nc".format(era_dir, ftype)
+    era_dir = '{0}/{1}/{2:04d}/{3:02d}/{4:02d}'.format(path, case, year, month, day)
+    era_file = '{0}/{1}.nc'.format(era_dir, ftype)
 
     if return_dir:
         return era_dir, era_file
@@ -86,5 +86,5 @@ def get_required_forecast(start, end):
 def lower_to_hour(time):
     time_out = datetime.datetime(time.year, time.month, time.day, time.hour)
     if time.minute != 0 or time.second != 0:
-        warning("Changed date/time from {} to {}".format(time, time_out))
+        warning('Changed date/time from {} to {}'.format(time, time_out))
     return time_out

@@ -34,7 +34,7 @@ import numpy as np
 def _int_or_float_or_str(value):
     """Helper function: convert a string to int/float/str"""
     try:
-        if "." in value:
+        if '.' in value:
             return float(value)
         else:
             return int(float(value))
@@ -44,8 +44,8 @@ def _int_or_float_or_str(value):
 
 def _convert_value(value):
     """Helper function: convert namelist value or list"""
-    if "," in value:
-        value = value.split(",")
+    if ',' in value:
+        value = value.split(',')
         return [_int_or_float_or_str(val) for val in value]
     else:
         return _int_or_float_or_str(value)
@@ -57,16 +57,16 @@ def read_namelist(namelist_file):
     """
 
     ini = OrderedDict()
-    with open(namelist_file, "r") as f:
+    with open(namelist_file, 'r') as f:
         for line in f:
             lstrip = line.strip()
-            if len(lstrip) > 0 and lstrip[0] != "#":
-                if lstrip[0] == "[" and lstrip[-1] == "]":
+            if len(lstrip) > 0 and lstrip[0] != '#':
+                if lstrip[0] == '[' and lstrip[-1] == ']':
                     group_name = lstrip[1:-1]
                     ini[group_name] = OrderedDict()
-                elif "=" in line:
-                    var_name = lstrip.split("=")[0]
-                    value = _convert_value(lstrip.split("=")[1])
+                elif '=' in line:
+                    var_name = lstrip.split('=')[0]
+                    value = _convert_value(lstrip.split('=')[1])
                     ini[group_name][var_name] = value
     return ini
 
@@ -76,20 +76,26 @@ def write_namelist(namelist_file, namelist_dict):
     Write a .ini namelist from a (nested) dictionary
     """
 
-    with open(namelist_file, "w") as f:
+    with open(namelist_file, 'w') as f:
         for group, items in namelist_dict.items():
-            f.write("[{}]\n".format(group))
+            f.write('[{}]\n'.format(group))
             for variable, value in items.items():
                 if isinstance(value, list):
-                    value = ",".join([str(elem) for elem in value])
+                    value = ','.join([str(elem) for elem in value])
                 elif isinstance(value, bool):
                     value = 1 if value == True else 0
-                f.write("{}={}\n".format(variable, value))
-            f.write("\n")
+                f.write('{}={}\n'.format(variable, value))
+            f.write('\n')
 
 
 def write_netcdf_input(
-    case_name, float_type, init_profiles, tdep_surface=None, tdep_ls=None, radiation=None, soil=None
+    case_name,
+    float_type,
+    init_profiles,
+    tdep_surface=None,
+    tdep_ls=None,
+    radiation=None,
+    soil=None,
 ):
     """
     Function for writing the MicroHH2 NetCDF input
@@ -115,61 +121,61 @@ def write_netcdf_input(
         return False
 
     # Define new NetCDF file
-    nc_file = nc4.Dataset("{}_input.nc".format(case_name), mode="w", datamodel="NETCDF4")
+    nc_file = nc4.Dataset('{}_input.nc'.format(case_name), mode='w', datamodel='NETCDF4')
 
     # Create height dimension, and set height coordinate
-    nc_file.createDimension("z", init_profiles["z"].size)
-    add_variable(nc_file, "z", ("z"), init_profiles["z"], float_type)
+    nc_file.createDimension('z', init_profiles['z'].size)
+    add_variable(nc_file, 'z', ('z'), init_profiles['z'], float_type)
 
     # Create a group called "init" for the initial profiles.
-    nc_group_init = nc_file.createGroup("init")
+    nc_group_init = nc_file.createGroup('init')
 
     # Set the initial profiles
     for name, data in init_profiles.items():
         # Switch between vector and scalar values
-        dims = "z" if is_array(data) else None
+        dims = 'z' if is_array(data) else None
         add_variable(nc_group_init, name, dims, data, float_type)
 
     # Create a group called "timedep" for the time dependent input
     if tdep_surface is not None or tdep_ls is not None:
-        nc_group_timedep = nc_file.createGroup("timedep")
+        nc_group_timedep = nc_file.createGroup('timedep')
 
     # Write the time dependent surface values
     if tdep_surface is not None:
-        nc_group_timedep.createDimension("time_surface", tdep_surface["time_surface"].size)
+        nc_group_timedep.createDimension('time_surface', tdep_surface['time_surface'].size)
 
         for name, data in tdep_surface.items():
-            add_variable(nc_group_timedep, name, ("time_surface"), data, float_type)
+            add_variable(nc_group_timedep, name, ('time_surface'), data, float_type)
 
     # Write the time dependent atmospheric values
     if tdep_ls is not None:
-        nc_group_timedep.createDimension("time_ls", tdep_ls["time_ls"].size)
+        nc_group_timedep.createDimension('time_ls', tdep_ls['time_ls'].size)
 
         for name, data in tdep_ls.items():
-            dims = ("time_ls") if name == "time_ls" else ("time_ls", "z")
+            dims = ('time_ls') if name == 'time_ls' else ('time_ls', 'z')
             add_variable(nc_group_timedep, name, dims, data, float_type)
 
     if radiation is not None:
-        nc_group_rad = nc_file.createGroup("radiation")
+        nc_group_rad = nc_file.createGroup('radiation')
 
-        nc_group_rad.createDimension("lay", radiation["p_lay"].size)
-        nc_group_rad.createDimension("lev", radiation["p_lev"].size)
+        nc_group_rad.createDimension('lay', radiation['p_lay'].size)
+        nc_group_rad.createDimension('lev', radiation['p_lev'].size)
 
         for name, data in radiation.items():
             # Switch between vector and scalar values
             if not is_array(data):
                 dims = None
             else:
-                dims = ("lay") if data.size == radiation["p_lay"].size else ("lev")
+                dims = ('lay') if data.size == radiation['p_lay'].size else ('lev')
 
             add_variable(nc_group_rad, name, dims, data, float_type)
 
     if soil is not None:
-        nc_group_soil = nc_file.createGroup("soil")
-        nc_group_soil.createDimension("z", soil["z"].size)
+        nc_group_soil = nc_file.createGroup('soil')
+        nc_group_soil.createDimension('z', soil['z'].size)
 
         for name, data in soil.items():
-            add_variable(nc_group_soil, name, "z", data, float_type)
+            add_variable(nc_group_soil, name, 'z', data, float_type)
 
     nc_file.close()
 
@@ -202,30 +208,30 @@ def check_grid_decomposition(itot, jtot, ktot, npx, npy):
     Check whether grid / MPI decomposition is valid
     """
 
-    print("Checking grid: itot={}, jtot={}, ktot={}, npx={}, npy={}".format(itot, jtot, ktot, npx, npy))
+    print('Checking grid: itot={}, jtot={}, ktot={}, npx={}, npy={}'.format(itot, jtot, ktot, npx, npy))
 
     err = False
     if itot % npx != 0:
-        print("ERROR: itot%npx != 0")
+        print('ERROR: itot%npx != 0')
         err = True
 
     if itot % npy != 0:
-        print("ERROR: itot%npy != 0")
+        print('ERROR: itot%npy != 0')
         err = True
 
     if jtot % npx != 0 and npy > 1:
-        print("ERROR: jtot%npx != 0")
+        print('ERROR: jtot%npx != 0')
         err = True
 
     if jtot % npy != 0:
-        print("ERROR: jtot%npy != 0")
+        print('ERROR: jtot%npy != 0')
         err = True
 
     if ktot % npx != 0:
-        print("ERROR: ktot%npx != 0")
+        print('ERROR: ktot%npx != 0')
         err = True
 
     if err:
-        sys.exit("Invalid grid configuration!")
+        sys.exit('Invalid grid configuration!')
     else:
-        print("Grid okay!")
+        print('Grid okay!')

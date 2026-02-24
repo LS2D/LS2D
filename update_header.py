@@ -20,13 +20,13 @@
 
 import glob
 
-replace_in = "# Copyright (c) 2017-2024 Wageningen University & Research"
-replace_out = "# Copyright (c) 2017-2024 Wageningen University & Research"
+replace_in = '# Copyright (c) 2017-2024 Wageningen University & Research'
+replace_out = '# Copyright (c) 2017-2024 Wageningen University & Research'
 
-files = glob.iglob("**/*.py", recursive=True)
+files = glob.iglob('**/*.py', recursive=True)
 for file in files:
-    with open(file, "r") as f:
+    with open(file, 'r') as f:
         lines = f.readlines()
-    with open(file, "w") as f:
+    with open(file, 'w') as f:
         for l in lines:
             f.write(l.replace(replace_in, replace_out))

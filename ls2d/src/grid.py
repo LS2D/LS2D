@@ -40,24 +40,24 @@ class _Grid:
 
         fig = pl.figure()
         ax = pl.subplot(121)
-        pl.title(r"$z_\mathrm{{size}}$ = {0:.1f} m".format(self.zsize), loc="left")
-        pl.plot(self.dz, self.z, "k-x")
-        pl.xlabel(r"$\Delta z$ (m)")
-        pl.ylabel(r"$z$ (m)")
+        pl.title(r'$z_\mathrm{{size}}$ = {0:.1f} m'.format(self.zsize), loc='left')
+        pl.plot(self.dz, self.z, 'k-x')
+        pl.xlabel(r'$\Delta z$ (m)')
+        pl.ylabel(r'$z$ (m)')
         pl.grid()
 
         ax = pl.subplot(122)
-        pl.plot(np.arange(self.kmax) + 1, self.z, "k-x")
-        pl.xlabel(r"Level (-)")
-        pl.ylabel(r"$z$ (m)")
+        pl.plot(np.arange(self.kmax) + 1, self.z, 'k-x')
+        pl.xlabel(r'Level (-)')
+        pl.ylabel(r'$z$ (m)')
         pl.grid()
 
         if logx:
             for ax in fig.axes:
-                ax.set_xscale("log")
+                ax.set_xscale('log')
         if logy:
             for ax in fig.axes:
-                ax.set_yscale("log")
+                ax.set_yscale('log')
 
         pl.tight_layout()
 
@@ -156,7 +156,7 @@ class Grid_stretched_manual(_Grid):
         self.zh[-1] = self.zsize
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     """
     For debug/testing.
     """
@@ -175,22 +175,22 @@ if __name__ == "__main__":
     pl.figure()
 
     def plot_grid(grid, color, x, label):
-        pl.plot(np.ones_like(grid.z) * x, grid.z, "-o", color=color, ms=5, label=f"{label}")
-        pl.plot(np.ones_like(grid.zh) * x, grid.zh, "-x", color=color, ms=5)
+        pl.plot(np.ones_like(grid.z) * x, grid.z, '-o', color=color, ms=5, label=f'{label}')
+        pl.plot(np.ones_like(grid.zh) * x, grid.zh, '-x', color=color, ms=5)
 
     pl.subplot(121)
-    plot_grid(grid1, "tab:red", 0, "Grid_equidist")
-    plot_grid(grid2, "tab:blue", 1, "Grid_linear_stretched")
-    plot_grid(grid3, "tab:green", 2, "Grid_stretched_manual")
-    plot_grid(grid4, "tab:purple", 3, "Grid_stretched")
-    pl.xlabel(r"-")
-    pl.ylabel(r"$z$ (m)")
+    plot_grid(grid1, 'tab:red', 0, 'Grid_equidist')
+    plot_grid(grid2, 'tab:blue', 1, 'Grid_linear_stretched')
+    plot_grid(grid3, 'tab:green', 2, 'Grid_stretched_manual')
+    plot_grid(grid4, 'tab:purple', 3, 'Grid_stretched')
+    pl.xlabel(r'-')
+    pl.ylabel(r'$z$ (m)')
     pl.legend()
 
     pl.subplot(122)
-    pl.plot(grid1.dz, grid1.z, "-o", color="tab:red")
-    pl.plot(grid2.dz, grid2.z, "-o", color="tab:blue")
-    pl.plot(grid3.dz, grid3.z, "-o", color="tab:green")
-    pl.plot(grid4.dz, grid4.z, "-o", color="tab:purple")
-    pl.xlabel(r"$\Delta$ z (m)")
-    pl.ylabel(r"$z$ (m)")
+    pl.plot(grid1.dz, grid1.z, '-o', color='tab:red')
+    pl.plot(grid2.dz, grid2.z, '-o', color='tab:blue')
+    pl.plot(grid3.dz, grid3.z, '-o', color='tab:green')
+    pl.plot(grid4.dz, grid4.z, '-o', color='tab:purple')
+    pl.xlabel(r'$\Delta$ z (m)')
+    pl.ylabel(r'$z$ (m)')

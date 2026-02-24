@@ -36,7 +36,7 @@ class IFS_tools:
     mixing up differences in methods/constants/.. between IFS and other models
     """
 
-    def __init__(self, grid_def="L137"):
+    def __init__(self, grid_def='L137'):
 
         # Constants (see IFS part IV, chapter 12)
         self.grav = 9.80665
@@ -48,10 +48,10 @@ class IFS_tools:
 
         # Read the table with the vertical grid properties/parameters
         # From: https://www.ecmwf.int/en/forecasts/documentation-and-support/137-model-levels
-        if grid_def == "L137":
-            path = PKG_ROOT / "L137_grid.txt"
-        elif grid_def == "L60":
-            path = PKG_ROOT / "L60_grid.txt"
+        if grid_def == 'L137':
+            path = PKG_ROOT / 'L137_grid.txt'
+        elif grid_def == 'L60':
+            path = PKG_ROOT / 'L60_grid.txt'
         else:
             sys.exit(f'Unknow grid definition "{grid_def}".')
         f = np.loadtxt(path)
@@ -167,65 +167,65 @@ class IFS_tools:
         Zgh = self.calc_half_level_Zg(ph, self.T)
 
         # Compare calculated values with reference data from ECMWF table
-        pl.close("all")
+        pl.close('all')
         pl.figure(figsize=[14, 8])
 
         pl.subplot(231)
-        pl.plot(self.nh, self.ph, label="Table half")
-        pl.plot(self.nh, ph, label="Calculated half", marker="x", linestyle="")
-        pl.plot(self.nf + 20, self.pf, label="Table full (+offs)")
-        pl.plot(self.nf + 20, pf, label="Calculated full (+offs)", marker="x", linestyle="")
-        pl.legend(frameon=False, loc="best")
-        pl.xlabel("Level (-)")
-        pl.ylabel("p (Pa)")
+        pl.plot(self.nh, self.ph, label='Table half')
+        pl.plot(self.nh, ph, label='Calculated half', marker='x', linestyle='')
+        pl.plot(self.nf + 20, self.pf, label='Table full (+offs)')
+        pl.plot(self.nf + 20, pf, label='Calculated full (+offs)', marker='x', linestyle='')
+        pl.legend(frameon=False, loc='best')
+        pl.xlabel('Level (-)')
+        pl.ylabel('p (Pa)')
 
         pl.subplot(234)
-        pl.title("rel. diff. p", loc="left")
-        pl.semilogy(self.nh, np.abs((self.ph - ph) / self.ph), label="half")
-        pl.semilogy(self.nf, np.abs((self.pf - pf) / self.pf), label="full")
-        pl.legend(frameon=False, loc="best")
-        pl.xlabel("Level (-)")
-        pl.ylabel("(-)")
+        pl.title('rel. diff. p', loc='left')
+        pl.semilogy(self.nh, np.abs((self.ph - ph) / self.ph), label='half')
+        pl.semilogy(self.nf, np.abs((self.pf - pf) / self.pf), label='full')
+        pl.legend(frameon=False, loc='best')
+        pl.xlabel('Level (-)')
+        pl.ylabel('(-)')
 
         pl.subplot(232)
-        pl.plot(self.nf, self.rho, label="Table")
-        pl.plot(self.nf, rhof, label="Calculated", marker="x", linestyle="")
-        pl.legend(frameon=False, loc="best")
-        pl.xlabel("Level (-)")
-        pl.ylabel("rho (kg m-3)")
+        pl.plot(self.nf, self.rho, label='Table')
+        pl.plot(self.nf, rhof, label='Calculated', marker='x', linestyle='')
+        pl.legend(frameon=False, loc='best')
+        pl.xlabel('Level (-)')
+        pl.ylabel('rho (kg m-3)')
 
         pl.subplot(235)
-        pl.title("rel. diff. rho", loc="left")
+        pl.title('rel. diff. rho', loc='left')
         pl.semilogy(self.nf, np.abs((self.rho - rhof) / self.rho))
-        pl.xlabel("Level (-)")
-        pl.ylabel("(-)")
+        pl.xlabel('Level (-)')
+        pl.ylabel('(-)')
 
         pl.subplot(233)
-        pl.plot(self.nf, self.gpa, label="Table")
-        pl.plot(self.nf, Zgf, label="Calculated", marker="x", linestyle="")
-        pl.legend(frameon=False, loc="best")
-        pl.xlabel("Level (-)")
-        pl.ylabel("Geop. height (m)")
+        pl.plot(self.nf, self.gpa, label='Table')
+        pl.plot(self.nf, Zgf, label='Calculated', marker='x', linestyle='')
+        pl.legend(frameon=False, loc='best')
+        pl.xlabel('Level (-)')
+        pl.ylabel('Geop. height (m)')
 
         pl.subplot(236)
-        pl.title("rel. diff. z", loc="left")
+        pl.title('rel. diff. z', loc='left')
         pl.semilogy(self.nf, np.abs((self.gpa - Zgf) / self.gpa))
-        pl.xlabel("Level (-)")
-        pl.ylabel("(-)")
+        pl.xlabel('Level (-)')
+        pl.ylabel('(-)')
 
         pl.tight_layout()
-        pl.savefig("IFS_tools_validation.pdf")
+        pl.savefig('IFS_tools_validation.pdf')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     """Test / example, only executed if script is called directly"""
 
     import matplotlib.pyplot as pl
 
     pl.ion()
-    pl.close("all")
+    pl.close('all')
 
-    ifs_tools = IFS_tools("L60")
+    ifs_tools = IFS_tools('L60')
 
     # Validate the IFS_tools conversion from surface pressure to model level pressure, height, etc.
     ifs_tools.validate()

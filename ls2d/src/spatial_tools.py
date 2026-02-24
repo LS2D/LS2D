@@ -58,7 +58,7 @@ def ddlat(valS, valN, latS, latN):
     return (valN - valS) / dlat(latS, latN)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     """Test / example, only executed if script is called directly"""
 
     # Test of correct gradient signs
@@ -79,14 +79,14 @@ if __name__ == "__main__":
     valN = 2.0
 
     # Positive distances from S->N and W->E
-    print("dlat=", dlat(latS, latN))
-    print("dlon=", dlon(lonW, lonE, latC))
-    print("dlat=", dlat(latN, latS))
-    print("dlon=", dlon(lonE, lonW, latC))
+    print('dlat=', dlat(latS, latN))
+    print('dlon=', dlon(lonW, lonE, latC))
+    print('dlat=', dlat(latN, latS))
+    print('dlon=', dlon(lonE, lonW, latC))
 
     # Positive gradients
-    print("ddlat=", ddlat(valS, valN, latS, latN))
-    print("ddlon=", ddlon(valW, valE, lonW, lonE, latC))
+    print('ddlat=', ddlat(valS, valN, latS, latN))
+    print('ddlon=', ddlon(valW, valE, lonW, lonE, latC))
 
-    print("ddlat=", ddlat(valN, valS, latN, latS))
-    print("ddlon=", ddlon(valE, valW, lonE, lonW, latC))
+    print('ddlat=', ddlat(valN, valS, latN, latS))
+    print('ddlon=', ddlon(valE, valW, lonE, lonW, latC))

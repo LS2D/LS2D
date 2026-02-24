@@ -42,5 +42,8 @@ cds = ["cdsapi"]
 [project.urls]
 Homepage = "https://github.com/LS2D/LS2D"
 
-[tool.black]
-line-length = 120  # allow longer lines
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+quote-style = "single"

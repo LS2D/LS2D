@@ -63,7 +63,7 @@ def regrid(nc_file, central_lon, central_lat, resolution):
             New output resolution
     """
 
-    shutil.copyfile(nc_file, nc_file + ".orig_grid")
+    shutil.copyfile(nc_file, nc_file + '.orig_grid')
 
     ds = xr.open_dataset(nc_file)
 
@@ -88,7 +88,7 @@ def regrid(nc_file, central_lon, central_lat, resolution):
     # new coordinate is exactly equal to the start/end coordinate
     # of the input NetCDF file. Otherwise, those values are set to
     # NaN (no idea why....).
-    dsi = ds.interp(longitude=lon_out, latitude=lat_out, kwargs={"fill_value": "extrapolate"})
+    dsi = ds.interp(longitude=lon_out, latitude=lat_out, kwargs={'fill_value': 'extrapolate'})
 
     # Save back.
     ds.close()
@@ -99,66 +99,66 @@ def _download_cams_file(settings, variables, grid):
     """
     Download single CAMS file.
     """
-    header("Downloading: {} - {}".format(settings["date"], settings["ftype"]))
+    header('Downloading: {} - {}'.format(settings['date'], settings['ftype']))
 
-    ftype = settings["ftype"]
+    ftype = settings['ftype']
     variables = variables[ftype]
 
     # Read ADS url/key from `.cdsapirc` file.
-    with open(settings["cdsapirc"], "r") as f:
+    with open(settings['cdsapirc'], 'r') as f:
         credentials = yaml.safe_load(f)
 
-    if "url_ads" not in credentials.keys() or "key_ads" not in credentials:
-        error("You need to specify `url_ads` and `key_ads` in your `.cdsapirc` file!")
+    if 'url_ads' not in credentials.keys() or 'key_ads' not in credentials:
+        error('You need to specify `url_ads` and `key_ads` in your `.cdsapirc` file!')
 
     # Keep track of CDS downloads which are finished:
     finished = False
 
     # Output file name
     nc_dir, nc_file = era_tools.era5_file_path(
-        settings["date"].year,
-        settings["date"].month,
-        settings["date"].day,
-        settings["cams_path"],
-        settings["case_name"],
+        settings['date'].year,
+        settings['date'].month,
+        settings['date'].day,
+        settings['cams_path'],
+        settings['case_name'],
         ftype,
     )
 
     # Write CDS API prints to log file (NetCDF file path/name appended with .out/.err)
-    if settings["write_log"]:
-        out_file = "{}.out".format(nc_file[:-3])
-        err_file = "{}.err".format(nc_file[:-3])
+    if settings['write_log']:
+        out_file = '{}.out'.format(nc_file[:-3])
+        err_file = '{}.err'.format(nc_file[:-3])
         old_stdout = sys.stdout
         old_stderr = sys.stderr
-        sys.stdout = open(out_file, "w")
-        sys.stderr = open(err_file, "w")
+        sys.stdout = open(out_file, 'w')
+        sys.stderr = open(err_file, 'w')
 
     # Bounds of domain
-    lat_n = settings["central_lat"] + settings["area_size"]
-    lat_s = settings["central_lat"] - settings["area_size"]
-    lon_w = settings["central_lon"] - settings["area_size"]
-    lon_e = settings["central_lon"] + settings["area_size"]
+    lat_n = settings['central_lat'] + settings['area_size']
+    lat_s = settings['central_lat'] - settings['area_size']
+    lon_w = settings['central_lon'] - settings['area_size']
+    lon_e = settings['central_lon'] + settings['area_size']
 
     # Check if pickle with previous request is available.
     # If so, try to download NetCDF file, if not, submit new request
-    pickle_file = "{}.pickle".format(nc_file[:-3])
+    pickle_file = '{}.pickle'.format(nc_file[:-3])
 
     if os.path.isfile(pickle_file):
-        message("Found previous CDS request!")
+        message('Found previous CDS request!')
 
-        with open(pickle_file, "rb") as f:
+        with open(pickle_file, 'rb') as f:
             cds_request = pickle.load(f)
 
             try:
                 cds_request.update()
             except requests.exceptions.HTTPError:
-                error("CDS request is no longer available online!", exit=False)
-                error("To continue, delete the previous request: {}".format(pickle_file))
+                error('CDS request is no longer available online!', exit=False)
+                error('To continue, delete the previous request: {}'.format(pickle_file))
 
-            state = cds_request.reply["state"]
+            state = cds_request.reply['state']
 
-            if state == "completed":
-                message("Request finished, downloading NetCDF file")
+            if state == 'completed':
+                message('Request finished, downloading NetCDF file')
 
                 cds_request.download(nc_file)
                 os.remove(pickle_file)
@@ -172,65 +172,65 @@ def _download_cams_file(settings, variables, grid):
                         patch_longitude(nc_file)
 
                 if grid is not None:
-                    message(f"Re-gridding NetCDF to {grid:.2f}°×{grid:.2f}° degree grid.")
-                    regrid(nc_file, settings["central_lon"], settings["central_lat"], grid)
+                    message(f'Re-gridding NetCDF to {grid:.2f}°×{grid:.2f}° degree grid.')
+                    regrid(nc_file, settings['central_lon'], settings['central_lat'], grid)
 
                 finished = True
 
-            elif state in ("accepted", "queued", "running"):
+            elif state in ('accepted', 'queued', 'running'):
                 message('Request not finished, current status = "{}"'.format(state))
 
             else:
                 error('Request failed, status = "{}"'.format(state), exit=False)
-                message("Error message = {}".format(cds_request.reply["error"].get("message")))
-                message("Error reason = {}".format(cds_request.reply["error"].get("reason")))
+                message('Error message = {}'.format(cds_request.reply['error'].get('message')))
+                message('Error reason = {}'.format(cds_request.reply['error'].get('reason')))
 
     else:
-        message("No previous CDS request, submitting new one")
+        message('No previous CDS request, submitting new one')
 
         # Create instance of CDS API
         server = cdsapi.Client(
-            url=credentials["url_ads"],
-            key=credentials["key_ads"],
+            url=credentials['url_ads'],
+            key=credentials['key_ads'],
             verify=True,
             wait_until_complete=False,
             delete=False,
         )
 
         model_level = [str(x) for x in range(1, 61)]
-        analysis_times = ["{0:02d}:00".format(i) for i in range(0, 22, 3)]
-        steps = ["{}".format(i) for i in range(0, 22, 3)]
+        analysis_times = ['{0:02d}:00'.format(i) for i in range(0, 22, 3)]
+        steps = ['{}'.format(i) for i in range(0, 22, 3)]
         area = [lat_n, lon_w, lat_s, lon_e]
-        date = settings["date"].strftime("%Y-%m-%d")
+        date = settings['date'].strftime('%Y-%m-%d')
 
         request = {
-            "format": "netcdf",
-            "variable": variables,
-            "date": date,
-            "area": area,
+            'format': 'netcdf',
+            'variable': variables,
+            'date': date,
+            'area': area,
             #'grid': '0.25/0.25'   # NOTE to self: not supported in the ADS!
         }
 
-        if ftype == "eac4_ml" or ftype == "eac4_sfc":
-            request.update({"time": analysis_times})
-        elif ftype == "egg4_ml" or ftype == "egg4_sfc" or ftype == "egg4_sl":
-            request.update({"step": steps})
+        if ftype == 'eac4_ml' or ftype == 'eac4_sfc':
+            request.update({'time': analysis_times})
+        elif ftype == 'egg4_ml' or ftype == 'egg4_sfc' or ftype == 'egg4_sl':
+            request.update({'step': steps})
 
-        if ftype == "eac4_ml" or ftype == "egg4_ml":
-            request.update({"model_level": model_level})
-        elif ftype == "egg4_sl":
-            request.update({"model_level": ["1"]})
+        if ftype == 'eac4_ml' or ftype == 'egg4_ml':
+            request.update({'model_level': model_level})
+        elif ftype == 'egg4_sl':
+            request.update({'model_level': ['1']})
 
-        if ftype == "eac4_ml" or ftype == "eac4_sfc":
-            cds_request = server.retrieve("cams-global-reanalysis-eac4", request)
-        elif ftype == "egg4_ml" or ftype == "egg4_sfc" or ftype == "egg4_sl":
-            cds_request = server.retrieve("cams-global-ghg-reanalysis-egg4", request)
+        if ftype == 'eac4_ml' or ftype == 'eac4_sfc':
+            cds_request = server.retrieve('cams-global-reanalysis-eac4', request)
+        elif ftype == 'egg4_ml' or ftype == 'egg4_sfc' or ftype == 'egg4_sl':
+            cds_request = server.retrieve('cams-global-ghg-reanalysis-egg4', request)
 
         # Save pickle for later processing/download
-        with open(pickle_file, "wb") as f:
+        with open(pickle_file, 'wb') as f:
             pickle.dump(cds_request, f)
 
-    if settings["write_log"]:
+    if settings['write_log']:
         sys.stdout = old_stdout
         sys.stderr = old_stderr
 
@@ -258,26 +258,26 @@ def download_cams(settings, variables, grid=None):
     """
 
     # Checks!
-    if settings["data_source"] != "CDS":
-        error("CAMS downloads only support CDS (for now...)!")
+    if settings['data_source'] != 'CDS':
+        error('CAMS downloads only support CDS (for now...)!')
 
-    if "cdsapirc" not in settings.keys():
-        error("You need to specify the location of your `.cdsapirc` file in `settings`!")
+    if 'cdsapirc' not in settings.keys():
+        error('You need to specify the location of your `.cdsapirc` file in `settings`!')
 
-    header("Downloading CAMS for period: {} to {}".format(settings["start_date"], settings["end_date"]))
+    header('Downloading CAMS for period: {} to {}'.format(settings['start_date'], settings['end_date']))
 
     # Check if output directory exists, and ends with '/'
-    if not os.path.isdir(settings["cams_path"]):
-        error('Output directory "{}" does not exist!'.format(settings["cams_path"]))
-    if settings["cams_path"][-1] != "/":
-        settings["cams_path"] += "/"
+    if not os.path.isdir(settings['cams_path']):
+        error('Output directory "{}" does not exist!'.format(settings['cams_path']))
+    if settings['cams_path'][-1] != '/':
+        settings['cams_path'] += '/'
 
     if cdsapi is None:
-        error("CDS API is not installed. See: https://cds.climate.copernicus.eu/api-how-to")
+        error('CDS API is not installed. See: https://cds.climate.copernicus.eu/api-how-to')
 
     # Round date/time to full hours
-    start = era_tools.lower_to_hour(settings["start_date"])
-    end = era_tools.lower_to_hour(settings["end_date"])
+    start = era_tools.lower_to_hour(settings['start_date'])
+    end = era_tools.lower_to_hour(settings['end_date'])
 
     # Get list of required forecast and analysis times
     an_dates = era_tools.get_required_analysis(start, end, freq=3)
@@ -288,25 +288,24 @@ def download_cams(settings, variables, grid=None):
 
     for date in an_dates:
         for ftype in variables.keys():
-
             era_dir, era_file = era_tools.era5_file_path(
                 date.year,
                 date.month,
                 date.day,
-                settings["cams_path"],
-                settings["case_name"],
+                settings['cams_path'],
+                settings['case_name'],
                 ftype,
             )
 
             if not os.path.exists(era_dir):
-                message("Creating output directory {}".format(era_dir))
+                message('Creating output directory {}'.format(era_dir))
                 os.makedirs(era_dir)
 
             if os.path.isfile(era_file):
-                message("Found {} - {} local".format(date, ftype))
+                message('Found {} - {} local'.format(date, ftype))
             else:
                 settings_tmp = download_settings.copy()
-                settings_tmp.update({"date": date, "ftype": ftype})
+                settings_tmp.update({'date': date, 'ftype': ftype})
                 download_queue.append(settings_tmp)
 
     finished = True
@@ -315,12 +314,12 @@ def download_cams(settings, variables, grid=None):
             finished = False
 
     if not finished:
-        print(" --------------------------------------------------------------")
-        print(" | One or more requests are not finished.                     |")
-        print(" | For ADS request, you can monitor the progress at:          |")
-        print(" | https://ads.atmosphere.copernicus.eu/cdsapp#!/yourrequests |")
-        print(" | This script will stop now, you can restart it              |")
-        print(" | at any time to retry, or download the results.             |")
-        print(" --------------------------------------------------------------")
+        print(' --------------------------------------------------------------')
+        print(' | One or more requests are not finished.                     |')
+        print(' | For ADS request, you can monitor the progress at:          |')
+        print(' | https://ads.atmosphere.copernicus.eu/cdsapp#!/yourrequests |')
+        print(' | This script will stop now, you can restart it              |')
+        print(' | at any time to retry, or download the results.             |')
+        print(' --------------------------------------------------------------')
 
         sys.exit(1)
