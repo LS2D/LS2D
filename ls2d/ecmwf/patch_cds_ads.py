@@ -110,7 +110,28 @@ def patch_netcdf(nc_file_path):
     new_ds.to_netcdf(nc_file_path, format='NETCDF4_CLASSIC')
 
     return new_ds   # Just for debugging...
+def patch_interpolation(nc_file_path, sfc_file_path):
+    """
+    The new CDS NetCDF files for model levels have latitudes and longitudes in the original ERA5 grid, which is not the same as the target grid of the surface files. This function interpolates the model level files to the same lat/lon grid as the surface files.
+    """
 
+    # Backup old file, and remove original.
+    backup_file_path = f'{nc_file_path}.unpatched_interpolation'
+    shutil.copyfile(nc_file_path, backup_file_path)
+    os.remove(nc_file_path)
+
+    # Edit with Xarray. Read the copied file, so that we can overwrite the original one.
+    ds = xr.open_dataset(backup_file_path, decode_times=False)
+    sfc_ds = xr.open_dataset(sfc_file_path, decode_times=False)
+
+    new_ds = ds.interp(
+            latitude=sfc_ds.latitude,
+            longitude=sfc_ds.longitude,
+            method='linear')
+
+    new_ds.to_netcdf(nc_file_path, format='NETCDF4_CLASSIC')
+
+    return new_ds   # Just for debugging...
 
 def patch_longitude(nc_file_path):
     """

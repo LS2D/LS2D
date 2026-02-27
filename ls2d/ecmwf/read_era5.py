@@ -36,7 +36,7 @@ from ls2d.src.messages import *
 import ls2d.ecmwf.era_tools as era_tools
 from ls2d.ecmwf.IFS_tools import IFS_tools
 
-from ls2d.ecmwf.patch_cds_ads import patch_netcdf
+from ls2d.ecmwf.patch_cds_ads import patch_interpolation, patch_netcdf
 
 # Constants
 Rd = 287.04
@@ -44,7 +44,6 @@ Rv = 461.5
 ep = Rd/Rv
 
 ifs_tools = IFS_tools('L137')
-
 
 class Slice:
     def __init__(self, istart, iend, jstart, jend):
@@ -128,6 +127,21 @@ class Read_era5:
             if 'valid_time' in ds.dims:
                 ds.close()
                 patch_netcdf(f)
+
+        # patch model level files for interpolation (if needed)
+        for model_file, sfc_file in zip(an_model_files, an_sfc_files):
+            ds =  xr.open_dataset(model_file)
+            ds_sfc =  xr.open_dataset(sfc_file)
+            if not ds.latitude.shape == ds_sfc.latitude.shape or not ds.longitude.shape == ds_sfc.longitude.shape:
+                ds.close()
+                ds_sfc.close()
+                patch_interpolation(model_file, sfc_file)
+                continue
+            if not np.allclose(ds.latitude.values, ds_sfc.latitude.values) or not np.allclose(ds.longitude.values, ds_sfc.longitude.values):
+                ds.close()
+                ds_sfc.close()
+                patch_interpolation(model_file, sfc_file)
+                continue
 
         # Open NetCDF files: MFDataset automatically merges the files / time dimensions
         self.fsa = nc4.MFDataset(an_sfc_files,   aggdim='time')
