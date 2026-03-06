@@ -65,21 +65,16 @@ def patch_netcdf(nc_file_path):
     file_name = os.path.basename(nc_file_path)
 
     if file_name in ['model_an.nc', 'eac4_ml.nc', 'egg4_ml.nc']:
-        new_ds = ds.rename({
-                'model_level': 'level',
-                'valid_time': 'time'})
+        new_ds = ds.rename({'model_level': 'level', 'valid_time': 'time'})
 
     elif file_name == 'pressure_an.nc':
-        new_ds = ds.rename({
-                'pressure_level': 'level',
-                'valid_time': 'time'})
+        new_ds = ds.rename({'pressure_level': 'level', 'valid_time': 'time'})
 
         # Yeah, somehow they thought it was a good idea to reverse the pressure levels......
         new_ds = new_ds.reindex(level=new_ds.level[::-1])
 
     elif file_name in ['surface_an.nc', 'eac4_sfc.nc', 'egg4_sfc.nc', 'egg4_sl.nc']:
-        new_ds = ds.rename({
-                'valid_time': 'time'})
+        new_ds = ds.rename({'valid_time': 'time'})
 
     else:
         error('Not a valid file type!')
@@ -88,7 +83,9 @@ def patch_netcdf(nc_file_path):
     old_ref = datetime.datetime(year=1900, month=1, day=1)
     new_ref = datetime.datetime(year=1970, month=1, day=1)
 
-    new_ds['time'] = [(new_ref + datetime.timedelta(seconds=int(s)) - old_ref).total_seconds() / 3600. for s in new_ds.time.values]
+    new_ds['time'] = [
+        (new_ref + datetime.timedelta(seconds=int(s)) - old_ref).total_seconds() / 3600.0 for s in new_ds.time.values
+    ]
     new_ds['time'].attrs['units'] = 'hours since 1900-01-01 00:00:00.0'
 
     # Remove Grib attributes.
@@ -109,7 +106,7 @@ def patch_netcdf(nc_file_path):
     # Overwrite old file.
     new_ds.to_netcdf(nc_file_path, format='NETCDF4_CLASSIC')
 
-    return new_ds   # Just for debugging...
+    return new_ds  # Just for debugging...
 
 
 def patch_longitude(nc_file_path):
@@ -144,18 +141,17 @@ def patch_longitude(nc_file_path):
     return new_ds
 
 
-
 if __name__ == '__main__':
     """
     For debugging...
     """
-    #model_an = patch_netcdf('/home/scratch1/bart/LS2D_ERA5/cabauw_test/2016/08/15/model_an.nc')
-    #surf_an = patch_netcdf('/home/scratch1/bart/LS2D_ERA5/cabauw_test/2016/08/15/surface_an.nc')
-    #pres_an = patch_netcdf('/home/scratch1/bart/LS2D_ERA5/cabauw_test/2016/08/15/pressure_an.nc')
+    # model_an = patch_netcdf('/home/scratch1/bart/LS2D_ERA5/cabauw_test/2016/08/15/model_an.nc')
+    # surf_an = patch_netcdf('/home/scratch1/bart/LS2D_ERA5/cabauw_test/2016/08/15/surface_an.nc')
+    # pres_an = patch_netcdf('/home/scratch1/bart/LS2D_ERA5/cabauw_test/2016/08/15/pressure_an.nc')
 
-    #model_an = patch_netcdf('/home/scratch1/bart/LS2D_CAMS/cabauw_test/2016/08/15/eac4_ml.nc')
-    #surf_an = patch_netcdf('/home/scratch1/bart/LS2D_CAMS/cabauw_test/2016/08/15/eac4_sfc.nc')
+    # model_an = patch_netcdf('/home/scratch1/bart/LS2D_CAMS/cabauw_test/2016/08/15/eac4_ml.nc')
+    # surf_an = patch_netcdf('/home/scratch1/bart/LS2D_CAMS/cabauw_test/2016/08/15/eac4_sfc.nc')
 
-    #model_an = patch_netcdf('/home/scratch1/bart/LS2D_CAMS/cabauw/2016/08/15/egg4_ml.nc')
+    # model_an = patch_netcdf('/home/scratch1/bart/LS2D_CAMS/cabauw/2016/08/15/egg4_ml.nc')
 
     patch_netcdf('/home/scratch1/bart/LS2D_CAMS/cabauw/2016/08/15/egg4_sl.nc')

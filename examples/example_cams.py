@@ -30,7 +30,8 @@ env = {
     'system': 'arch',
     'era5_path': '/home/scratch1/bart/LS2D_ERA5/',
     'cams_path': '/home/scratch1/bart/LS2D_CAMS/',
-    'cdsapirc': '/home/bart/.cdsapirc'}
+    'cdsapirc': '/home/bart/.cdsapirc',
+}
 
 cams_eac4_vars = {
     'eac4_ml': [
@@ -46,10 +47,10 @@ cams_eac4_vars = {
         'sea_salt_aerosol_5-20um_mixing_ratio',
         'specific_humidity',
         'sulphate_aerosol_mixing_ratio',
-        'temperature'],
-    'eac4_sfc': [
-        'surface_pressure']
-    }
+        'temperature',
+    ],
+    'eac4_sfc': ['surface_pressure'],
+}
 
 # NOTE: EGG4 provides several variables defined on model levels,
 #       but some of them (surface pressure, geopotential, etc.)
@@ -57,33 +58,28 @@ cams_eac4_vars = {
 #       be downloaded together with standard model-level variables.
 #       To retrieve them, use the `egg4_sl` variable group instead.
 cams_egg4_vars = {
-    'egg4_ml': [
-        'carbon_dioxide',
-        'methane',
-        'temperature',
-        'specific_humidity'],
-    'egg4_sl': [
-        'logarithm_of_surface_pressure']
-    }
+    'egg4_ml': ['carbon_dioxide', 'methane', 'temperature', 'specific_humidity'],
+    'egg4_sl': ['logarithm_of_surface_pressure'],
+}
 
 
 # Dictionary with (LS)2D settings
 settings = {
-    'central_lon'   : 4.92,
-    'central_lat'   : 51.97,
-    'start_date'    : datetime(year=2016, month=8, day=15, hour=6),
-    'end_date'      : datetime(year=2016, month=8, day=15, hour=18),
-    'area_size'     : 2,
-    'case_name'     : 'cabauw',
-    'cams_path'     : env['cams_path'],
-    'cdsapirc'      : env['cdsapirc'],
-    'era5_expver'   : 1,
-    'write_log'     : False,
-    'data_source'   : 'CDS',
-    'ntasks'        : 1
-    }
+    'central_lon': 4.92,
+    'central_lat': 51.97,
+    'start_date': datetime(year=2016, month=8, day=15, hour=6),
+    'end_date': datetime(year=2016, month=8, day=15, hour=18),
+    'area_size': 2,
+    'case_name': 'cabauw',
+    'cams_path': env['cams_path'],
+    'cdsapirc': env['cdsapirc'],
+    'era5_expver': 1,
+    'write_log': False,
+    'data_source': 'CDS',
+    'ntasks': 1,
+}
 
-#settings = {
+# settings = {
 #    'central_lon'   : -57.7,
 #    'central_lat'   : 13.3,
 #    'start_date'    : datetime(year=2022, month=1, day=2, hour=6),
@@ -116,16 +112,16 @@ les_egg.to_netcdf('ls2d_egg4_cams.nc')
 
 # Quick plot.
 for les_input in [les_eac, les_egg]:
-
-    pl.figure(figsize=(10,8), layout='constrained')
+    pl.figure(figsize=(10, 8), layout='constrained')
     ncol = 5
     nrow = 6
     sp = 1
 
     for name, da in les_input.data_vars.items():
-        pl.subplot(nrow, ncol, sp); sp+=1
+        pl.subplot(nrow, ncol, sp)
+        sp += 1
         if 'lay' in name:
-            pl.plot(da[0,:], les_input.z_lay[0,:])
+            pl.plot(da[0, :], les_input.z_lay[0, :])
         else:
-            pl.plot(da[0,:], les_input.z)
+            pl.plot(da[0, :], les_input.z)
         pl.xlabel(name)

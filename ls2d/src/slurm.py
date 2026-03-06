@@ -41,7 +41,7 @@ def update_namelist(namelist_file, to_update):
     with open(namelist_file, 'w') as f:
         for l in lines:
             if len(l) > 0 and l[0] != '#' and '=' in l:
-                name  = l.split('=')[0].strip()
+                name = l.split('=')[0].strip()
                 if name in to_update.keys():
                     f.write('{}={}\n'.format(name, to_update[name]))
                 else:
@@ -57,7 +57,7 @@ def read_namelist_value(namelist_file, variable):
     with open(namelist_file, 'r') as f:
         for l in f.readlines():
             if len(l) > 0 and l[0] != '#' and '=' in l:
-                name,value = l.split('=')
+                name, value = l.split('=')
                 if name == variable:
                     return value.strip()
 
@@ -82,13 +82,22 @@ def seconds_to_time(seconds):
     h, m = divmod(m, 60)
     d, h = divmod(h, 24)
 
-    return '{0}-{1:02d}:{2:02d}:{3:02d}'.format(d,h,m,s)
+    return '{0}-{1:02d}:{2:02d}:{3:02d}'.format(d, h, m, s)
 
 
 def submit_case(
-        case, total_time, max_time, wc_time, n_tasks,
-        partition, work_dir, job_name, script_name,
-        auto_submit, bypass_slurm=False):
+    case,
+    total_time,
+    max_time,
+    wc_time,
+    n_tasks,
+    partition,
+    work_dir,
+    job_name,
+    script_name,
+    auto_submit,
+    bypass_slurm=False,
+):
 
     # Get time of latest restart file
     restart_time = get_latest_restart_time(work_dir)
@@ -98,7 +107,7 @@ def submit_case(
         print('Experiment finished!')
     else:
         # Switch between warm and cold start
-        is_cold_start = restart_time==0
+        is_cold_start = restart_time == 0
 
         if is_cold_start:
             print('Submitting cold start experiment')
@@ -114,10 +123,11 @@ def submit_case(
 
         # Update namelist
         to_update = {
-                'wallclocklimit': wc_time/3600.,
-                'starttime': restart_time,
-                'endtime': end_time,
-                'savetime': max_time}
+            'wallclocklimit': wc_time / 3600.0,
+            'starttime': restart_time,
+            'endtime': end_time,
+            'savetime': max_time,
+        }
 
         update_namelist('{}/{}.ini'.format(work_dir, case), to_update)
 
@@ -159,9 +169,21 @@ def submit_case(
             f.write('runjobval=$?\n')
             f.write('if [ "${runjobval}" -eq "0" ]; then\n')
             # Re-submit Python script
-            f.write('  python3 {}/slurm.py -c {} -tt {} -mt {} -wc {} -p {} -n {} -w {} -j {} -s {} {}\n'.format(
-                work_dir, case, int(total_time), int(max_time), int(wc_time), partition,
-                int(n_tasks), work_dir, job_name, script_name, auto_submit_flag))
+            f.write(
+                '  python3 {}/slurm.py -c {} -tt {} -mt {} -wc {} -p {} -n {} -w {} -j {} -s {} {}\n'.format(
+                    work_dir,
+                    case,
+                    int(total_time),
+                    int(max_time),
+                    int(wc_time),
+                    partition,
+                    int(n_tasks),
+                    work_dir,
+                    job_name,
+                    script_name,
+                    auto_submit_flag,
+                )
+            )
             f.write('fi\n')
 
         # Submit runscript
@@ -179,32 +201,40 @@ if __name__ == '__main__':
     #
     # Parse the input arguments
     #
-    parser = argparse.ArgumentParser(
-        description='Slurm launcher with restart capabilities')
+    parser = argparse.ArgumentParser(description='Slurm launcher with restart capabilities')
 
     # Required arguments:
-    parser.add_argument('-tt', '--total_time', required=True, type=int,
-            help='Total integration time of experiment')
-    parser.add_argument('-mt', '--max_time', required=True, type=int,
-            help='Max integration time per submission')
-    parser.add_argument('-c', '--case', required=True,
-            help='MicroHH case name')
-    parser.add_argument('-n', '--n_tasks', required=True, type=int,
-            help='Total MPI tasks')
-    parser.add_argument('-wc', '--wallclocklimit', required=True, type=int,
-            help='Wall clock limit in seconds')
+    parser.add_argument(
+        '-tt',
+        '--total_time',
+        required=True,
+        type=int,
+        help='Total integration time of experiment',
+    )
+    parser.add_argument(
+        '-mt',
+        '--max_time',
+        required=True,
+        type=int,
+        help='Max integration time per submission',
+    )
+    parser.add_argument('-c', '--case', required=True, help='MicroHH case name')
+    parser.add_argument('-n', '--n_tasks', required=True, type=int, help='Total MPI tasks')
+    parser.add_argument(
+        '-wc',
+        '--wallclocklimit',
+        required=True,
+        type=int,
+        help='Wall clock limit in seconds',
+    )
 
     # Optional arguments:
     parser.add_argument('--auto_submit', dest='auto_submit', action='store_true')
 
-    parser.add_argument('-w', '--work_dir', default='.',
-            help='Work directory')
-    parser.add_argument('-j', '--job_name', default='mhh',
-            help='Slurm job name')
-    parser.add_argument('-s', '--script_name', default='run_restart.slurm',
-            help='Slurm script name')
-    parser.add_argument('-p', '--partition', default='normal',
-            help='Slurm partition')
+    parser.add_argument('-w', '--work_dir', default='.', help='Work directory')
+    parser.add_argument('-j', '--job_name', default='mhh', help='Slurm job name')
+    parser.add_argument('-s', '--script_name', default='run_restart.slurm', help='Slurm script name')
+    parser.add_argument('-p', '--partition', default='normal', help='Slurm partition')
 
     args = parser.parse_args()
 
@@ -221,4 +251,5 @@ if __name__ == '__main__':
         args.work_dir,
         args.job_name,
         args.script_name,
-        args.auto_submit)
+        args.auto_submit,
+    )

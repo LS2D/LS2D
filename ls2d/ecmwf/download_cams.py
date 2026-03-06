@@ -69,20 +69,20 @@ def regrid(nc_file, central_lon, central_lat, resolution):
 
     # Find start/end lon/lat to stay within bounds of input dataset.
     lon_frac = np.abs((ds.longitude.values - central_lon) / resolution)
-    lat_frac = np.abs((ds.latitude.values  - central_lat) / resolution)
+    lat_frac = np.abs((ds.latitude.values - central_lat) / resolution)
 
     # The longitude conversion above results in some minor floating point inaccuracies.
     lon_frac = np.round(lon_frac, 6)
     lat_frac = np.round(lat_frac, 6)
 
-    lon_0 = central_lon - np.floor(lon_frac[0 ]) * resolution
+    lon_0 = central_lon - np.floor(lon_frac[0]) * resolution
     lon_1 = central_lon + np.floor(lon_frac[-1]) * resolution
 
-    lat_0 = central_lat - np.floor(lat_frac[0 ]) * resolution
+    lat_0 = central_lat - np.floor(lat_frac[0]) * resolution
     lat_1 = central_lat + np.floor(lat_frac[-1]) * resolution
 
-    lon_out = np.arange(lon_0, lon_1+1e-12, resolution)
-    lat_out = np.arange(lat_0, lat_1+1e-12, resolution)
+    lon_out = np.arange(lon_0, lon_1 + 1e-12, resolution)
+    lat_out = np.arange(lat_0, lat_1 + 1e-12, resolution)
 
     # Interpolate. Extrapolation is necessary if the first or last
     # new coordinate is exactly equal to the start/end coordinate
@@ -116,23 +116,28 @@ def _download_cams_file(settings, variables, grid):
 
     # Output file name
     nc_dir, nc_file = era_tools.era5_file_path(
-            settings['date'].year, settings['date'].month, settings['date'].day,
-            settings['cams_path'], settings['case_name'], ftype)
+        settings['date'].year,
+        settings['date'].month,
+        settings['date'].day,
+        settings['cams_path'],
+        settings['case_name'],
+        ftype,
+    )
 
     # Write CDS API prints to log file (NetCDF file path/name appended with .out/.err)
     if settings['write_log']:
-        out_file   = '{}.out'.format(nc_file[:-3])
-        err_file   = '{}.err'.format(nc_file[:-3])
+        out_file = '{}.out'.format(nc_file[:-3])
+        err_file = '{}.err'.format(nc_file[:-3])
         old_stdout = sys.stdout
         old_stderr = sys.stderr
         sys.stdout = open(out_file, 'w')
         sys.stderr = open(err_file, 'w')
 
     # Bounds of domain
-    lat_n = settings['central_lat']+settings['area_size']
-    lat_s = settings['central_lat']-settings['area_size']
-    lon_w = settings['central_lon']-settings['area_size']
-    lon_e = settings['central_lon']+settings['area_size']
+    lat_n = settings['central_lat'] + settings['area_size']
+    lat_s = settings['central_lat'] - settings['area_size']
+    lon_w = settings['central_lon'] - settings['area_size']
+    lon_e = settings['central_lon'] + settings['area_size']
 
     # Check if pickle with previous request is available.
     # If so, try to download NetCDF file, if not, submit new request
@@ -173,26 +178,26 @@ def _download_cams_file(settings, variables, grid):
                 finished = True
 
             elif state in ('accepted', 'queued', 'running'):
-                message('Request not finished, current status = \"{}\"'.format(state))
+                message('Request not finished, current status = "{}"'.format(state))
 
             else:
-                error('Request failed, status = \"{}\"'.format(state), exit=False)
+                error('Request failed, status = "{}"'.format(state), exit=False)
                 message('Error message = {}'.format(cds_request.reply['error'].get('message')))
                 message('Error reason = {}'.format(cds_request.reply['error'].get('reason')))
-
 
     else:
         message('No previous CDS request, submitting new one')
 
         # Create instance of CDS API
         server = cdsapi.Client(
-                url=credentials['url_ads'],
-                key=credentials['key_ads'],
-                verify=True,
-                wait_until_complete=False,
-                delete=False)
+            url=credentials['url_ads'],
+            key=credentials['key_ads'],
+            verify=True,
+            wait_until_complete=False,
+            delete=False,
+        )
 
-        model_level = [str(x) for x in range(1,61)]
+        model_level = [str(x) for x in range(1, 61)]
         analysis_times = ['{0:02d}:00'.format(i) for i in range(0, 22, 3)]
         steps = ['{}'.format(i) for i in range(0, 22, 3)]
         area = [lat_n, lon_w, lat_s, lon_e]
@@ -214,7 +219,7 @@ def _download_cams_file(settings, variables, grid):
         if ftype == 'eac4_ml' or ftype == 'egg4_ml':
             request.update({'model_level': model_level})
         elif ftype == 'egg4_sl':
-            request.update({'model_level': ["1"]})
+            request.update({'model_level': ['1']})
 
         if ftype == 'eac4_ml' or ftype == 'eac4_sfc':
             cds_request = server.retrieve('cams-global-reanalysis-eac4', request)
@@ -263,7 +268,7 @@ def download_cams(settings, variables, grid=None):
 
     # Check if output directory exists, and ends with '/'
     if not os.path.isdir(settings['cams_path']):
-        error('Output directory \"{}\" does not exist!'.format(settings['cams_path']))
+        error('Output directory "{}" does not exist!'.format(settings['cams_path']))
     if settings['cams_path'][-1] != '/':
         settings['cams_path'] += '/'
 
@@ -272,7 +277,7 @@ def download_cams(settings, variables, grid=None):
 
     # Round date/time to full hours
     start = era_tools.lower_to_hour(settings['start_date'])
-    end   = era_tools.lower_to_hour(settings['end_date']  )
+    end = era_tools.lower_to_hour(settings['end_date'])
 
     # Get list of required forecast and analysis times
     an_dates = era_tools.get_required_analysis(start, end, freq=3)
@@ -283,9 +288,14 @@ def download_cams(settings, variables, grid=None):
 
     for date in an_dates:
         for ftype in variables.keys():
-
             era_dir, era_file = era_tools.era5_file_path(
-                    date.year, date.month, date.day, settings['cams_path'], settings['case_name'], ftype)
+                date.year,
+                date.month,
+                date.day,
+                settings['cams_path'],
+                settings['case_name'],
+                ftype,
+            )
 
             if not os.path.exists(era_dir):
                 message('Creating output directory {}'.format(era_dir))

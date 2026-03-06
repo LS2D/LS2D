@@ -74,3 +74,14 @@ All settings for (LS)<sup>2</sup>D are wrapped in a dictionary:
 - `end_date`: Python `datetime` object with end date/time
 - `write_log`: Write ERA5 download to screen (`False`) or log file (`True`)
 - `data_source`: Download method (`CDS` or `MARS`). `MARS` only works on e.g. the ECMWF supercomputer.
+
+## Contributing guidelines
+
+Contributions through pull requests are always appreciated. To keep the code style consistent, we stick to PEP8 with two modifications (see [`project.toml`](./pyproject.toml)):
+
+- The maximum line length is set to 120 characters instead of 80.
+- Single quotes are used for strings instead of double quotes.
+
+To ensure consistent formatting, the code should be automatically formatted using [ruff](https://docs.astral.sh/ruff/). It can be installed via pip and can be run on the entire codebase from the project root (this directory) like
+
+    ruff format .

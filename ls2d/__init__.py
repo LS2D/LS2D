@@ -20,8 +20,10 @@
 
 # Ban Python 2.x:
 import sys
+
 if sys.version_info.major < 3:
     from ls2d.src.messages import error
+
     error('(LS)2D requires Python 3.x')
 
 # Make packages directly available as e.g.:

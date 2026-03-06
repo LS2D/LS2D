@@ -36,7 +36,7 @@ grid1 = ls2d.grid.Grid_equidist(kmax=28, dz0=20)
 grid2 = ls2d.grid.Grid_linear_stretched(kmax=24, dz0=15, alpha=0.03)
 
 # Manually stretched grid.
-heights = [0,100,10000]
+heights = [0, 100, 10000]
 alpha = [1.02, 1.05]
 grid3 = ls2d.grid.Grid_stretched_manual(kmax=24, dz0=12.5, heights=heights, factors=alpha)
 
