@@ -141,6 +141,55 @@ def patch_longitude(nc_file_path):
     return new_ds
 
 
+def regrid_netcdf(nc_file, central_lon, central_lat, resolution):
+    """
+    Re-grid regular lat/lon NetCDF file (like ERA5 or CAMS)
+    onto new grid / resolution. Note: this function
+    overwrites the original `nc_file`.
+
+    Arguments:
+        nc_file : str
+            Path to NetCDF file.
+        central_lon : float
+            Central longitude of new grid
+        central_lat : float
+            Central latitude of new grid
+        resolution : float
+            New output resolution
+    """
+
+    shutil.copyfile(nc_file, nc_file + '.orig_grid')
+
+    ds = xr.open_dataset(nc_file)
+
+    # Find start/end lon/lat to stay within bounds of input dataset.
+    lon_frac = np.abs((ds.longitude.values - central_lon) / resolution)
+    lat_frac = np.abs((ds.latitude.values - central_lat) / resolution)
+
+    # The longitude conversion above results in some minor floating point inaccuracies.
+    lon_frac = np.round(lon_frac, 6)
+    lat_frac = np.round(lat_frac, 6)
+
+    lon_0 = central_lon - np.floor(lon_frac[0]) * resolution
+    lon_1 = central_lon + np.floor(lon_frac[-1]) * resolution
+
+    lat_0 = central_lat - np.floor(lat_frac[0]) * resolution
+    lat_1 = central_lat + np.floor(lat_frac[-1]) * resolution
+
+    lon_out = np.arange(lon_0, lon_1 + 1e-12, resolution)
+    lat_out = np.arange(lat_0, lat_1 + 1e-12, resolution)
+
+    # Interpolate. Extrapolation is necessary if the first or last
+    # new coordinate is exactly equal to the start/end coordinate
+    # of the input NetCDF file. Otherwise, those values are set to
+    # NaN (no idea why....).
+    dsi = ds.interp(longitude=lon_out, latitude=lat_out, kwargs={'fill_value': 'extrapolate'})
+
+    # Save back.
+    ds.close()
+    dsi.to_netcdf(nc_file, format='NETCDF4_CLASSIC')
+
+
 if __name__ == '__main__':
     """
     For debugging...
