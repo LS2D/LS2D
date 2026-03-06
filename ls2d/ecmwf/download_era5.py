@@ -31,7 +31,7 @@ import numpy as np
 # LS2D modules
 import ls2d.ecmwf.era_tools as era_tools
 from ls2d.src.messages import *
-from ls2d.ecmwf.patch_cds_ads import patch_netcdf
+from ls2d.ecmwf.patch_cds_ads import patch_netcdf, regrid_netcdf
 
 # Yikes, but necessary (?) if you want to use
 # MARS downloads without the Python CDS api installed?
@@ -168,6 +168,10 @@ def _download_era5_file(settings):
                     # files, and files retrieved from MARS.
                     patch_netcdf(nc_file)
 
+                    # Interpolate to requested grid, to stay in line with downloads before March 2026.
+                    if settings['ftype'] in ('surface_an', 'pressure_an'):
+                        regrid_netcdf(nc_file, settings['central_lon'], settings['central_lat'], resolution=0.25)
+
                     finished = True
 
                 elif state in ('queued', 'accepted', 'running'):
@@ -187,7 +191,10 @@ def _download_era5_file(settings):
             # Surface and pressure level analysis, stored on HDs, so downloads are fast :-)
             if settings['ftype'] == 'pressure_an' or settings['ftype'] == 'surface_an':
                 analysis_times = ['{0:02d}:00'.format(i) for i in range(24)]
-                area = [lat_n, lon_w, lat_s, lon_e]
+
+                # Add +/- 1 grid point to pressure and surface files, required for interpolations.
+                pad = 0.25
+                area = [lat_n + pad, lon_w - pad, lat_s - pad, lon_e + pad]
 
                 request = {
                     'product_type': 'reanalysis',
