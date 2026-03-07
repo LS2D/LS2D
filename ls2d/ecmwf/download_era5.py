@@ -30,7 +30,7 @@ import numpy as np
 
 # LS2D modules
 import ls2d.ecmwf.era_tools as era_tools
-from ls2d.src.messages import *
+from ls2d.src.logger import logger
 from ls2d.ecmwf.patch_cds_ads import patch_netcdf, regrid_netcdf
 
 # Yikes, but necessary (?) if you want to use
@@ -104,7 +104,7 @@ def _download_era5_file(settings):
                 ftype : level/forecast/analysis switch (in: [model_an, model_fc, pressure_an, surface_an])
     """
 
-    header('Downloading: {} - {}'.format(settings['date'], settings['ftype']))
+    logger.info('Downloading: {} - {}'.format(settings['date'], settings['ftype']))
 
     # Keep track of CDS downloads which are finished:
     finished = False
@@ -144,7 +144,7 @@ def _download_era5_file(settings):
         pickle_file = '{}.pickle'.format(nc_file[:-3])
 
         if os.path.isfile(pickle_file):
-            message('Found previous CDS request!')
+            logger.debug('Found previous CDS request!')
 
             with open(pickle_file, 'rb') as f:
                 cds_request = pickle.load(f)
@@ -152,13 +152,13 @@ def _download_era5_file(settings):
                 try:
                     cds_request.update()
                 except requests.exceptions.HTTPError:
-                    error('CDS request is no longer available online!', exit=False)
-                    error('To continue, delete the previous request: {}'.format(pickle_file))
+                    logger.warning('CDS request is no longer available online!')
+                    logger.critical('To continue, delete the previous request: {}'.format(pickle_file))
 
                 state = cds_request.reply['state']
 
                 if state == 'completed':
-                    message('Request finished, downloading NetCDF file')
+                    logger.debug('Request finished, downloading NetCDF file')
 
                     cds_request.download(nc_file)
                     f.close()
@@ -175,15 +175,15 @@ def _download_era5_file(settings):
                     finished = True
 
                 elif state in ('queued', 'accepted', 'running'):
-                    message('Request not finished, current status = "{}"'.format(state))
+                    logger.debug('Request not finished, current status = "{}"'.format(state))
 
                 else:
-                    error('Request failed, status = "{}"'.format(state), exit=False)
-                    message('Error message = {}'.format(cds_request.reply['error'].get('message')))
-                    message('Error reason = {}'.format(cds_request.reply['error'].get('reason')))
+                    logger.error('Request failed, status = "{}"'.format(state))
+                    logger.error('Error message = {}'.format(cds_request.reply['error'].get('message')))
+                    logger.critical('Error reason = {}'.format(cds_request.reply['error'].get('reason')))
 
         else:
-            message('No previous CDS request, submitting new one')
+            logger.debug('No previous CDS request, submitting new one')
 
             # Create instance of CDS API
             server = cdsapi.Client(wait_until_complete=False, delete=False)
@@ -413,16 +413,16 @@ def download_era5(settings, exit_when_waiting=True):
             Case name used in file name of NetCDF files
     """
 
-    header('Downloading ERA5 for period: {} to {}'.format(settings['start_date'], settings['end_date']))
+    logger.info('Downloading ERA5 for period: {} to {}'.format(settings['start_date'], settings['end_date']))
 
     # Check if output directory exists, and ends with '/'
     if not os.path.isdir(settings['era5_path']):
-        error('Output directory "{}" does not exist!'.format(settings['era5_path']))
+        logger.critical('Output directory "{}" does not exist!'.format(settings['era5_path']))
     if settings['era5_path'][-1] != '/':
         settings['era5_path'] += '/'
 
     if cdsapi is None:
-        error('CDS API is not installed. See: https://cds.climate.copernicus.eu/how-to-api')
+        logger.critical('CDS API is not installed. See: https://cds.climate.copernicus.eu/how-to-api')
 
     # Round date/time to full hours
     start = era_tools.lower_to_hour(settings['start_date'])
@@ -458,11 +458,11 @@ def download_era5(settings, exit_when_waiting=True):
                 )
 
                 if not os.path.exists(era_dir):
-                    message('Creating output directory {}'.format(era_dir))
+                    logger.debug('Creating output directory {}'.format(era_dir))
                     os.makedirs(era_dir)
 
                 if os.path.isfile(era_file):
-                    message('Found {} - {} local'.format(date, ftype))
+                    logger.debug('Found {} - {} local'.format(date, ftype))
                 else:
                     settings_tmp = download_settings.copy()
                     settings_tmp.update({'date': date, 'ftype': ftype})

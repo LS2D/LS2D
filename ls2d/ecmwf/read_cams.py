@@ -29,7 +29,7 @@ import numpy as np
 from scipy import interpolate
 
 # LS2D modules
-from ls2d.src.messages import *
+from ls2d.src.logger import logger
 import ls2d.src.spatial_tools as spatial
 import ls2d.ecmwf.era_tools as era_tools
 from ls2d.ecmwf.IFS_tools import IFS_tools
@@ -63,7 +63,7 @@ class Read_cams:
         Open all NetCDF files required for start->end period using Xarray.
         """
 
-        header('Reading CAMS from {} to {}'.format(self.start, self.end))
+        logger.info('Reading CAMS from {} to {}'.format(self.start, self.end))
 
         # Get list of required forecast and analysis times
         an_dates = era_tools.get_required_analysis(self.start, self.end, freq=3)
@@ -88,18 +88,18 @@ class Read_cams:
         files_missing = False
         for f in cams_files:
             if not os.path.exists(f):
-                warning(f'File {f} does not exist...')
+                logger.warning(f'File {f} does not exist...')
                 files_missing = True
 
         if files_missing:
-            error('One or more required CAMS files are missing...!')
+            logger.critical('One or more required CAMS files are missing...!')
 
         # Check if any files are from the new CDS/ADS, and require patching.
         for f in cams_files:
             # Check if file has compatible longitudes. If not, throw error, since we can't fix it at this stage.
             ds = xr.open_dataset(f)
             if np.any(ds.longitude.values > 180):
-                error(
+                logger.critical(
                     f'File {f} has longitude values > 180, which is not supported. '
                     'See https://github.com/LS2D/LS2D/blob/main/KNOWN_ISSUES.md#issue-1-longitude-range'
                 )
@@ -179,7 +179,7 @@ class Read_cams:
 
         # Some debugging output
         distance = spatial.haversine(self.ds_ml.longitude[ic], self.ds_ml.latitude[jc], clon, clat)
-        message(
+        logger.debug(
             'Using nearest lat/lon = {0:.2f}/{1:.2f} (requested = {2:.2f}/{3:.2f}), distance ~= {4:.1f} km'.format(
                 self.ds_ml.latitude[jc],
                 self.ds_ml.longitude[ic],
@@ -192,7 +192,7 @@ class Read_cams:
         # Calculate and output averaging area.
         dlon = (1 + 2 * n_av) * abs(float(self.ds_ml.longitude[1] - self.ds_ml.longitude[0]))
         dlat = (1 + 2 * n_av) * abs(float(self.ds_ml.latitude[0] - self.ds_ml.latitude[1]))
-        message(f'Averaging CAMS over a {dlon:.2f}°×{dlat:.2f}° spatial area.')
+        logger.debug(f'Averaging CAMS over a {dlon:.2f}°×{dlat:.2f}° spatial area.')
 
         # Slice out averaging sub-domain, and calculate mean over sub-domain.
         self.ds_ml = self.ds_ml.isel(
