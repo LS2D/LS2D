@@ -21,21 +21,21 @@
 import logging
 from colorlog import ColoredFormatter
 
-logger = logging.getLogger("(LS)²D")
+logger = logging.getLogger('(LS)²D')
 logger.setLevel(logging.DEBUG)
 
 if not logger.handlers:
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.DEBUG)
     formatter = ColoredFormatter(
-        "[%(asctime)s] [%(name)s] %(log_color)s[%(levelname)s]%(reset)s %(message)s",
-        datefmt="%Y/%m/%d %H:%M:%S",
+        '[%(asctime)s] [%(name)s] %(log_color)s[%(levelname)s]%(reset)s %(message)s',
+        datefmt='%Y/%m/%d %H:%M:%S',
         log_colors={
-            "DEBUG": "fg_244",
-            "INFO": "",
-            "WARNING": "fg_208",
-            "ERROR": "red",
-            "CRITICAL": "red",
+            'DEBUG': 'fg_244',
+            'INFO': '',
+            'WARNING': 'fg_208',
+            'ERROR': 'red',
+            'CRITICAL': 'red',
         },
         reset=True,  # Explicit reset
     )
@@ -46,5 +46,5 @@ if not logger.handlers:
     def critical_exception(message, *args, **kwargs):
         logger.log(logging.CRITICAL, message, *args, **kwargs)
         raise RuntimeError(message)
-    
+
     logger.critical = critical_exception
