@@ -18,21 +18,20 @@
 # along with LS2D.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-# Ban Python 2.x:
-import sys
+from ls2d import logger
 
-if sys.version_info.major < 3:
-    from ls2d.src.messages import error
+# Demo of all log levels
+logger.setLevel('DEBUG')
 
-    error('(LS)2D requires Python 3.x')
+logger.debug('This is a debug() message')
+logger.info('This is an info() message')
+logger.warning('This is a warning() message')
+logger.error('This is an error() message that does not raise exception')
 
-# Make packages directly available as e.g.:
-# ls2d.download_era5() instead of ls2d.ecmwf.download_era5()
-from ls2d.ecmwf import download_era5
-from ls2d.ecmwf import download_cams
+# Suppress DEBUG messages (only INFO and above)
+logger.setLevel('INFO')
+logger.debug('This debug() message will not be shown..')
+logger.info('This info() message will be shown')
 
-from ls2d.ecmwf import Read_era5
-from ls2d.ecmwf import Read_cams
-
-from ls2d.src import grid
-from ls2d.src.logger import logger
+# critical() raises RuntimeError in addition to logging
+logger.critical('This is a critical() message that raises RuntimeError')
