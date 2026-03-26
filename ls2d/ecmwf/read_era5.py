@@ -190,6 +190,9 @@ class Read_era5:
         self.lats = self.fma.variables['latitude'][::-1]
         self.lons = self.fma.variables['longitude'][:]
 
+        self.lats_p = self.fpa.variables['latitude'][::-1]
+        self.lons_p = self.fpa.variables['longitude'][:]
+
         # Read time, and check if all files are synced.
         self.time = self.fma.variables['time'][t_an]
         time_check = self.fsa.variables['time'][t_an]
@@ -474,6 +477,18 @@ class Read_era5:
             self.dtqt_advec_mean = advec(self.qt)
             self.dtu_advec_mean = advec(self.u)
             self.dtv_advec_mean = advec(self.v)
+
+            # Re-calculate dxdi and dydj with pressure level grid.
+            # In newer CDS ERA5 files, latitude dimension is flipped.
+            lat_rad = np.deg2rad(self.lats_p)
+            lon_rad = np.deg2rad(self.lons_p)
+            cos_lat = np.cos(lat_rad)
+
+            dxdi = np.zeros((self.nlat, self.nlon))
+            dydj = np.zeros((self.nlat, self.nlon))
+
+            dxdi[:, :] = r_earth * cos_lat[:, None] * np.gradient(lon_rad[None, :], axis=1)
+            dydj[:, :] = r_earth * np.gradient(lat_rad[:, None], axis=0)
 
             # Geostrophic wind:
             dzdx = np.gradient(self.z_p, axis=3) / dxdi[None, None, :, :]
