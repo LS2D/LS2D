@@ -18,6 +18,7 @@
 # along with LS2D.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+
 def grad2(a, b, delta):
     """
     2nd order accurate gradient at location of X:
@@ -30,6 +31,7 @@ def grad2(a, b, delta):
 
     return (b - a) / delta
 
+
 def grad2c(a, b, delta):
     """
     2nd order accurate gradient at location of X:
@@ -40,7 +42,8 @@ def grad2c(a, b, delta):
             [X]
     """
 
-    return (b - a) / (2*delta)
+    return (b - a) / (2 * delta)
+
 
 def grad4(a, b, c, d, delta):
     """
@@ -52,7 +55,8 @@ def grad4(a, b, c, d, delta):
                [X]
     """
 
-    return (a - 27*b + 27*c - d) / (24*delta)
+    return (a - 27 * b + 27 * c - d) / (24 * delta)
+
 
 def grad4c(a, b, c, d, delta):
     """
@@ -64,4 +68,4 @@ def grad4c(a, b, c, d, delta):
                   [X]
     """
 
-    return (a - 8*b + 8*c - d) / (12*delta)
+    return (a - 8 * b + 8 * c - d) / (12 * delta)

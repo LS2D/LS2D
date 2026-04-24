@@ -32,9 +32,9 @@ import numpy as np
 
 # General help functions
 def _int_or_float_or_str(value):
-    """ Helper function: convert a string to int/float/str """
+    """Helper function: convert a string to int/float/str"""
     try:
-        if ('.' in value):
+        if '.' in value:
             return float(value)
         else:
             return int(float(value))
@@ -43,7 +43,7 @@ def _int_or_float_or_str(value):
 
 
 def _convert_value(value):
-    """ Helper function: convert namelist value or list """
+    """Helper function: convert namelist value or list"""
     if ',' in value:
         value = value.split(',')
         return [_int_or_float_or_str(val) for val in value]
@@ -60,11 +60,11 @@ def read_namelist(namelist_file):
     with open(namelist_file, 'r') as f:
         for line in f:
             lstrip = line.strip()
-            if (len(lstrip) > 0 and lstrip[0] != "#"):
+            if len(lstrip) > 0 and lstrip[0] != '#':
                 if lstrip[0] == '[' and lstrip[-1] == ']':
                     group_name = lstrip[1:-1]
                     ini[group_name] = OrderedDict()
-                elif ("=" in line):
+                elif '=' in line:
                     var_name = lstrip.split('=')[0]
                     value = _convert_value(lstrip.split('=')[1])
                     ini[group_name][var_name] = value
@@ -79,18 +79,24 @@ def write_namelist(namelist_file, namelist_dict):
     with open(namelist_file, 'w') as f:
         for group, items in namelist_dict.items():
             f.write('[{}]\n'.format(group))
-            for variable,value in items.items():
+            for variable, value in items.items():
                 if isinstance(value, list):
                     value = ','.join([str(elem) for elem in value])
                 elif isinstance(value, bool):
-                    value = 1 if value==True else 0
+                    value = 1 if value == True else 0
                 f.write('{}={}\n'.format(variable, value))
             f.write('\n')
 
 
 def write_netcdf_input(
-        case_name, float_type, init_profiles, tdep_surface=None,
-        tdep_ls=None, radiation=None, soil=None):
+    case_name,
+    float_type,
+    init_profiles,
+    tdep_surface=None,
+    tdep_ls=None,
+    radiation=None,
+    soil=None,
+):
     """
     Function for writing the MicroHH2 NetCDF input
     """
@@ -152,8 +158,8 @@ def write_netcdf_input(
     if radiation is not None:
         nc_group_rad = nc_file.createGroup('radiation')
 
-        nc_group_rad.createDimension("lay", radiation['p_lay'].size)
-        nc_group_rad.createDimension("lev", radiation['p_lev'].size)
+        nc_group_rad.createDimension('lay', radiation['p_lay'].size)
+        nc_group_rad.createDimension('lev', radiation['p_lev'].size)
 
         for name, data in radiation.items():
             # Switch between vector and scalar values
@@ -166,7 +172,7 @@ def write_netcdf_input(
 
     if soil is not None:
         nc_group_soil = nc_file.createGroup('soil')
-        nc_group_soil.createDimension("z", soil['z'].size)
+        nc_group_soil.createDimension('z', soil['z'].size)
 
         for name, data in soil.items():
             add_variable(nc_group_soil, name, 'z', data, float_type)
@@ -181,19 +187,18 @@ def calc_root_frac(z, a_r, b_r):
     """
 
     # Calculate half level soil depths
-    zh = np.zeros(z.size+1)
-    for k in range(zh.size-2, -1, -1):
-        zh[k] = zh[k+1] - 2*(zh[k+1] - z[k])
+    zh = np.zeros(z.size + 1)
+    for k in range(zh.size - 2, -1, -1):
+        zh[k] = zh[k + 1] - 2 * (zh[k + 1] - z[k])
 
     # Calculate root fraction
     root_frac = np.zeros_like(z)
     for k in range(1, root_frac.size):
-        root_frac[k] = 0.5 * (np.exp(a_r * zh[k+1]) + \
-                              np.exp(b_r * zh[k+1]) - \
-                              np.exp(a_r * zh[k  ]) - \
-                              np.exp(b_r * zh[k  ]));
+        root_frac[k] = 0.5 * (
+            np.exp(a_r * zh[k + 1]) + np.exp(b_r * zh[k + 1]) - np.exp(a_r * zh[k]) - np.exp(b_r * zh[k])
+        )
 
-    root_frac[0] = 1.-root_frac.sum()
+    root_frac[0] = 1.0 - root_frac.sum()
 
     return root_frac
 
@@ -203,27 +208,26 @@ def check_grid_decomposition(itot, jtot, ktot, npx, npy):
     Check whether grid / MPI decomposition is valid
     """
 
-    print('Checking grid: itot={}, jtot={}, ktot={}, npx={}, npy={}'.format(
-        itot, jtot, ktot, npx, npy))
+    print('Checking grid: itot={}, jtot={}, ktot={}, npx={}, npy={}'.format(itot, jtot, ktot, npx, npy))
 
     err = False
-    if itot%npx != 0:
+    if itot % npx != 0:
         print('ERROR: itot%npx != 0')
         err = True
 
-    if itot%npy != 0:
+    if itot % npy != 0:
         print('ERROR: itot%npy != 0')
         err = True
 
-    if jtot%npx != 0 and npy > 1:
+    if jtot % npx != 0 and npy > 1:
         print('ERROR: jtot%npx != 0')
         err = True
 
-    if jtot%npy != 0:
+    if jtot % npy != 0:
         print('ERROR: jtot%npy != 0')
         err = True
 
-    if ktot%npx != 0:
+    if ktot % npx != 0:
         print('ERROR: ktot%npx != 0')
         err = True
 

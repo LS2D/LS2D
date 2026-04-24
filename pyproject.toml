@@ -10,7 +10,7 @@ where = ["src"]
 
 [project]
 name = "ls2d"
-version = "1.0.12"
+version = "1.0.15"
 description = "Python toolkit to downscale ERA5 with doubly-periodic large-eddy simulation"
 readme = "README.md"
 authors = [{ name = "Bart van Stratum", email = "bart.vanstratum@wur.nl" }]
@@ -41,3 +41,9 @@ cds = ["cdsapi"]
 
 [project.urls]
 Homepage = "https://github.com/LS2D/LS2D"
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+quote-style = "single"

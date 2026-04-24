@@ -32,8 +32,8 @@ def era5_file_path(year, month, day, path, case, ftype, return_dir=True):
     Return saving path of files in format `path/yyyy/mm/dd/type.nc`
     """
 
-    era_dir = "{0}/{1}/{2:04d}/{3:02d}/{4:02d}".format(path, case, year, month, day)
-    era_file = "{0}/{1}.nc".format(era_dir, ftype)
+    era_dir = '{0}/{1}/{2:04d}/{3:02d}/{4:02d}'.format(path, case, year, month, day)
+    era_file = '{0}/{1}.nc'.format(era_dir, ftype)
 
     if return_dir:
         return era_dir, era_file
@@ -51,14 +51,14 @@ def get_required_analysis(start, end, freq=1):
 
     # If end time is after (24-freq) UTC, include next day for the analysis files.
     # `freq` is typically 1 hour for ERA5, and 3 hours for CAMS.
-    hour = end.hour + end.minute / 60.
+    hour = end.hour + end.minute / 60.0
     if hour > 24 - freq:
         last_analysis = datetime.datetime(end.year, end.month, end.day) + one_day
     else:
         last_analysis = datetime.datetime(end.year, end.month, end.day)
 
     # Create list of datetime objects:
-    dates = [first_analysis + i*one_day for i in range((last_analysis-first_analysis).days + 1)]
+    dates = [first_analysis + i * one_day for i in range((last_analysis - first_analysis).days + 1)]
 
     return dates
 
@@ -78,7 +78,7 @@ def get_required_forecast(start, end):
         first_forecast = datetime.datetime(start.year, start.month, start.day) - one_day
 
     # Create list of datetime objects:
-    dates = [first_forecast + i*one_day for i in range((last_forecast-first_forecast).days + 1)]
+    dates = [first_forecast + i * one_day for i in range((last_forecast - first_forecast).days + 1)]
 
     return dates
 
