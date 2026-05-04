@@ -36,7 +36,7 @@ import numpy as np
 # LS2D modules
 import ls2d.ecmwf.era_tools as era_tools
 from ls2d.core.messages import *
-from ls2d.ecmwf.patch_cds_ads import patch_netcdf, patch_longitude
+from ls2d.ecmwf.patch_cds_ads import patch_netcdf, patch_longitude, regrid_netcdf
 
 # Yikes, but necessary (?) if you want to use
 # MARS downloads without the Python CDS api installed?
