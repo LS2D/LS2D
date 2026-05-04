@@ -22,8 +22,7 @@
 import sys
 
 if sys.version_info.major < 3:
-    from ls2d.src.messages import error
-
+    from ls2d.core.messages import error
     error('(LS)2D requires Python 3.x')
 
 # Make packages directly available as e.g.:
@@ -34,4 +33,4 @@ from ls2d.ecmwf import download_cams
 from ls2d.ecmwf import Read_era5
 from ls2d.ecmwf import Read_cams
 
-from ls2d.src import grid
+from ls2d.core import grid

@@ -31,7 +31,7 @@ import numpy as np
 
 # LS2D modules
 sys.path.append('/home/bart/meteo/models/LS2D')
-from ls2d.src.messages import *
+from ls2d.core.messages import *
 
 
 def patch_netcdf(nc_file_path):
