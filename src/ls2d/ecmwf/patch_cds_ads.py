@@ -60,7 +60,7 @@ def patch_netcdf(nc_file_path):
     # Drop `expver`; we need to save this file in classic NetCDF4 format, which
     # does not support variable length strings.
     if 'expver' in ds.variables:
-        ds = ds.drop('expver')
+        ds = ds.drop_vars('expver')
 
     file_name = os.path.basename(nc_file_path)
 
@@ -184,6 +184,11 @@ def regrid_netcdf(nc_file, central_lon, central_lat, resolution):
     # of the input NetCDF file. Otherwise, those values are set to
     # NaN (no idea why....).
     dsi = ds.interp(longitude=lon_out, latitude=lat_out, kwargs={'fill_value': 'extrapolate'})
+
+    # Force-load all lazy arrays before closing ds and writing to the same file path.
+    # Scalar coordinates (e.g. `number`) remain lazy after interp() and would fail
+    # to read once the source file is truncated by to_netcdf().
+    dsi.load()
 
     # Save back.
     ds.close()
