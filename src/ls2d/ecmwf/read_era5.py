@@ -741,7 +741,7 @@ class Read_era5:
 
         ds = xr.Dataset(
             coords={
-                'time': self.datetime,
+                'time': np.array(self.datetime).astype(self.time.dtype),
                 'z': z,
                 'zs': self.z_soil,
                 'lev': np.arange(self.nhalf),
