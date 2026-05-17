@@ -9,7 +9,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-ecmwf = ["*.txt"]
+ls2d = ["ecmwf/*.txt"]
 
 [project]
 name = "ls2d"
