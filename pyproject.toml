@@ -8,6 +8,9 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"ecmwf" = ["*.txt"]
+
 [project]
 name = "ls2d"
 version = "1.0.15"
