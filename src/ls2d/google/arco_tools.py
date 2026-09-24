@@ -38,7 +38,7 @@ import numpy as np
 from numcodecs import blosc
 
 # LS2D modules
-from ls2d.core.messages import *
+from ls2d.core.logger import logger
 
 # Blosc header is 16 bytes, followed by one int32 block offset per block.
 _BLOSC_HEADER = 16
@@ -67,7 +67,9 @@ def get_layout(ds, name):
         and compressor.codec_id == 'blosc'
     )
     if not ok:
-        error(f'ARCO variable "{name}" has an unsupported layout: dims={da.dims}, chunks={chunks}')
+        msg = f'ARCO variable "{name}" has an unsupported layout: dims={da.dims}, chunks={chunks}'
+        logger.error(msg)
+        raise RuntimeError(msg)
 
     if da.ndim == 4:
         return dict(nlev=da.shape[1], nlev_chunk=chunks[1])
@@ -128,13 +130,17 @@ def read_rows(fs, fields, it, ilat0, nlat, nlat_g, nlon_g, batch_size=512):
         header = head[:_BLOSC_HEADER]
         _, _, flags, typesize, nbytes, blocksize, cbytes = struct.unpack('<BBBBiii', header)
         if typesize != 4 or nbytes != lay['nlev_chunk'] * nlat_g * row_bytes:
-            error(f'Unexpected Blosc header in {path}: typesize={typesize}, nbytes={nbytes}')
+            msg = f'Unexpected Blosc header in {path}: typesize={typesize}, nbytes={nbytes}'
+            logger.error(msg)
+            raise RuntimeError(msg)
 
         memcpyed = flags & 0x2
         nblocks = -(-nbytes // blocksize)
         if not memcpyed:
             if _BLOSC_HEADER + 4 * nblocks > len(head):
-                error(f'Blosc block table of {path} larger than {_HEAD_BYTES} bytes')
+                msg = f'Blosc block table of {path} larger than {_HEAD_BYTES} bytes'
+                logger.error(msg)
+                raise RuntimeError(msg)
             bstarts = np.frombuffer(head, '<i4', count=nblocks, offset=_BLOSC_HEADER)
             bends = np.append(bstarts[1:], cbytes)
 

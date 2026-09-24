@@ -31,7 +31,7 @@ import numpy as np
 
 # LS2D modules
 sys.path.append('/home/bart/meteo/models/LS2D')
-from ls2d.core.messages import *
+from ls2d.core.logger import logger
 
 
 def patch_netcdf(nc_file_path):
@@ -55,7 +55,9 @@ def patch_netcdf(nc_file_path):
 
     # Check if we actually have a new NetCDF file.
     if 'valid_time' not in ds.dims:
-        error('Provided NetCDF is not a new (>09/2024) CDS file!')
+        msg = 'Provided NetCDF is not a new (>09/2024) CDS file!'
+        logger.error(msg)
+        raise ValueError(msg)
 
     # Drop `expver`; we need to save this file in classic NetCDF4 format, which
     # does not support variable length strings.
@@ -77,7 +79,9 @@ def patch_netcdf(nc_file_path):
         new_ds = ds.rename({'valid_time': 'time'})
 
     else:
-        error('Not a valid file type!')
+        msg = 'Not a valid file type!'
+        logger.error(msg)
+        raise ValueError(msg)
 
     # Fix time. Old format was `hours since 1900-01-01 00:00:00.0`, new format `seconds since 1970-01-01`.
     old_ref = datetime.datetime(year=1900, month=1, day=1)

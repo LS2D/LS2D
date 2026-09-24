@@ -30,7 +30,7 @@ import ls2d.ecmwf.era_tools as era_tools
 import ls2d.ecmwf.htessel as htessel
 from ls2d.ecmwf.IFS_tools import IFS_tools
 from ls2d.column.spec import validate
-from ls2d.core.messages import *
+from ls2d.core.logger import logger
 
 ifs = IFS_tools('L137')
 
@@ -52,7 +52,7 @@ def read_era5_arco(settings):
     start = era_tools.lower_to_hour(settings['start_date'])
     end = era_tools.lower_to_hour(settings['end_date'])
 
-    header(f'Reading ERA5 (ARCO) from {start} to {end}')
+    logger.info(f'Reading ERA5 (Google ARCO) for period: {start} to {end}')
 
     files = [
         era_tools.era5_file_path(d.year, d.month, d.day, settings['era5_path'], settings['case_name'], 'era5_arco', False)
@@ -60,7 +60,9 @@ def read_era5_arco(settings):
     ]
     for f in files:
         if not os.path.exists(f):
-            error(f'File "{f}" does not exist. Run `ls2d.download_era5_arco()` first.')
+            msg = f'File "{f}" does not exist. Run `ls2d.download_era5_arco()` first.'
+            logger.error(msg)
+            raise FileNotFoundError(msg)
 
     era = xr.concat([xr.open_dataset(f) for f in files], dim='time').sel(time=slice(start, end)).load()
 

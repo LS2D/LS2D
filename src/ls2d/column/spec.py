@@ -36,7 +36,7 @@ Conventions:
 import numpy as np
 
 # LS2D modules
-from ls2d.core.messages import *
+from ls2d.core.logger import logger
 
 _d3 = ('time', 'level', 'latitude', 'longitude')
 _d3h = ('time', 'level_half', 'latitude', 'longitude')
@@ -91,21 +91,35 @@ def validate(ds):
 
     for name, (dims, _, _) in required.items():
         if name not in ds:
-            error(f'Generic dataset: missing required variable "{name}"')
+            msg = f'Generic dataset: missing required variable "{name}"'
+            logger.error(msg)
+            raise ValueError(msg)
         if ds[name].dims != dims:
-            error(f'Generic dataset: "{name}" has dims {ds[name].dims}, expected {dims}')
+            msg = f'Generic dataset: "{name}" has dims {ds[name].dims}, expected {dims}'
+            logger.error(msg)
+            raise ValueError(msg)
 
     for name, (dims, _, _) in optional.items():
         if name in ds and ds[name].dims != dims:
-            error(f'Generic dataset: "{name}" has dims {ds[name].dims}, expected {dims}')
+            msg = f'Generic dataset: "{name}" has dims {ds[name].dims}, expected {dims}'
+            logger.error(msg)
+            raise ValueError(msg)
 
     for attr in ('central_lat', 'central_lon'):
         if attr not in ds.attrs:
-            error(f'Generic dataset: missing attribute "{attr}"')
+            msg = f'Generic dataset: missing attribute "{attr}"'
+            logger.error(msg)
+            raise ValueError(msg)
 
     if np.any(np.diff(ds.latitude.values) <= 0):
-        error('Generic dataset: latitude should be ascending (south to north)')
+        msg = 'Generic dataset: latitude should be ascending (south to north)'
+        logger.error(msg)
+        raise ValueError(msg)
     if np.any(np.diff(ds.pressure_level.values) >= 0):
-        error('Generic dataset: pressure_level should be descending (surface to top)')
+        msg = 'Generic dataset: pressure_level should be descending (surface to top)'
+        logger.error(msg)
+        raise ValueError(msg)
     if np.any(ds.p.isel(level=0) < ds.p.isel(level=-1)):
-        error('Generic dataset: levels should go from surface to top')
+        msg = 'Generic dataset: levels should go from surface to top'
+        logger.error(msg)
+        raise ValueError(msg)

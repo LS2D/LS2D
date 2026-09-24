@@ -24,7 +24,7 @@ import datetime
 # Third party modules
 
 # LS2D modules
-from ls2d.core.messages import *
+from ls2d.core.logger import logger
 
 
 def era5_file_path(year, month, day, path, case, ftype, return_dir=True):
@@ -86,5 +86,5 @@ def get_required_forecast(start, end):
 def lower_to_hour(time):
     time_out = datetime.datetime(time.year, time.month, time.day, time.hour)
     if time.minute != 0 or time.second != 0:
-        warning('Changed date/time from {} to {}'.format(time, time_out))
+        logger.warning('Changed date/time from {} to {}'.format(time, time_out))
     return time_out

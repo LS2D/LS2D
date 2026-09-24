@@ -32,7 +32,7 @@ import gcsfs
 # LS2D modules
 import ls2d.ecmwf.era_tools as era_tools
 from ls2d.google.arco_tools import get_layout, read_rows
-from ls2d.core.messages import *
+from ls2d.core.logger import logger
 
 _bucket = 'gcp-public-data-arco-era5/ar'
 _store_ml = f'{_bucket}/model-level-1h-0p25deg.zarr-v1'
@@ -130,11 +130,13 @@ def download_era5_arco(settings, batch_size=512):
             Number of concurrent HTTP range requests.
     """
 
-    header(f'Downloading ERA5 from Google ARCO for period: {settings["start_date"]} to {settings["end_date"]}')
+    logger.info(f'Downloading ERA5 (Google ARCO) for period: {settings["start_date"]} to {settings["end_date"]}')
 
     # Check if output directory exists.
     if not os.path.isdir(settings['era5_path']):
-        error(f'Output directory "{settings["era5_path"]}" does not exist!')
+        msg = f'Output directory "{settings["era5_path"]}" does not exist!'
+        logger.error(msg)
+        raise FileNotFoundError(msg)
 
     # Round date/time to full hours, and get list of days to download.
     start = era_tools.lower_to_hour(settings['start_date'])
@@ -147,18 +149,21 @@ def download_era5_arco(settings, batch_size=512):
             date.year, date.month, date.day, settings['era5_path'], settings['case_name'], 'era5_arco'
         )
         if os.path.isfile(era_file):
-            message(f'Found {era_file} local')
+            logger.debug(f'Found {era_file} local')
         else:
             download_dates.append((date, era_dir, era_file))
 
     if len(download_dates) == 0:
+        logger.info('All required ERA5 files found local, nothing to download')
         return True
 
     # Check if data is available for all requested days.
     last_valid = min(_last_valid_date(_store_ml), _last_valid_date(_store_sl))
     for date, _, _ in download_dates:
         if date > last_valid:
-            error(f'ERA5 data at {date:%Y-%m-%d} is not (yet) available in ARCO. Last available day: {last_valid:%Y-%m-%d}')
+            msg = f'ERA5 data at {date:%Y-%m-%d} is not (yet) available in ARCO. Last available day: {last_valid:%Y-%m-%d}'
+            logger.error(msg)
+            raise ValueError(msg)
 
     fs = gcsfs.GCSFileSystem(token='anon')
     ds_ml = _open_metadata(_store_ml)
@@ -168,7 +173,9 @@ def download_era5_arco(settings, batch_size=512):
     lats = ds_sl.latitude.values
     lons = ds_sl.longitude.values
     if not (np.array_equal(lats, ds_ml.latitude.values) and np.array_equal(lons, ds_ml.longitude.values)):
-        error('Model and single/pressure level ARCO stores have different grids!')
+        msg = 'Model and single/pressure level ARCO stores have different grids!'
+        logger.error(msg)
+        raise RuntimeError(msg)
 
     # Select box on native grid, including one extra grid point for the gradients.
     # Latitude = contiguous rows. Longitude: full rows are read anyway, so any
@@ -196,16 +203,18 @@ def download_era5_arco(settings, batch_size=512):
     short_names = {**_vars_ml, **_vars_pl, **_vars_sfc}
 
     for date, era_dir, era_file in download_dates:
-        header(f'Downloading {date:%Y-%m-%d}')
+        logger.info(f'Downloading ERA5 (Google ARCO) for {date:%Y-%m-%d}')
 
         if not os.path.exists(era_dir):
-            message(f'Creating output directory {era_dir}')
+            logger.debug(f'Creating output directory {era_dir}')
             os.makedirs(era_dir)
 
         times = np.array([np.datetime64(date + datetime.timedelta(hours=h), 'ns') for h in range(24)])
         itimes = np.searchsorted(ds_sl.time.values, times)
         if not (np.array_equal(ds_sl.time.values[itimes], times) and np.array_equal(ds_ml.time.values[itimes], times)):
-            error('Requested times not found in ARCO time axis!')
+            msg = 'Requested times not found in ARCO time axis!'
+            logger.error(msg)
+            raise RuntimeError(msg)
 
         data = {name: np.empty((24, lay['nlev'], nlat, ilon.size), np.float32) for _, name, lay in fields}
 
@@ -247,6 +256,6 @@ def download_era5_arco(settings, batch_size=512):
         tmp_file = f'{era_file}.tmp'
         ds.to_netcdf(tmp_file)
         os.replace(tmp_file, era_file)
-        message(f'Saved {era_file} in {time.perf_counter() - t_start:.0f} sec')
+        logger.info(f'Saved {era_file} in {time.perf_counter() - t_start:.0f} sec')
 
     return True

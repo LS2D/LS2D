@@ -25,7 +25,7 @@ import xarray as xr
 # LS2D modules
 import ls2d.core.spatial_tools as spatial
 from ls2d.column.spec import validate
-from ls2d.core.messages import *
+from ls2d.core.logger import logger
 
 r_earth = 6.37e6
 omega_earth = 7.2921e-5
@@ -42,6 +42,15 @@ def _interp_extrap(x, xp, fp):
     y[lo] = fp[0] + (x[lo] - xp[0]) * (fp[1] - fp[0]) / (xp[1] - xp[0])
     y[hi] = fp[-1] + (x[hi] - xp[-1]) * (fp[-1] - fp[-2]) / (xp[-1] - xp[-2])
     return y
+
+
+def _format_latlon(lat, lon):
+    """
+    Format lat/lon as e.g. `52.00°N, 4.93°E`.
+    """
+    ns = 'N' if lat >= 0 else 'S'
+    ew = 'E' if lon >= 0 else 'W'
+    return f'{abs(lat):.2f}°{ns}, {abs(lon):.2f}°{ew}'
 
 
 def create_column_input(ds, z, n_av=0):
@@ -61,7 +70,7 @@ def create_column_input(ds, z, n_av=0):
         xarray.Dataset with the LES input.
     """
 
-    header('Calculating large-scale forcings')
+    logger.info('Creating initial and boundary conditions for column')
 
     validate(ds)
 
@@ -74,11 +83,12 @@ def create_column_input(ds, z, n_av=0):
 
     lat, lon = float(ds.latitude[j]), float(ds.longitude[i])
     distance = spatial.haversine(lon, lat, clon, clat)
-    message(f'Using nearest lat/lon = {lat:.2f}/{lon:.2f} (requested = {clat:.2f}/{clon:.2f}), distance ~= {distance / 1000:.1f} km')
 
     # Averaging window, plus one grid point on each side for the gradients.
     if min(i, j) - n_av < 1 or i + n_av > ds.sizes['longitude'] - 2 or j + n_av > ds.sizes['latitude'] - 2:
-        error(f'Domain too small for n_av={n_av}; download a larger area.')
+        msg = f'Domain too small for n_av={n_av}; download a larger area.'
+        logger.error(msg)
+        raise ValueError(msg)
 
     sub = ds.isel(latitude=slice(j - n_av - 1, j + n_av + 2), longitude=slice(i - n_av - 1, i + n_av + 2))
     inner = dict(latitude=slice(1, -1), longitude=slice(1, -1))
@@ -86,7 +96,10 @@ def create_column_input(ds, z, n_av=0):
     dlon = float(ds.longitude[1] - ds.longitude[0])
     dlat = float(ds.latitude[1] - ds.latitude[0])
     area = f'{(1 + 2 * n_av) * dlon:.2f}°×{(1 + 2 * n_av) * dlat:.2f}°'
-    message(f'Averaging over a {area} spatial area.')
+    logger.info(
+        f'Averaging {area} @ {_format_latlon(lat, lon)} '
+        f'(requested: {_format_latlon(clat, clon)}, distance = {distance / 1000:.1f} km)'
+    )
 
     def mean(da):
         return da.isel(inner).mean(('latitude', 'longitude'))
@@ -189,9 +202,9 @@ def create_column_input(ds, z, n_av=0):
     if 'type_soil' in ds:
         is_land = int(nn.type_soil[0]) != 0
         if is_land:
-            message('Selected grid point is over land.')
+            logger.debug('Selected grid point is over land.')
         else:
-            warning('Selected grid point is water/sea! Setting vegetation/soil indexes to 1e9.')
+            logger.warning('Selected grid point is water/sea! Setting vegetation/soil indexes to 1e9.')
 
         for name, long_name in [
             ('type_soil', 'soil type (Fortran indexing!)'),
