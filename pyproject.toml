@@ -35,7 +35,10 @@ dependencies = [
     "requests",
     "dill",
     "pyyaml",
-    "dask"
+    "dask",
+    "gcsfs",
+    "zarr",
+    "numcodecs"
 ]
 requires-python = ">=3.6"
 

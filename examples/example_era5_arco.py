@@ -1,7 +1,7 @@
 #
 # This file is part of LS2D.
 #
-# Copyright (c) 2017-2024 Wageningen University & Research
+# Copyright (c) 2017-2026 Wageningen University & Research
 # Author: Bart van Stratum (WUR)
 #
 # LS2D is free software: you can redistribute it and/or modify
@@ -18,20 +18,20 @@
 # along with LS2D.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-# Ban Python 2.x:
-import sys
+# Python modules
+from datetime import datetime
 
-if sys.version_info.major < 3:
-    from ls2d.core.messages import error
-    error('(LS)2D requires Python 3.x')
+import ls2d
 
-# Make packages directly available as e.g.:
-# ls2d.download_era5() instead of ls2d.ecmwf.download_era5()
-from ls2d.ecmwf import download_era5
-from ls2d.ecmwf import download_cams
-from ls2d.google import download_era5_arco
+settings = {
+    'central_lat': 51.97,
+    'central_lon': 4.93,
+    'area_size': 0.25,
+    'case_name': 'cabauw',
+    'era5_path': '/home/scratch1/meteo_data/LS2D_ERA5_ARCO/',
+    'start_date': datetime(year=2016, month=8, day=15, hour=6),
+    'end_date': datetime(year=2016, month=8, day=15, hour=18),
+}
 
-from ls2d.ecmwf import Read_era5
-from ls2d.ecmwf import Read_cams
-
-from ls2d.core import grid
+# Download required ERA5 files from Google ARCO.
+ls2d.download_era5_arco(settings)
