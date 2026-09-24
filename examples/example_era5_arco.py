@@ -21,6 +21,8 @@
 # Python modules
 from datetime import datetime
 
+# Third-party modules
+import numpy as np
 import ls2d
 
 settings = {
@@ -35,3 +37,14 @@ settings = {
 
 # Download required ERA5 files from Google ARCO.
 ls2d.download_era5_arco(settings)
+
+# Read ERA5 data, and calculate derived properties (thl, etc.):
+ds_3d = ls2d.read_era5_arco(settings)
+
+# Calculate initial and boundary conditions for SCM or doubly-periodic LES,
+# and interpolate ERA5 to fixed height grid:
+z = np.arange(10, 5000, 20).astype(float)
+ds_1d = ls2d.create_column_input(ds_3d, z, n_av=1)
+
+# Save as NetCDF:
+ds_1d.to_netcdf('ls2d_era5_arco.nc')

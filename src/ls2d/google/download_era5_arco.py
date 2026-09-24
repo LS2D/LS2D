@@ -170,17 +170,19 @@ def download_era5_arco(settings, batch_size=512):
     if not (np.array_equal(lats, ds_ml.latitude.values) and np.array_equal(lons, ds_ml.longitude.values)):
         error('Model and single/pressure level ARCO stores have different grids!')
 
-    # Select box on native grid, including one extra grid point for gradients on pressure levels.
+    # Select box on native grid, including one extra grid point for the gradients.
     # Latitude = contiguous rows. Longitude: full rows are read anyway, so any
     # (also 0-deg crossing) selection is free. Output longitudes are -180..180, west->east,
     # except for boxes crossing the 180 deg meridian, which keep 0..360.
-    half = settings['area_size'] + 0.25 + 1e-6
-    ilat = np.where(np.abs(lats - settings['central_lat']) <= half)[0]
-    ilat0, nlat = ilat.min(), ilat.size
+    # The box is centred on the nearest grid point, with `n` points on each side.
+    n = int(round(settings['area_size'] / 0.25)) + 1
+
+    jc = np.abs(lats - settings['central_lat']).argmin()
+    ilat0, nlat = jc - n, 2 * n + 1
 
     dlon = ((lons - settings['central_lon'] % 360 + 180) % 360) - 180
-    ilon = np.where(np.abs(dlon) <= half)[0]
-    ilon = ilon[np.argsort(dlon[ilon])]
+    ic = np.abs(dlon).argmin()
+    ilon = (ic + np.arange(-n, n + 1)) % lons.size
     lons_out = ((lons[ilon] + 180) % 360) - 180
     if np.any(np.diff(lons_out) < 0):
         lons_out = lons[ilon]

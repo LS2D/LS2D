@@ -1,7 +1,7 @@
 #
 # This file is part of LS2D.
 #
-# Copyright (c) 2017-2024 Wageningen University & Research
+# Copyright (c) 2017-2026 Wageningen University & Research
 # Author: Bart van Stratum (WUR)
 #
 # LS2D is free software: you can redistribute it and/or modify
@@ -18,21 +18,5 @@
 # along with LS2D.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-# Ban Python 2.x:
-import sys
-
-if sys.version_info.major < 3:
-    from ls2d.core.messages import error
-    error('(LS)2D requires Python 3.x')
-
-# Make packages directly available as e.g.:
-# ls2d.download_era5() instead of ls2d.ecmwf.download_era5()
-from ls2d.ecmwf import download_era5
-from ls2d.ecmwf import download_cams
-from ls2d.google import download_era5_arco, read_era5_arco
-from ls2d.column import create_column_input
-
-from ls2d.ecmwf import Read_era5
-from ls2d.ecmwf import Read_cams
-
-from ls2d.core import grid
+from .create_column_input import create_column_input
+from .spec import validate
