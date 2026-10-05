@@ -28,7 +28,7 @@ if sys.version_info.major < 3:
 # ls2d.download_era5() instead of ls2d.ecmwf.download_era5()
 from ls2d.ecmwf import download_era5
 from ls2d.ecmwf import download_cams
-from ls2d.google import download_era5_arco, read_era5_arco
+from ls2d.google import download_era5_arco, download_era5_arco_set, read_era5_arco
 from ls2d.column import create_column_input
 
 from ls2d.ecmwf import Read_era5

@@ -18,5 +18,5 @@
 # along with LS2D.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from .download_era5_arco import download_era5_arco
+from .download_era5_arco import download_era5_arco, download_era5_arco_set
 from .read_era5_arco import read_era5_arco

@@ -20,6 +20,7 @@
 
 # Python modules
 import datetime
+import hashlib
 import time
 import os
 
@@ -109,6 +110,29 @@ def _clean_attrs(attrs):
     return {k: v for k, v in attrs.items() if not k.startswith('GRIB')}
 
 
+def _select_box(lats, lons, central_lat, central_lon, size, n_extra=0):
+    """
+    Select box of lat+/-size, lon+/-size on the native grid, plus `n_extra` grid points on each side.
+    Latitude = contiguous rows. Longitude: full rows are read anyway, so any
+    (also 0-deg crossing) selection is free. Output longitudes are -180..180, west->east,
+    except for boxes crossing the 180 deg meridian, which keep 0..360.
+    The box is centred on the nearest grid point, with `n` points on each side.
+    """
+    n = int(round(size / 0.25)) + n_extra
+
+    jc = np.abs(lats - central_lat).argmin()
+    ilat0, nlat = jc - n, 2 * n + 1
+
+    dlon = ((lons - central_lon % 360 + 180) % 360) - 180
+    ic = np.abs(dlon).argmin()
+    ilon = (ic + np.arange(-n, n + 1)) % lons.size
+    lons_out = ((lons[ilon] + 180) % 360) - 180
+    if np.any(np.diff(lons_out) < 0):
+        lons_out = lons[ilon]
+
+    return ilat0, nlat, ilon, lons_out
+
+
 def download_era5_arco(settings, batch_size=512):
     """
     Download all required ERA5 fields for an experiment between
@@ -178,21 +202,9 @@ def download_era5_arco(settings, batch_size=512):
         raise RuntimeError(msg)
 
     # Select box on native grid, including one extra grid point for the gradients.
-    # Latitude = contiguous rows. Longitude: full rows are read anyway, so any
-    # (also 0-deg crossing) selection is free. Output longitudes are -180..180, west->east,
-    # except for boxes crossing the 180 deg meridian, which keep 0..360.
-    # The box is centred on the nearest grid point, with `n` points on each side.
-    n = int(round(settings['area_size'] / 0.25)) + 1
-
-    jc = np.abs(lats - settings['central_lat']).argmin()
-    ilat0, nlat = jc - n, 2 * n + 1
-
-    dlon = ((lons - settings['central_lon'] % 360 + 180) % 360) - 180
-    ic = np.abs(dlon).argmin()
-    ilon = (ic + np.arange(-n, n + 1)) % lons.size
-    lons_out = ((lons[ilon] + 180) % 360) - 180
-    if np.any(np.diff(lons_out) < 0):
-        lons_out = lons[ilon]
+    ilat0, nlat, ilon, lons_out = _select_box(
+        lats, lons, settings['central_lat'], settings['central_lon'], settings['area_size'], n_extra=1
+    )
 
     # Variables to read, with their chunk layout.
     fields = [(_store_ml, name, get_layout(ds_ml, name)) for name in _vars_ml]
@@ -220,9 +232,9 @@ def download_era5_arco(settings, batch_size=512):
 
         t_start = time.perf_counter()
         for n, it in enumerate(itimes):
-            rows = read_rows(fs, fields, it, ilat0, nlat, lats.size, lons.size, batch_size)
+            rows = read_rows(fs, fields, [it], ilat0, nlat, lats.size, lons.size, batch_size)
             for name in data:
-                data[name][n] = rows[name][:, :, ilon]
+                data[name][n] = rows[name][0][:, :, ilon]
 
         # Create combined dataset and save to NetCDF.
         variables = {}
@@ -259,3 +271,113 @@ def download_era5_arco(settings, batch_size=512):
         logger.info(f'Saved {era_file} in {time.perf_counter() - t_start:.0f} sec')
 
     return True
+
+
+def download_era5_arco_set(
+    central_lon, central_lat, size, start_date, end_date, variables, cache_dir='~/.cache/ls2d/arco', batch_size=512
+):
+    """
+    Download a set of 2D (single level) ERA5 fields from the Google ARCO-ERA5 archive,
+    for an area of lat+/-size, lon+/-size (degrees), hourly from `start_date` to (including) `end_date`.
+
+    The result is cached as one NetCDF file in `cache_dir`, with a name based on a checksum of the arguments.
+
+    Arguments:
+        central_lon, central_lat : requested longitude and latitude
+        size : download an area of lat+/-size, lon+/-size (degrees)
+        start_date, end_date : datetime objects with start/end of period
+        variables : list of ARCO variable names, e.g. ['10m_u_component_of_wind', '100m_u_component_of_wind']
+        cache_dir : directory for cached NetCDF files
+        batch_size : int
+            Number of concurrent HTTP range requests.
+    Returns:
+        path : path to NetCDF file
+    """
+
+    start = era_tools.lower_to_hour(start_date)
+    end = era_tools.lower_to_hour(end_date)
+
+    key = f'{central_lon:.4f}_{central_lat:.4f}_{size:.4f}_{start:%Y%m%d%H}_{end:%Y%m%d%H}_{",".join(sorted(variables))}'
+    cache_dir = os.path.expanduser(cache_dir)
+    path = os.path.join(cache_dir, f'era5_arco_{hashlib.sha1(key.encode()).hexdigest()[:16]}.nc')
+
+    if os.path.isfile(path):
+        logger.info(f'Found {path} in cache')
+        return path
+
+    logger.info(f'Downloading ERA5 (Google ARCO) {variables} for period: {start} to {end}')
+    os.makedirs(cache_dir, exist_ok=True)
+
+    last_valid = _last_valid_date(_store_sl)
+    if end >= last_valid + datetime.timedelta(days=1):
+        msg = f'ERA5 data at {end:%Y-%m-%d} is not (yet) available in ARCO. Last available day: {last_valid:%Y-%m-%d}'
+        logger.error(msg)
+        raise ValueError(msg)
+
+    fs = gcsfs.GCSFileSystem(token='anon')
+    ds_sl = _open_metadata(_store_sl)
+
+    lats = ds_sl.latitude.values
+    lons = ds_sl.longitude.values
+    ilat0, nlat, ilon, lons_out = _select_box(lats, lons, central_lat, central_lon, size)
+
+    fields = []
+    for name in variables:
+        if name not in ds_sl:
+            msg = f'Variable "{name}" not found in ARCO store gs://{_store_sl}'
+            logger.error(msg)
+            raise ValueError(msg)
+        layout = get_layout(ds_sl, name)
+        if layout['nlev'] != 1:
+            msg = f'Variable "{name}" is not a 2D field'
+            logger.error(msg)
+            raise ValueError(msg)
+        fields.append((_store_sl, name, layout))
+
+    times = np.arange(np.datetime64(start, 'ns'), np.datetime64(end, 'ns') + np.timedelta64(1, 'h'), np.timedelta64(1, 'h'))
+    itimes = np.searchsorted(ds_sl.time.values, times)
+    if not np.array_equal(ds_sl.time.values[itimes], times):
+        msg = 'Requested times not found in ARCO time axis!'
+        logger.error(msg)
+        raise RuntimeError(msg)
+
+    data = {name: np.empty((times.size, nlat, ilon.size), np.float32) for name in variables}
+
+    # Read multiple time steps per call, so that one call fills about one batch of requests.
+    t_start = time.perf_counter()
+    nt = max(1, batch_size // len(variables))
+    for t0 in range(0, times.size, nt):
+        rows = read_rows(fs, fields, itimes[t0 : t0 + nt], ilat0, nlat, lats.size, lons.size, batch_size)
+        for name in variables:
+            data[name][t0 : t0 + nt] = rows[name][:, 0][:, :, ilon]
+
+    variables_out = {}
+    for name in variables:
+        variables_out[name] = (('time', 'latitude', 'longitude'), data[name], _clean_attrs(ds_sl[name].attrs))
+
+    ds = xr.Dataset(
+        variables_out,
+        coords=dict(
+            time=times,
+            latitude=('latitude', lats[ilat0 : ilat0 + nlat], ds_sl.latitude.attrs),
+            longitude=('longitude', lons_out, ds_sl.longitude.attrs),
+        ),
+        attrs=dict(
+            source='ERA5 from Google ARCO-ERA5 (https://github.com/google-research/arco-era5)',
+            stores=f'gs://{_store_sl}',
+            central_lon=central_lon,
+            central_lat=central_lat,
+            size=size,
+            start_date=f'{start:%Y-%m-%d %H:%M}',
+            end_date=f'{end:%Y-%m-%d %H:%M}',
+            history=f'Downloaded by (LS)2D on {datetime.datetime.now():%Y-%m-%d %H:%M}',
+        ),
+    )
+
+    # Write to temporary file first, so that an interrupted download does not leave a valid looking file.
+    tmp_file = f'{path}.tmp'
+    ds.to_netcdf(tmp_file)
+    os.replace(tmp_file, path)
+    logger.info(f'Saved {path} in {time.perf_counter() - t_start:.0f} sec')
+
+    return path

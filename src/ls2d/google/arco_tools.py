@@ -88,40 +88,41 @@ def _decode_block(header, raw, iblock, nblocks):
     return blosc.decompress(frame + raw)
 
 
-def read_rows(fs, fields, it, ilat0, nlat, nlat_g, nlon_g, batch_size=512):
+def read_rows(fs, fields, itimes, ilat0, nlat, nlat_g, nlon_g, batch_size=512):
     """
-    Read latitude rows `ilat0:ilat0+nlat` (all longitudes, all levels) at time index `it`.
+    Read latitude rows `ilat0:ilat0+nlat` (all longitudes, all levels) at time indices `itimes`.
 
     Arguments:
         fs : gcsfs.GCSFileSystem
         fields : list of (store_path, variable name, layout from `get_layout()`)
-        it : time index in the Zarr store
+        itimes : list of time indices in the Zarr store
         ilat0, nlat : first latitude index and number of latitude rows
         nlat_g, nlon_g : global number of latitudes and longitudes
         batch_size : number of concurrent HTTP range requests
     Returns:
-        out : dict {name: np.ndarray(nlev, nlat, nlon_g)}
+        out : dict {name: np.ndarray(nt, nlev, nlat, nlon_g)}
     """
 
     row_bytes = nlon_g * 4
     out = {}
     chunks = []
     for store, name, lay in fields:
-        out[name] = np.full((lay['nlev'], nlat, nlon_g), np.nan, np.float32)
-        if lay['nlev'] == 1:
-            chunks.append((name, lay, 0, f'{store}/{name}/{it}.0.0'))
-        else:
-            for k in range(-(-lay['nlev'] // lay['nlev_chunk'])):
-                chunks.append((name, lay, k, f'{store}/{name}/{it}.{k}.0.0'))
+        out[name] = np.full((len(itimes), lay['nlev'], nlat, nlon_g), np.nan, np.float32)
+        for t, it in enumerate(itimes):
+            if lay['nlev'] == 1:
+                chunks.append((name, lay, t, 0, f'{store}/{name}/{it}.0.0'))
+            else:
+                for k in range(-(-lay['nlev'] // lay['nlev_chunk'])):
+                    chunks.append((name, lay, t, k, f'{store}/{name}/{it}.{k}.0.0'))
 
-    paths = [c[3] for c in chunks]
+    paths = [c[4] for c in chunks]
 
     # 1. Blosc headers + block offset tables.
     heads = fs.cat_ranges(paths, [0] * len(paths), [_HEAD_BYTES] * len(paths), on_error='return', batch_size=batch_size)
 
     # 2. Figure out which byte ranges we need from every chunk.
     req_paths, req_starts, req_ends, req_meta = [], [], [], []
-    for (name, lay, k, path), head in zip(chunks, heads):
+    for (name, lay, t, k, path), head in zip(chunks, heads):
         if isinstance(head, FileNotFoundError):
             continue  # Missing chunk == fill value (NaN).
         if isinstance(head, Exception):
@@ -147,7 +148,7 @@ def read_rows(fs, fields, it, ilat0, nlat, nlat_g, nlon_g, batch_size=512):
         for lk in range(min(lay['nlev_chunk'], lay['nlev'] - k * lay['nlev_chunk'])):
             s = (lk * nlat_g + ilat0) * row_bytes
             e = s + nlat * row_bytes
-            meta = (name, k * lay['nlev_chunk'] + lk, header, s, e, nblocks)
+            meta = (name, t, k * lay['nlev_chunk'] + lk, header, s, e, nblocks)
             if memcpyed:
                 req_starts.append(_BLOSC_HEADER + s)
                 req_ends.append(_BLOSC_HEADER + e)
@@ -162,13 +163,13 @@ def read_rows(fs, fields, it, ilat0, nlat, nlat_g, nlon_g, batch_size=512):
 
     # 3. Fetch only the needed blocks, decode, and cut out the latitude rows.
     datas = fs.cat_ranges(req_paths, req_starts, req_ends, on_error='raise', batch_size=batch_size)
-    for data, (name, lev, header, s, e, nblocks, blocks) in zip(datas, req_meta):
+    for data, (name, t, lev, header, s, e, nblocks, blocks) in zip(datas, req_meta):
         if blocks is None:
             buf = data
         else:
             b0, b1, rs, re, blocksize = blocks
             buf = b''.join(_decode_block(header, data[rs[i] : re[i]], b0 + i, nblocks) for i in range(b1 - b0 + 1))
             buf = buf[s - b0 * blocksize : e - b0 * blocksize]
-        out[name][lev] = np.frombuffer(buf, np.float32).reshape(nlat, nlon_g)
+        out[name][t, lev] = np.frombuffer(buf, np.float32).reshape(nlat, nlon_g)
 
     return out
