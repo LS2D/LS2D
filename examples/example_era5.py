@@ -35,7 +35,8 @@ settings = {
     'central_lon': 4.93,
     'area_size': 1,
     'case_name': 'cabauw',
-    'era5_path': '/home/scratch1/bart/LS2D_ERA5/',
+    #'era5_path': '/home/scratch1/bart/LS2D_ERA5/',
+    'era5_path': '.',
     'era5_expver': 1,  # 1=normal ERA5, 5=ERA5 near-realtime
     'start_date': datetime(year=2016, month=8, day=15, hour=6),
     'end_date': datetime(year=2016, month=8, day=15, hour=18),

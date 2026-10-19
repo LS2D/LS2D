@@ -27,6 +27,7 @@ import requests
 
 # Third party modules
 import numpy as np
+import xarray as xr
 
 # LS2D modules
 import ls2d.ecmwf.era_tools as era_tools
@@ -39,6 +40,9 @@ try:
     import cdsapi
 except ImportError:
     cdsapi = None
+
+# CDS limits requests to ~10000 fields, so model level requests are split in blocks of N hours.
+cds_ml_chunk_hours = 6
 
 
 def _retrieve_from_MARS(request, settings, nc_dir, nc_file, qos):
@@ -88,7 +92,37 @@ def _retrieve_from_MARS(request, settings, nc_dir, nc_file, qos):
     execute('sbatch {}'.format(slurm_job))
 
 
-def _download_era5_file(settings):
+def _ml_chunks():
+    return [(t0, min(t0 + cds_ml_chunk_hours, 24) - 1) for t0 in range(0, 24, cds_ml_chunk_hours)]
+
+
+def _ml_chunk_file(nc_file, chunk):
+    return f'{nc_file[:-3]}_{chunk[0]:02d}-{chunk[1]:02d}.nc'
+
+
+def _merge_ml_chunks(nc_file):
+    """
+    Merge model level chunks into `nc_file`, once all chunks are downloaded.
+    """
+    chunk_files = [_ml_chunk_file(nc_file, chunk) for chunk in _ml_chunks()]
+
+    if not all(os.path.isfile(f) for f in chunk_files):
+        return
+
+    logger.info(f'Merging {len(chunk_files)} model level chunks into {nc_file}')
+
+    with xr.open_mfdataset(
+        chunk_files, combine='nested', concat_dim='valid_time', data_vars='minimal', decode_times=False
+    ) as ds:
+        ds.to_netcdf(nc_file)
+
+    patch_netcdf(nc_file)
+
+    for f in chunk_files:
+        os.remove(f)
+
+
+def _download_era5_file(settings, ml_chunk=None):
     """
     Download ERA5 analysis or forecasts on surface, model or pressure levels
     Requested parameters are hardcoded and chosen for the specific use of LS2D
@@ -118,6 +152,9 @@ def _download_era5_file(settings):
         settings['case_name'],
         settings['ftype'],
     )
+
+    if ml_chunk is not None:
+        nc_file = _ml_chunk_file(nc_file, ml_chunk)
 
     # Write CDS API prints to log file (NetCDF file path/name appended with .out/.err)
     if settings['write_log']:
@@ -167,8 +204,9 @@ def _download_era5_file(settings):
                     os.remove(pickle_file)
 
                     # Patch NetCDF file, to make the (+/-) identical to the old CDS
-                    # files, and files retrieved from MARS.
-                    patch_netcdf(nc_file)
+                    # files, and files retrieved from MARS. Model level chunks are patched after merging.
+                    if ml_chunk is None:
+                        patch_netcdf(nc_file)
 
                     # Interpolate to requested grid, to stay in line with downloads before March 2026.
                     if settings['ftype'] in ('surface_an', 'pressure_an'):
@@ -288,7 +326,8 @@ def _download_era5_file(settings):
             # Model level analysis, stored in tape archive, so downloads are VERY slow :-(
             elif settings['ftype'] == 'model_an':
                 model_levels = '/'.join(list(np.arange(1, 138).astype(str)))
-                analysis_times = '/'.join(['{0:02d}:00:00'.format(i) for i in range(24)])
+                t0, t1 = ml_chunk if ml_chunk is not None else (0, 23)
+                analysis_times = '/'.join([f'{i:02d}:00:00' for i in range(t0, t1 + 1)])
 
                 request = {
                     'class': 'ea',
@@ -418,7 +457,7 @@ def download_era5(settings, exit_when_waiting=True):
     logger.info(f'Downloading ERA5 ({settings["data_source"]}) for period: {settings["start_date"]} to {settings["end_date"]}')
 
     if settings['data_source'] == 'CDS':
-        logger.warning('CDS downloads currently fail due to CDS request size limits ("your request is too large"). Use `ls2d.download_era5_arco()` instead.')
+        logger.warning('CDS downloads are slow -- consider using `ls2d.download_era5_arco()`.')
 
     # Check if output directory exists, and ends with '/'
     if not os.path.isdir(settings['era5_path']):
@@ -445,6 +484,7 @@ def download_era5(settings, exit_when_waiting=True):
     # multiple arguments. For now, keep it generic for older versions by passing all arguments inside a dict.
     download_settings = settings.copy()
     download_queue = []
+    ml_merge_queue = []
 
     # Option to exclude download types.
     if 'blacklist_download' in settings:
@@ -472,15 +512,31 @@ def download_era5(settings, exit_when_waiting=True):
 
                 if os.path.isfile(era_file):
                     logger.debug('Found {} - {} local'.format(date, ftype))
+                    continue
+
+                settings_tmp = download_settings.copy()
+                settings_tmp.update({'date': date, 'ftype': ftype})
+
+                # A `model_an.pickle` is a full day request from an older LS2D version.
+                if (
+                    ftype == 'model_an'
+                    and settings['data_source'] == 'CDS'
+                    and not os.path.isfile(f'{era_file[:-3]}.pickle')
+                ):
+                    for chunk in _ml_chunks():
+                        if not os.path.isfile(_ml_chunk_file(era_file, chunk)):
+                            download_queue.append((settings_tmp, chunk))
+                    ml_merge_queue.append(era_file)
                 else:
-                    settings_tmp = download_settings.copy()
-                    settings_tmp.update({'date': date, 'ftype': ftype})
-                    download_queue.append(settings_tmp)
+                    download_queue.append((settings_tmp, None))
 
     finished = True
-    for req in download_queue:
-        if not _download_era5_file(req):
+    for req, ml_chunk in download_queue:
+        if not _download_era5_file(req, ml_chunk):
             finished = False
+
+    for era_file in ml_merge_queue:
+        _merge_ml_chunks(era_file)
 
     if not finished:
         if settings['data_source'] == 'CDS':
