@@ -417,6 +417,9 @@ def download_era5(settings, exit_when_waiting=True):
 
     logger.info(f'Downloading ERA5 ({settings["data_source"]}) for period: {settings["start_date"]} to {settings["end_date"]}')
 
+    if settings['data_source'] == 'CDS':
+        logger.warning('CDS downloads currently fail due to CDS request size limits ("your request is too large"). Use `ls2d.download_era5_arco()` instead.')
+
     # Check if output directory exists, and ends with '/'
     if not os.path.isdir(settings['era5_path']):
         msg = 'Output directory "{}" does not exist!'.format(settings['era5_path'])

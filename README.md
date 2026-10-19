@@ -3,7 +3,13 @@
 [![PyPI version](https://badge.fury.io/py/ls2d.svg)](https://pypi.org/project/ls2d/)
 [![Static Badge](https://img.shields.io/badge/JAMES-10.1029%2F2023MS003750-blue?link=https%3A%2F%2Fdoi.org%2F10.1029%2F2023MS003750)](https://doi.org/10.1029/2023MS003750)
 
-(LS)<sup>2</sup>D is a Python toolkit, developed to simplify all the steps required to downscale ERA5 with doubly-periodic large-eddy simulation (LES), or single-column models (SCMs). For the retrieval of ERA data, it relies on the Copernicus Data Store (CDS), or the Meteorological Archival and Retrieval System (MARS) at ECMWF computer systems.
+(LS)<sup>2</sup>D is a Python toolkit, developed to simplify all the steps required to downscale ERA5 with doubly-periodic large-eddy simulation (LES), or single-column models (SCMs). For the retrieval of ERA data, it relies on the Google Analysis-Ready, Cloud-Optimized (ARCO) ERA5 archive, the Copernicus Data Store (CDS), or the Meteorological Archival and Retrieval System (MARS) at ECMWF computer systems.
+
+> [!IMPORTANT]
+> Due to new request size limits at CDS, ERA5 downloads through `download_era5()` from CDS no longer work. Since v1.1.0, (LS)<sup>2</sup>D therefore downloads ERA5 from the Google [ARCO ERA5](https://github.com/google-research/arco-era5) archive instead, using `ls2d.download_era5_arco()`, `ls2d.read_era5_arco()` and `ls2d.create_column_input()`; see `examples/example_era5_arco.py`. Note that:
+> - The ARCO path is not backward compatible: ERA5 files previously downloaded from CDS or MARS can't be read by `read_era5_arco()`. They can still be read with `Read_era5`.
+> - Results from the ARCO and CDS paths are close but not identical, due to small changes in e.g. the interpolations.
+> - CDS provides more up-to-date ERA5 data than ARCO, so CDS support might return in the future.
 
 > [!IMPORTANT]
 > In September 2024, Copernicus upgraded the Copernicus and Atmosphere Data Stores (CDS/ADS), introducing changes in the NetCDF file structure. The updated files now have different dimension names, time units, and even some reordered dimensions (!!). Unfortunately, these changes made the new NetCDF files incompatible with older versions or files extracted from MARS. Although (LS)<sup>2</sup>D briefly supported the new format, this led to several issues. Therefore, starting November 2024, (LS)<sup>2</sup>D will automatically patch new NetCDF files to ensure compatibility with the previous NetCDF file structure. On the user side, nothing should change:

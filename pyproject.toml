@@ -13,7 +13,7 @@ ls2d = ["ecmwf/*.txt"]
 
 [project]
 name = "ls2d"
-version = "1.1.0b1"
+version = "1.1.0"
 description = "Python toolkit to downscale ERA5 with doubly-periodic large-eddy simulation"
 readme = "README.md"
 authors = [{ name = "Bart van Stratum", email = "bart.vanstratum@wur.nl" }]
@@ -41,7 +41,7 @@ dependencies = [
     "numcodecs",
     "colorlog"
 ]
-requires-python = ">=3.6"
+requires-python = ">=3.10"
 
 [project.optional-dependencies]
 cds = ["cdsapi"]
