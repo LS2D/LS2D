@@ -534,21 +534,11 @@ def download_era5(settings, exit_when_waiting=True):
 
     if not finished:
         if settings['data_source'] == 'CDS':
-            print(' -----------------------------------------------------------')
-            print(' | One or more requests are not finished.                  |')
-            print(' | For CDS request, you can monitor the progress at:       |')
-            print(' | https://cds.climate.copernicus.eu/requests?tab=all      |')
+            logger.warning('Not all CDS requests are finished, see https://cds.climate.copernicus.eu/requests?tab=all')
             if exit_when_waiting:
-                print(' | This script will stop now, you can restart it           |')
-                print(' | at any time to retry, or download the results.          |')
-                print(' -----------------------------------------------------------')
+                logger.warning('Stopping; restart to retry or download the results.')
                 sys.exit(0)
-            print(' -----------------------------------------------------------')
         else:
-            print(' -------------------------------------------------')
-            print(' | MARS requests are submitted.                  |')
-            print(' | This script will stop now, you can restart it |')
-            print(' | at any time to retry.                         |')
-            print(' -------------------------------------------------')
+            logger.warning('MARS requests are submitted; restart to retry.')
 
     return finished

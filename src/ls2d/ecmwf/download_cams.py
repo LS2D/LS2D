@@ -277,12 +277,6 @@ def download_cams(settings, variables, grid=None):
             finished = False
 
     if not finished:
-        print(' --------------------------------------------------------------')
-        print(' | One or more requests are not finished.                     |')
-        print(' | For ADS request, you can monitor the progress at:          |')
-        print(' | https://ads.atmosphere.copernicus.eu/cdsapp#!/yourrequests |')
-        print(' | This script will stop now, you can restart it              |')
-        print(' | at any time to retry, or download the results.             |')
-        print(' --------------------------------------------------------------')
-
+        logger.warning('Not all ADS requests are finished, see https://ads.atmosphere.copernicus.eu/requests?tab=all')
+        logger.warning('Stopping; restart to retry or download the results.')
         sys.exit(1)
