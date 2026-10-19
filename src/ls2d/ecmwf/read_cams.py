@@ -184,13 +184,8 @@ class Read_cams:
         # Some debugging output
         distance = spatial.haversine(self.ds_ml.longitude[ic], self.ds_ml.latitude[jc], clon, clat)
         logger.info(
-            'Using nearest lat/lon = {0:.2f}/{1:.2f} (requested = {2:.2f}/{3:.2f}), distance ~= {4:.1f} km'.format(
-                self.ds_ml.latitude[jc],
-                self.ds_ml.longitude[ic],
-                clat,
-                clon,
-                distance / 1000.0,
-            )
+            f'Using nearest lat/lon = {self.ds_ml.latitude[jc]:.2f}/{self.ds_ml.longitude[ic]:.2f} '
+            f'(requested = {clat:.2f}/{clon:.2f}), distance ~= {distance / 1000.0:.1f} km'
         )
 
         # Calculate and output averaging area.

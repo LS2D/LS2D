@@ -32,7 +32,7 @@ def _get_or_default(dict, name, shape, default_value):
     if name in dict:
         return dict[name]
     else:
-        print(' - No input for "{}", defaulting values at zero'.format(name))
+        print(f' - No input for "{name}", defaulting values at zero')
         return default_value * np.ones(shape)
 
 
@@ -44,7 +44,7 @@ def write_profiles(file_name, variables, nlev, docstring=''):
     Write the prof.inp.xxx input profiles for DALES
     """
 
-    print(' - Saving {}'.format(file_name))
+    print(f' - Saving {file_name}')
 
     f = open(file_name, 'w')
 
@@ -52,17 +52,17 @@ def write_profiles(file_name, variables, nlev, docstring=''):
     if docstring == '':
         f.write('DALES\n')
     else:
-        f.write('{}\n'.format(docstring))
+        f.write(f'{docstring}\n')
 
     # Write header (column names)
     for var in variables.keys():
-        f.write('{0:^17s} '.format(var))
+        f.write(f'{var:^17s} ')
     f.write('\n')
 
     # Write data
     for k in range(nlev):
         for var in variables.keys():
-            f.write('{0:+1.10E} '.format(variables[var][k]))
+            f.write(f'{variables[var][k]:+1.10E} ')
         f.write('\n')
 
     f.close()
@@ -73,7 +73,7 @@ def write_time_profiles(file_name, time, variables, nlev, docstring=''):
     Write time varying input profiles for DALES
     """
 
-    print(' - Saving {}'.format(file_name))
+    print(f' - Saving {file_name}')
 
     f = open(file_name, 'w')
 
@@ -81,7 +81,7 @@ def write_time_profiles(file_name, time, variables, nlev, docstring=''):
     if docstring == '':
         f.write('DALES\n')
     else:
-        f.write('{}\n'.format(docstring))
+        f.write(f'{docstring}\n')
 
     # Write time dependent profiles
     for t in range(time.size):
@@ -89,19 +89,19 @@ def write_time_profiles(file_name, time, variables, nlev, docstring=''):
 
         # Write header (column names)
         for var in variables.keys():
-            f.write('{0:^17s} '.format(var))
+            f.write(f'{var:^17s} ')
         f.write('\n')
 
         # Write time
-        f.write('# {0:1.8E}\n'.format(time[t]))
+        f.write(f'# {time[t]:1.8E}\n')
 
         # Write data
         for k in range(nlev):
             for var in variables.keys():
                 if len(variables[var].shape) == 1:
-                    f.write('{0:+1.10E} '.format(variables[var][k]))
+                    f.write(f'{variables[var][k]:+1.10E} ')
                 else:
-                    f.write('{0:+1.10E} '.format(variables[var][t, k]))
+                    f.write(f'{variables[var][t, k]:+1.10E} ')
             f.write('\n')
 
     f.close()
@@ -112,7 +112,7 @@ def write_dummy_forcings(file_name, n_scalars, z, docstring):
     Write dummy forcings
     """
 
-    print('Saving {}'.format(file_name))
+    print(f'Saving {file_name}')
 
     f = open(file_name, 'w')
 
@@ -120,29 +120,29 @@ def write_dummy_forcings(file_name, n_scalars, z, docstring):
     if docstring == '':
         f.write('DALES\n\n')
     else:
-        f.write('{}\n\n'.format(docstring))
+        f.write(f'{docstring}\n\n')
 
     # Surface fluxes (zero)
-    f.write('{0:^15s} '.format('time'))
+    f.write(f'{"time":^15s} ')
     for i in range(n_scalars):
-        f.write('{0:>10s}{1:<8d}'.format('sv', i + 1))
+        f.write(f'{"sv":>10s}{i + 1:<8d}')
     f.write('\n')
 
     for time in [0, 1e6]:
-        f.write('{0:+1.10E} '.format(time))
+        f.write(f'{time:+1.10E} ')
         for i in range(n_scalars):
-            f.write('{0:+1.10E} '.format(0))
+            f.write(f'{0:+1.10E} ')
         f.write('\n')
 
     # Atmospheric forcings
     f.write('\n')
 
     for time in [0, 1e6]:
-        f.write('# {0:+1.10E}\n'.format(time))
+        f.write(f'# {time:+1.10E}\n')
         for k in range(z.size):
-            f.write('{0:+1.10E} '.format(z[k]))
+            f.write(f'{z[k]:+1.10E} ')
             for i in range(n_scalars):
-                f.write('{0:+1.10E} '.format(0))
+                f.write(f'{0:+1.10E} ')
             f.write('\n')
 
     f.close()
@@ -153,7 +153,7 @@ def write_forcings(file_name, timedep_sfc, timedep_atm, docstring=''):
     Write the ls_flux.inp.xxx files
     """
 
-    print(' - Saving {}'.format(file_name))
+    print(f' - Saving {file_name}')
 
     f = open(file_name, 'w')
 
@@ -161,23 +161,17 @@ def write_forcings(file_name, timedep_sfc, timedep_atm, docstring=''):
     if docstring == '':
         f.write('DALES time dependent input\n')
     else:
-        f.write('{}\n'.format(docstring))
+        f.write(f'{docstring}\n')
 
     # Write surface variables
-    f.write(
-        '{0:^15s} {1:^15s} {2:^15s} {3:^15s} {4:^15s} {5:^15s}\n'.format(
-            'time', 'wthl_s', 'wqt_s', 'T_s', 'qt_s', 'p_s'
-        )
-    )
-    f.write(
-        '{0:^15s} {1:^15s} {2:^15s} {3:^15s} {4:^15s} {5:^15s}\n'.format(
-            '(s)', '(K m s-1)', '(kg kg-1 m s-1)', '(K)', '(kg kg-1)', '(Pa)'
-        )
-    )
+    header = ['time', 'wthl_s', 'wqt_s', 'T_s', 'qt_s', 'p_s']
+    units = ['(s)', '(K m s-1)', '(kg kg-1 m s-1)', '(K)', '(kg kg-1)', '(Pa)']
+    f.write(' '.join(f'{name:^15s}' for name in header) + '\n')
+    f.write(' '.join(f'{name:^15s}' for name in units) + '\n')
 
     if timedep_sfc is None:
         # Write a large initial time, so DALES will disable the surface timedep
-        f.write('{0:+1.8E} {1:+1.8E} {2:+1.8E} {3:+1.8E} {4:+1.8E} {5:+1.8E}\n'.format(1e16, -1, -1, -1, -1, -1))
+        f.write(f'{1e16:+1.8E} {-1:+1.8E} {-1:+1.8E} {-1:+1.8E} {-1:+1.8E} {-1:+1.8E}\n')
     else:
         nt = timedep_sfc['time'].size
         time = _get_or_default(timedep_sfc, 'time', nt, 0)
@@ -189,9 +183,7 @@ def write_forcings(file_name, timedep_sfc, timedep_atm, docstring=''):
 
         for t in range(nt):
             f.write(
-                '{0:+1.8E} {1:+1.8E} {2:+1.8E} {3:+1.8E} {4:+1.8E} {5:+1.8E}\n'.format(
-                    time[t], wthls[t], wqts[t], Ts[t], qts[t], ps[t]
-                )
+                f'{time[t]:+1.8E} {wthls[t]:+1.8E} {wqts[t]:+1.8E} {Ts[t]:+1.8E} {qts[t]:+1.8E} {ps[t]:+1.8E}\n'
             )
 
     if timedep_atm is not None:
@@ -214,39 +206,28 @@ def write_forcings(file_name, timedep_sfc, timedep_atm, docstring=''):
         for t in range(nt):
             f.write('\n')
             # Write header:
-            f.write(
-                '{0:^19s} {1:^19s} {2:^19s} {3:^19s} {4:^19s} {5:^19s} {6:^19s} {7:^19s} {8:^19s} {9:^19s}\n'.format(
-                    'z (m)',
-                    'u_g (m s-1)',
-                    'v_g (m s-1)',
-                    'w_ls (m s-1)',
-                    'dqtdx (kg kg-1 m-1)',
-                    'dqtdy (kg kg m-1)',
-                    'dqtdt (kg kg-1 s-1)',
-                    'dthldt (K s-1)',
-                    'dudt (m s-2)',
-                    'dvdt (m s-2)',
-                )
-            )
+            header = [
+                'z (m)',
+                'u_g (m s-1)',
+                'v_g (m s-1)',
+                'w_ls (m s-1)',
+                'dqtdx (kg kg-1 m-1)',
+                'dqtdy (kg kg m-1)',
+                'dqtdt (kg kg-1 s-1)',
+                'dthldt (K s-1)',
+                'dudt (m s-2)',
+                'dvdt (m s-2)',
+            ]
+            f.write(' '.join(f'{name:^19s}' for name in header) + '\n')
 
             # Write current time:
-            f.write('# {0:1.8E}\n'.format(time[t]))
+            f.write(f'# {time[t]:1.8E}\n')
 
             # Write profiles:
             for k in range(nlev):
                 f.write(
-                    '{0:+1.12E} {1:+1.12E} {2:+1.12E} {3:+1.12E} {4:+1.12E} {5:+1.12E} {6:+1.12E} {7:+1.12E} {8:+1.12E} {9:+1.12E}\n'.format(
-                        z[k],
-                        ug[t, k],
-                        vg[t, k],
-                        wls[t, k],
-                        dxq[t, k],
-                        dyq[t, k],
-                        dtq[t, k],
-                        dtth[t, k],
-                        dtu[t, k],
-                        dtv[t, k],
-                    )
+                    f'{z[k]:+1.12E} {ug[t, k]:+1.12E} {vg[t, k]:+1.12E} {wls[t, k]:+1.12E} {dxq[t, k]:+1.12E} '
+                    f'{dyq[t, k]:+1.12E} {dtq[t, k]:+1.12E} {dtth[t, k]:+1.12E} {dtu[t, k]:+1.12E} {dtv[t, k]:+1.12E}\n'
                 )
 
     f.close()
@@ -257,9 +238,9 @@ def create_backrad(p, T, q, expnr=1):
     Create the background profiles for RRTMG
     """
 
-    print(' - Saving backrad.inp.{0:03d}.nc'.format(expnr))
+    print(f' - Saving backrad.inp.{expnr:03d}.nc')
 
-    nc_file = nc4.Dataset('backrad.inp.{0:03d}.nc'.format(expnr), 'w')
+    nc_file = nc4.Dataset(f'backrad.inp.{expnr:03d}.nc', 'w')
     dims = nc_file.createDimension('lev', p.size)
 
     p_var = nc_file.createVariable('lev', 'f4', ('lev'))

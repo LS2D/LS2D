@@ -43,7 +43,7 @@ def update_namelist(namelist_file, to_update):
             if len(l) > 0 and l[0] != '#' and '=' in l:
                 name = l.split('=')[0].strip()
                 if name in to_update.keys():
-                    f.write('{}={}\n'.format(name, to_update[name]))
+                    f.write(f'{name}={to_update[name]}\n')
                 else:
                     f.write(l)
             else:
@@ -66,7 +66,7 @@ def get_latest_restart_time(path='.'):
     """
     Get latest restart time from the `time.***` files
     """
-    files = glob.glob('{}/time.*'.format(path))
+    files = glob.glob(f'{path}/time.*')
     if len(files) == 0:
         print('Cant find any time.xxxx files, returning 0')
         return 0
@@ -82,7 +82,7 @@ def seconds_to_time(seconds):
     h, m = divmod(m, 60)
     d, h = divmod(h, 24)
 
-    return '{0}-{1:02d}:{2:02d}:{3:02d}'.format(d, h, m, s)
+    return f'{d}-{h:02d}:{m:02d}:{s:02d}'
 
 
 def submit_case(
@@ -129,7 +129,7 @@ def submit_case(
             'savetime': max_time,
         }
 
-        update_namelist('{}/{}.ini'.format(work_dir, case), to_update)
+        update_namelist(f'{work_dir}/{case}.ini', to_update)
 
         # Wall-clock limit in `d-hh-mm-ss` format
         wc_time_str = seconds_to_time(int(wc_time))
@@ -137,62 +137,51 @@ def submit_case(
         auto_submit_flag = '--auto_submit' if auto_submit else ''
 
         # Create Slurm run script
-        with open('{}/{}'.format(work_dir, script_name), 'w') as f:
+        with open(f'{work_dir}/{script_name}', 'w') as f:
             f.write('#!/bin/bash\n')
-            f.write('#SBATCH -p {}\n'.format(partition))
-            f.write('#SBATCH -n {}\n'.format(n_tasks))
-            f.write('#SBATCH -t {}\n'.format(wc_time_str))
-            f.write('#SBATCH --job-name={}\n'.format(job_name))
-            f.write('#SBATCH --output={}/mhh-%j.out\n'.format(work_dir))
-            f.write('#SBATCH --error={}/mhh-%j.err\n'.format(work_dir))
+            f.write(f'#SBATCH -p {partition}\n')
+            f.write(f'#SBATCH -n {n_tasks}\n')
+            f.write(f'#SBATCH -t {wc_time_str}\n')
+            f.write(f'#SBATCH --job-name={job_name}\n')
+            f.write(f'#SBATCH --output={work_dir}/mhh-%j.out\n')
+            f.write(f'#SBATCH --error={work_dir}/mhh-%j.err\n')
             f.write('#SBATCH --constraint=haswell\n\n')
 
-            f.write('cd {}\n\n'.format(work_dir))
+            f.write(f'cd {work_dir}\n\n')
 
             if bypass_slurm:
                 if is_cold_start:
-                    f.write('./microhh init {}\n'.format(case))
-                f.write('./microhh run {}\n\n'.format(case))
+                    f.write(f'./microhh init {case}\n')
+                f.write(f'./microhh run {case}\n\n')
             else:
                 if is_cold_start:
                     if n_tasks == 1:
-                        f.write('./microhh init {}\n'.format(case))
+                        f.write(f'./microhh init {case}\n')
                     else:
-                        f.write('srun ./microhh init {}\n'.format(case))
+                        f.write(f'srun ./microhh init {case}\n')
 
                 if n_tasks == 1:
-                    f.write('./microhh run {}\n\n'.format(case))
+                    f.write(f'./microhh run {case}\n\n')
                 else:
-                    f.write('srun ./microhh run {}\n\n'.format(case))
+                    f.write(f'srun ./microhh run {case}\n\n')
 
             # Only re-submit if case exit was normal
             f.write('runjobval=$?\n')
             f.write('if [ "${runjobval}" -eq "0" ]; then\n')
             # Re-submit Python script
             f.write(
-                '  python3 {}/slurm.py -c {} -tt {} -mt {} -wc {} -p {} -n {} -w {} -j {} -s {} {}\n'.format(
-                    work_dir,
-                    case,
-                    int(total_time),
-                    int(max_time),
-                    int(wc_time),
-                    partition,
-                    int(n_tasks),
-                    work_dir,
-                    job_name,
-                    script_name,
-                    auto_submit_flag,
-                )
+                f'  python3 {work_dir}/slurm.py -c {case} -tt {int(total_time)} -mt {int(max_time)} -wc {int(wc_time)} '
+                f'-p {partition} -n {int(n_tasks)} -w {work_dir} -j {job_name} -s {script_name} {auto_submit_flag}\n'
             )
             f.write('fi\n')
 
         # Submit runscript
         if auto_submit:
             if bypass_slurm:
-                execute('chmod +x {}/{}'.format(work_dir, script_name))
-                execute('{}/{}'.format(work_dir, script_name))
+                execute(f'chmod +x {work_dir}/{script_name}')
+                execute(f'{work_dir}/{script_name}')
             else:
-                execute('sbatch {}/{}'.format(work_dir, script_name))
+                execute(f'sbatch {work_dir}/{script_name}')
 
 
 if __name__ == '__main__':

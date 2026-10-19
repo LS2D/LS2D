@@ -111,7 +111,7 @@ class Read_era5:
             file_missing = False
             for f in files:
                 if not os.path.exists(f):
-                    logger.error('File "{}" does not exist...'.format(f))
+                    logger.error(f'File "{f}" does not exist...')
                     file_missing = True
             return file_missing
 
@@ -200,8 +200,8 @@ class Read_era5:
         time_check = self.fsa.variables['time'][t_an]
 
         if not np.all(self.time == time_check):
-            logger.warning('Model level times: {}'.format(self.time))
-            logger.warning('Surface times:     {}'.format(time_check))
+            logger.warning(f'Model level times: {self.time}')
+            logger.warning(f'Surface times:     {time_check}')
             msg = 'Model level and surface times are not synced!'
             logger.error(msg)
             raise RuntimeError(msg)
@@ -356,13 +356,9 @@ class Read_era5:
         )
 
         logger.info(
-            'Using nearest lat/lon = {0:.2f}/{1:.2f} (requested = {2:.2f}/{3:.2f}), distance ~= {4:.1f} km'.format(
-                self.lats[self.j],
-                self.lons[self.i],
-                self.settings['central_lat'],
-                self.settings['central_lon'],
-                distance / 1000.0,
-            )
+            f'Using nearest lat/lon = {self.lats[self.j]:.2f}/{self.lons[self.i]:.2f} '
+            f'(requested = {self.settings["central_lat"]:.2f}/{self.settings["central_lon"]:.2f}), '
+            f'distance ~= {distance / 1000.0:.1f} km'
         )
 
         # Print averaging area.
@@ -403,7 +399,7 @@ class Read_era5:
         ]
         for var in var_4d_mean:
             mean = getattr(self, var)[center4d].mean(axis=(2, 3))
-            setattr(self, '{}_mean'.format(var), mean)
+            setattr(self, f'{var}_mean', mean)
 
         # Variables averaged from (time, lon, lat) to (time):
         var_3d_mean = [
@@ -423,13 +419,13 @@ class Read_era5:
         ]
         for var in var_3d_mean:
             mean = getattr(self, var)[center3d].mean(axis=(1, 2))
-            setattr(self, '{}_mean'.format(var), mean)
+            setattr(self, f'{var}_mean', mean)
 
         # Variables selected as nearest-neighbour
         var_nn = ['soil_type', 'veg_type_low', 'veg_type_high']
         for var in var_nn:
             data = getattr(self, var)
-            setattr(self, '{}_nn'.format(var), data[0, self.j, self.i])
+            setattr(self, f'{var}_nn', data[0, self.j, self.i])
 
         if self.soil_type_nn == 0:
             logger.warning('Selected grid point is water/sea! Setting vegetation/soil indexes to 1e9.')
@@ -782,13 +778,13 @@ class Read_era5:
         # Interpolate LES input to LES grid, and add to dataset
         #
         for var in variables.keys():
-            var_era5 = '{}_mean'.format(var)
+            var_era5 = f'{var}_mean'
             if hasattr(self, var_era5):
                 data = interp_z(getattr(self, var_era5), z)
                 attrs = variables[var]
                 add_ds_var(ds, var, data, ('time', 'z'), attrs[0], attrs[1])
             else:
-                msg = 'Can\'t interpolate variable "{}"...'.format(var)
+                msg = f'Can\'t interpolate variable "{var}"...'
                 logger.error(msg)
                 raise RuntimeError(msg)
 

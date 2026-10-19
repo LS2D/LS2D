@@ -78,13 +78,13 @@ def write_namelist(namelist_file, namelist_dict):
 
     with open(namelist_file, 'w') as f:
         for group, items in namelist_dict.items():
-            f.write('[{}]\n'.format(group))
+            f.write(f'[{group}]\n')
             for variable, value in items.items():
                 if isinstance(value, list):
                     value = ','.join([str(elem) for elem in value])
                 elif isinstance(value, bool):
                     value = 1 if value == True else 0
-                f.write('{}={}\n'.format(variable, value))
+                f.write(f'{variable}={value}\n')
             f.write('\n')
 
 
@@ -121,7 +121,7 @@ def write_netcdf_input(
         return False
 
     # Define new NetCDF file
-    nc_file = nc4.Dataset('{}_input.nc'.format(case_name), mode='w', datamodel='NETCDF4')
+    nc_file = nc4.Dataset(f'{case_name}_input.nc', mode='w', datamodel='NETCDF4')
 
     # Create height dimension, and set height coordinate
     nc_file.createDimension('z', init_profiles['z'].size)
@@ -208,7 +208,7 @@ def check_grid_decomposition(itot, jtot, ktot, npx, npy):
     Check whether grid / MPI decomposition is valid
     """
 
-    print('Checking grid: itot={}, jtot={}, ktot={}, npx={}, npy={}'.format(itot, jtot, ktot, npx, npy))
+    print(f'Checking grid: itot={itot}, jtot={jtot}, ktot={ktot}, npx={npx}, npy={npy}')
 
     err = False
     if itot % npx != 0:

@@ -40,7 +40,7 @@ class _Grid:
 
         fig = pl.figure()
         ax = pl.subplot(121)
-        pl.title(r'$z_\mathrm{{size}}$ = {0:.1f} m'.format(self.zsize), loc='left')
+        pl.title(rf'$z_\mathrm{{size}}$ = {self.zsize:.1f} m', loc='left')
         pl.plot(self.dz, self.z, 'k-x')
         pl.xlabel(r'$\Delta z$ (m)')
         pl.ylabel(r'$z$ (m)')

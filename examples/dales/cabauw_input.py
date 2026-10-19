@@ -73,7 +73,7 @@ expnr = 1
 tau_nudge = 10800  # Nudging time scale atmosphere
 init_tke = 0.1  # Initial SGS-TKE
 
-docstring = '(LS)2D case Cabauw: {} to {}'.format(settings['start_date'].isoformat(), settings['end_date'].isoformat())
+docstring = f'(LS)2D case Cabauw: {settings["start_date"].isoformat()} to {settings["end_date"].isoformat()}'
 
 #
 # Write initial profiles to `prof.inp.expnr`.
@@ -89,7 +89,7 @@ output = odict(
     ]
 )
 
-dlt.write_profiles('prof.inp.{0:03d}'.format(expnr), output, grid.kmax, docstring)
+dlt.write_profiles(f'prof.inp.{expnr:03d}', output, grid.kmax, docstring)
 
 #
 # Write initial scalar profiles to `scalar.inp.expnr`.
@@ -97,7 +97,7 @@ dlt.write_profiles('prof.inp.{0:03d}'.format(expnr), output, grid.kmax, docstrin
 zero = np.zeros(grid.kmax)
 output = odict([('z (m)', grid.z), ('qr (kg kg-1)', zero), ('nr (kg kg-1)', zero)])
 
-dlt.write_profiles('scalar.inp.{0:03d}'.format(expnr), output, grid.kmax, docstring)
+dlt.write_profiles(f'scalar.inp.{expnr:03d}', output, grid.kmax, docstring)
 
 #
 # Write large-scale forcings to `ls_flux.inp.expnr`.
@@ -125,7 +125,7 @@ output_ls = odict(
     ]
 )
 
-dlt.write_forcings('ls_flux.inp.{0:03d}'.format(expnr), output_sfc, output_ls, docstring)
+dlt.write_forcings(f'ls_flux.inp.{expnr:03d}', output_sfc, output_ls, docstring)
 
 #
 # Write nudging profiles to `nudge.inp.expnr`.
@@ -143,7 +143,7 @@ output = odict(
 )
 
 dlt.write_time_profiles(
-    'nudge.inp.{0:03d}'.format(expnr),
+    f'nudge.inp.{expnr:03d}',
     les_input.time_sec.values,
     output,
     grid.kmax,
@@ -168,7 +168,7 @@ output = odict(
     ]
 )
 
-dlt.write_profiles('lscale.inp.{0:03d}'.format(expnr), output, grid.kmax, docstring)
+dlt.write_profiles(f'lscale.inp.{expnr:03d}', output, grid.kmax, docstring)
 
 #
 # Write radiation background profiles to `backrad.inp.expnr`.

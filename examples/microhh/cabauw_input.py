@@ -184,9 +184,7 @@ nl['radiation']['lon'] = settings['central_lon']
 nl['radiation']['lat'] = settings['central_lat']
 
 start = settings['start_date']
-datetime_utc = '{0:04d}-{1:02d}-{2:02d} {3:02d}:{4:02d}:{5:02d}'.format(
-    start.year, start.month, start.day, start.hour, start.minute, start.second
-)
+datetime_utc = f'{start:%Y-%m-%d %H:%M:%S}'
 nl['time']['datetime_utc'] = datetime_utc
 
 # Add column locations

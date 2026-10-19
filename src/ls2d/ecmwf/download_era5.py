@@ -54,9 +54,9 @@ def _retrieve_from_MARS(request, settings, nc_dir, nc_file, qos):
         sp.call(task, shell=True, executable='/bin/bash')
 
     clean_name = nc_file[:-3]
-    mars_req = '{}.mars'.format(clean_name)
-    grib_file = '{}.grib'.format(clean_name)
-    slurm_job = '{}.slurm'.format(clean_name)
+    mars_req = f'{clean_name}.mars'
+    grib_file = f'{clean_name}.grib'
+    slurm_job = f'{clean_name}.slurm'
 
     # Wall clock limit
     wc_lim = '03:00:00' if qos == 'express' else '06:00:00'
@@ -65,31 +65,31 @@ def _retrieve_from_MARS(request, settings, nc_dir, nc_file, qos):
     f = open(mars_req, 'w')
     f.write('retrieve,\n')
     for key, value in request.items():
-        f.write('{}={},\n'.format(key, value))
-    f.write('target="{}"\n'.format(grib_file))
+        f.write(f'{key}={value},\n')
+    f.write(f'target="{grib_file}"\n')
     f.close()
 
     # Create SLURM job file
     date = settings['date']
     ftype = settings['ftype'].split('_')
-    jobname = '{0:04d}{1:02d}{2:02d}{3:}{4:}'.format(date.year, date.month, date.day, ftype[1], ftype[0])
+    jobname = f'{date.year:04d}{date.month:02d}{date.day:02d}{ftype[1]}{ftype[0]}'
 
     f = open(slurm_job, 'w')
     f.write('#!/bin/ksh\n')
-    f.write('#SBATCH --qos={}\n'.format(qos))
-    f.write('#SBATCH --job-name={}\n'.format(jobname))
-    f.write('#SBATCH --output={}.%N.%j.out\n'.format(slurm_job))
-    f.write('#SBATCH --error={}.%N.%j.err\n'.format(slurm_job))
-    f.write('#SBATCH --chdir={}\n'.format(nc_dir))
-    f.write('#SBATCH --time={}\n\n'.format(wc_lim))
+    f.write(f'#SBATCH --qos={qos}\n')
+    f.write(f'#SBATCH --job-name={jobname}\n')
+    f.write(f'#SBATCH --output={slurm_job}.%N.%j.out\n')
+    f.write(f'#SBATCH --error={slurm_job}.%N.%j.err\n')
+    f.write(f'#SBATCH --chdir={nc_dir}\n')
+    f.write(f'#SBATCH --time={wc_lim}\n\n')
 
-    f.write('mars {}\n'.format(mars_req))
+    f.write(f'mars {mars_req}\n')
     f.write('module load ecmwf-toolbox \n')
-    f.write('grib_to_netcdf -o {} {}'.format(nc_file, grib_file))
+    f.write(f'grib_to_netcdf -o {nc_file} {grib_file}')
     f.close()
 
     # Submit job
-    execute('sbatch {}'.format(slurm_job))
+    execute(f'sbatch {slurm_job}')
 
 
 def _ml_chunks():
@@ -158,8 +158,8 @@ def _download_era5_file(settings, ml_chunk=None):
 
     # Write CDS API prints to log file (NetCDF file path/name appended with .out/.err)
     if settings['write_log']:
-        out_file = '{}.out'.format(nc_file[:-3])
-        err_file = '{}.err'.format(nc_file[:-3])
+        out_file = f'{nc_file[:-3]}.out'
+        err_file = f'{nc_file[:-3]}.err'
         old_stdout = sys.stdout
         old_stderr = sys.stderr
         sys.stdout = open(out_file, 'w')
@@ -178,7 +178,7 @@ def _download_era5_file(settings, ml_chunk=None):
     if settings['data_source'] == 'CDS':
         # Check if pickle with previous request is available.
         # If so, try to download NetCDF file, if not, submit new request
-        pickle_file = '{}.pickle'.format(nc_file[:-3])
+        pickle_file = f'{nc_file[:-3]}.pickle'
 
         if os.path.isfile(pickle_file):
             logger.info('Found previous CDS request!')
@@ -190,7 +190,7 @@ def _download_era5_file(settings, ml_chunk=None):
                     cds_request.update()
                 except requests.exceptions.HTTPError:
                     logger.error('CDS request is no longer available online!')
-                    msg = 'To continue, delete the previous request: {}'.format(pickle_file)
+                    msg = f'To continue, delete the previous request: {pickle_file}'
                     logger.error(msg)
                     raise RuntimeError(msg)
 
@@ -215,12 +215,12 @@ def _download_era5_file(settings, ml_chunk=None):
                     finished = True
 
                 elif state in ('queued', 'accepted', 'running'):
-                    logger.info('Request not finished, current status = "{}"'.format(state))
+                    logger.info(f'Request not finished, current status = "{state}"')
 
                 else:
-                    logger.error('Request failed, status = "{}"'.format(state))
-                    logger.error('Error message = {}'.format(cds_request.reply['error'].get('message')))
-                    logger.error('Error reason = {}'.format(cds_request.reply['error'].get('reason')))
+                    logger.error(f'Request failed, status = "{state}"')
+                    logger.error(f'Error message = {cds_request.reply["error"].get("message")}')
+                    logger.error(f'Error reason = {cds_request.reply["error"].get("reason")}')
 
         else:
             logger.info('No previous CDS request, submitting new one')
@@ -230,7 +230,7 @@ def _download_era5_file(settings, ml_chunk=None):
 
             # Surface and pressure level analysis, stored on HDs, so downloads are fast :-)
             if settings['ftype'] == 'pressure_an' or settings['ftype'] == 'surface_an':
-                analysis_times = ['{0:02d}:00'.format(i) for i in range(24)]
+                analysis_times = [f'{i:02d}:00' for i in range(24)]
 
                 # Add +/- 1 grid point to pressure and surface files, required for interpolations.
                 pad = 0.25
@@ -239,9 +239,9 @@ def _download_era5_file(settings, ml_chunk=None):
                 request = {
                     'product_type': 'reanalysis',
                     'format': 'netcdf',
-                    'year': '{0:04d}'.format(settings['date'].year),
-                    'month': '{0:02d}'.format(settings['date'].month),
-                    'day': '{0:02d}'.format(settings['date'].day),
+                    'year': f'{settings["date"]:%Y}',
+                    'month': f'{settings["date"]:%m}',
+                    'day': f'{settings["date"]:%d}',
                     'time': analysis_times,
                     'area': area,
                 }
@@ -331,11 +331,7 @@ def _download_era5_file(settings, ml_chunk=None):
 
                 request = {
                     'class': 'ea',
-                    'date': '{0:04d}-{1:02d}-{2:02d}'.format(
-                        settings['date'].year,
-                        settings['date'].month,
-                        settings['date'].day,
-                    ),
+                    'date': f'{settings["date"]:%Y-%m-%d}',
                     'expver': '1',
                     'levelist': model_levels,
                     'levtype': 'ml',
@@ -343,7 +339,7 @@ def _download_era5_file(settings, ml_chunk=None):
                     'stream': 'oper',
                     'time': analysis_times,
                     'type': 'an',
-                    'area': '{}/{}/{}/{}'.format(lat_n, lon_w, lat_s, lon_e),
+                    'area': f'{lat_n}/{lon_w}/{lat_s}/{lon_e}',
                     'grid': '0.25/0.25',
                     'format': 'netcdf',
                 }
@@ -358,12 +354,10 @@ def _download_era5_file(settings, ml_chunk=None):
         # Shared set of CDS Python API settings for all download types:
         request = {
             'class': 'ea',
-            'expver': '{}'.format(settings['era5_expver']),
+            'expver': f'{settings["era5_expver"]}',
             'stream': 'oper',
-            'date': '{0:04d}-{1:02d}-{2:02d}'.format(
-                settings['date'].year, settings['date'].month, settings['date'].day
-            ),
-            'area': '{}/{}/{}/{}'.format(lat_n, lon_w, lat_s, lon_e),
+            'date': f'{settings["date"]:%Y-%m-%d}',
+            'area': f'{lat_n}/{lon_w}/{lat_s}/{lon_e}',
             'grid': '0.25/0.25',
             'format': 'netcdf',
         }
@@ -461,7 +455,7 @@ def download_era5(settings, exit_when_waiting=True):
 
     # Check if output directory exists, and ends with '/'
     if not os.path.isdir(settings['era5_path']):
-        msg = 'Output directory "{}" does not exist!'.format(settings['era5_path'])
+        msg = f'Output directory "{settings["era5_path"]}" does not exist!'
         logger.error(msg)
         raise FileNotFoundError(msg)
     if settings['era5_path'][-1] != '/':
@@ -507,11 +501,11 @@ def download_era5(settings, exit_when_waiting=True):
                 )
 
                 if not os.path.exists(era_dir):
-                    logger.debug('Creating output directory {}'.format(era_dir))
+                    logger.debug(f'Creating output directory {era_dir}')
                     os.makedirs(era_dir)
 
                 if os.path.isfile(era_file):
-                    logger.debug('Found {} - {} local'.format(date, ftype))
+                    logger.debug(f'Found {date} - {ftype} local')
                     continue
 
                 settings_tmp = download_settings.copy()

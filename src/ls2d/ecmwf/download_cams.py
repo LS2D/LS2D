@@ -79,8 +79,8 @@ def _download_cams_file(settings, variables, grid):
 
     # Write CDS API prints to log file (NetCDF file path/name appended with .out/.err)
     if settings['write_log']:
-        out_file = '{}.out'.format(nc_file[:-3])
-        err_file = '{}.err'.format(nc_file[:-3])
+        out_file = f'{nc_file[:-3]}.out'
+        err_file = f'{nc_file[:-3]}.err'
         old_stdout = sys.stdout
         old_stderr = sys.stderr
         sys.stdout = open(out_file, 'w')
@@ -94,7 +94,7 @@ def _download_cams_file(settings, variables, grid):
 
     # Check if pickle with previous request is available.
     # If so, try to download NetCDF file, if not, submit new request
-    pickle_file = '{}.pickle'.format(nc_file[:-3])
+    pickle_file = f'{nc_file[:-3]}.pickle'
 
     if os.path.isfile(pickle_file):
         logger.info('Found previous CDS request!')
@@ -106,7 +106,7 @@ def _download_cams_file(settings, variables, grid):
                 cds_request.update()
             except requests.exceptions.HTTPError:
                 logger.error('CDS request is no longer available online!')
-                msg = 'To continue, delete the previous request: {}'.format(pickle_file)
+                msg = f'To continue, delete the previous request: {pickle_file}'
                 logger.error(msg)
                 raise RuntimeError(msg)
 
@@ -133,12 +133,12 @@ def _download_cams_file(settings, variables, grid):
                 finished = True
 
             elif state in ('accepted', 'queued', 'running'):
-                logger.info('Request not finished, current status = "{}"'.format(state))
+                logger.info(f'Request not finished, current status = "{state}"')
 
             else:
-                logger.error('Request failed, status = "{}"'.format(state))
-                logger.error('Error message = {}'.format(cds_request.reply['error'].get('message')))
-                logger.error('Error reason = {}'.format(cds_request.reply['error'].get('reason')))
+                logger.error(f'Request failed, status = "{state}"')
+                logger.error(f'Error message = {cds_request.reply["error"].get("message")}')
+                logger.error(f'Error reason = {cds_request.reply["error"].get("reason")}')
 
     else:
         logger.info('No previous CDS request, submitting new one')
@@ -153,8 +153,8 @@ def _download_cams_file(settings, variables, grid):
         )
 
         model_level = [str(x) for x in range(1, 61)]
-        analysis_times = ['{0:02d}:00'.format(i) for i in range(0, 22, 3)]
-        steps = ['{}'.format(i) for i in range(0, 22, 3)]
+        analysis_times = [f'{i:02d}:00' for i in range(0, 22, 3)]
+        steps = [f'{i}' for i in range(0, 22, 3)]
         area = [lat_n, lon_w, lat_s, lon_e]
         date = settings['date'].strftime('%Y-%m-%d')
 
@@ -227,7 +227,7 @@ def download_cams(settings, variables, grid=None):
 
     # Check if output directory exists, and ends with '/'
     if not os.path.isdir(settings['cams_path']):
-        msg = 'Output directory "{}" does not exist!'.format(settings['cams_path'])
+        msg = f'Output directory "{settings["cams_path"]}" does not exist!'
         logger.error(msg)
         raise FileNotFoundError(msg)
     if settings['cams_path'][-1] != '/':
@@ -261,11 +261,11 @@ def download_cams(settings, variables, grid=None):
             )
 
             if not os.path.exists(era_dir):
-                logger.debug('Creating output directory {}'.format(era_dir))
+                logger.debug(f'Creating output directory {era_dir}')
                 os.makedirs(era_dir)
 
             if os.path.isfile(era_file):
-                logger.debug('Found {} - {} local'.format(date, ftype))
+                logger.debug(f'Found {date} - {ftype} local')
             else:
                 settings_tmp = download_settings.copy()
                 settings_tmp.update({'date': date, 'ftype': ftype})
