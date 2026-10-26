@@ -85,6 +85,10 @@ All settings for (LS)<sup>2</sup>D are wrapped in a dictionary:
 - `write_log`: Write ERA5 download to screen (`False`) or log file (`True`)
 - `data_source`: Download method (`CDS` or `MARS`). `MARS` only works on e.g. the ECMWF supercomputer.
 
+### Logging
+
+By default, (LS)<sup>2</sup>D prints formatted log messages to the screen. To use your own logging setup instead, call `ls2d.disable_default_logging()`; messages are then passed on to your own handlers via the `ls2d` logger.
+
 ## Contributing guidelines
 
 Contributions through pull requests are always appreciated. To keep the code style consistent, we stick to PEP8 with two modifications (see [`project.toml`](./pyproject.toml)):

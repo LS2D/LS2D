@@ -45,3 +45,11 @@ if not logger.handlers:
     )
     logger.addHandler(handler)
     logger.propagate = False
+
+
+def disable_default_logging():
+    """
+    Remove LS2D's coloured stream handler, and pass messages on to the user's own logging setup.
+    """
+    logger.handlers.clear()
+    logger.propagate = True
