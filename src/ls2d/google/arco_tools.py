@@ -28,6 +28,10 @@ with a table of block offsets in its header. So instead we:
   1. range-read the Blosc header + block offset table of every chunk we need,
   2. range-read only the blocks that overlap the latitude rows of our box,
   3. decode each block separately by wrapping it in a single-block Blosc frame.
+
+The smallest unit that can be read is one block of ~512 kB uncompressed (~91 latitude rows x 1440 longitudes),
+per level and time step. The download size is therefore nearly independent of the box size, and much larger
+than the saved data: e.g. one day for a 1x1 deg area is ~7 MB saved, but ~18 GB uncompressed (~5-10 GB compressed).
 """
 
 # Python modules

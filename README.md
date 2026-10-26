@@ -13,6 +13,7 @@
 > Note that:
 > - The ARCO path is not backward compatible: ERA5 files downloaded from CDS or MARS can't be read by `read_era5_arco()`. They can still be read with `Read_era5`.
 > - Results from the ARCO and CDS paths are close but not identical, due to small changes in e.g. the interpolations.
+> - ARCO stores global fields, and the smallest part that can be read is a band of ~91 latitudes x 1440 longitudes. Downloads are therefore much larger than the saved data: one day for a 1x1° area is ~7 MB on disk, but ~5-10 GB to download. See `src/ls2d/google/arco_tools.py` for details.
 
 > [!IMPORTANT]
 > In September 2024, Copernicus upgraded the Copernicus and Atmosphere Data Stores (CDS/ADS), introducing changes in the NetCDF file structure. The updated files now have different dimension names, time units, and even some reordered dimensions (!!). Unfortunately, these changes made the new NetCDF files incompatible with older versions or files extracted from MARS. Although (LS)<sup>2</sup>D briefly supported the new format, this led to several issues. Therefore, starting November 2024, (LS)<sup>2</sup>D will automatically patch new NetCDF files to ensure compatibility with the previous NetCDF file structure. On the user side, nothing should change:
