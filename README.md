@@ -47,16 +47,13 @@ By default, this excludes the `cdsapi` as a dependency. If you do want to instal
    
 #### Manual
 
-For a manual installation, you can clone the package from Github:
+For a manual installation, you can clone the package from Github, and install it in editable mode:
 
     git clone https://github.com/LS2D/LS2D.git
+    cd LS2D
+    pip install -e .
 
-In each script where you want to use (LS)<sup>2</sup>D, add the (LS)<sup>2</sup>D root directory to the Python path:
-
-    import sys
-    sys.path.append('/path/to/LS2D')
-    
-You will have to manually install the dependencies with `pip install numpy scipy netCDF4 matplotlib cdsapi`.
+Or use `pip install -e .[cds]` to include the `cdsapi` dependency. Changes to the local source code are directly available without re-installing.
     
 ### Usage
 
