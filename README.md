@@ -15,6 +15,9 @@
 > - Results from the ARCO and CDS paths are close but not identical, due to small changes in e.g. the interpolations.
 > - ARCO stores global fields, and the smallest part that can be read is a band of ~91 latitudes x 1440 longitudes. Downloads are therefore much larger than the saved data: one day for a 1x1° area is ~7 MB on disk, but ~5-10 GB to download. See `src/ls2d/google/arco_tools.py` for details.
 
+> [!WARNING]
+> In a continued effort to frustrate their users, ECMWF now [asks](https://forum.ecmwf.int/t/data-stores-service-protection-measures-affecting-data-downloads-and-account-access-cds-ads-ewds-ecds/15481) CDS/ADS users to submit requests sequentially, or risk having their account suspended. Handling many requests is exactly what a queueing system should be doing, but hey: give users a slow queueing system, and you frustrate them for a day. Make them implement their own queueing system on top of it, and you frustrate them for a lifetime. `ls2d.download_era5()` and `ls2d.download_cams()` submit all missing requests at once, so use CDS at your own risk.
+
 > [!IMPORTANT]
 > In September 2024, Copernicus upgraded the Copernicus and Atmosphere Data Stores (CDS/ADS), introducing changes in the NetCDF file structure. The updated files now have different dimension names, time units, and even some reordered dimensions (!!). Unfortunately, these changes made the new NetCDF files incompatible with older versions or files extracted from MARS. Although (LS)<sup>2</sup>D briefly supported the new format, this led to several issues. Therefore, starting November 2024, (LS)<sup>2</sup>D will automatically patch new NetCDF files to ensure compatibility with the previous NetCDF file structure. On the user side, nothing should change:
 > - Old NetCDF files from CDS or MARS remain compatible.
